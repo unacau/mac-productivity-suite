@@ -4,9 +4,9 @@
 Create the basic project directory structure in `~/Igor/igorekishev/mac-productivity-suite` to organize Hammerspoon and Karabiner-Elements configurations. Based on the design decision, the project will use functional folders (`hammerspoon/` and `karabiner/`) to maintain clear boundaries between technologies and simplify symlinking.
 
 ## Acceptance Criteria
-- [ ] `hammerspoon/` directory exists in the project root.
-- [ ] `karabiner/` directory exists in the project root.
-- [ ] Project root is organized according to the functional folder design.
+- [x] `hammerspoon/` directory exists in the project root.
+- [x] `karabiner/` directory exists in the project root.
+- [x] Project root is organized according to the functional folder design.
 
 ## Implementation Steps
 1. Create the `hammerspoon/` directory.
@@ -21,6 +21,7 @@ Create the basic project directory structure in `~/Igor/igorekishev/mac-producti
 
 ## Decisions & Trade-offs
 - **Functional Folders**: Decided to use separate folders for Hammerspoon and Karabiner rather than a flat root or a generic `src/` directory. This simplifies symlinking (only `hammerspoon/` needs to be linked to `~/.hammerspoon/`) and prevents Hammerspoon from attempting to process non-Lua project files.
+- **GitKeep**: Added `.gitkeep` files to ensure empty directories are tracked by Git.
 
 ## Completion Reminder
 `docs/aide/progress.md` MUST be updated (📋 → 🚧 → ✅) when the item is completed.
@@ -34,16 +35,16 @@ Create the basic project directory structure in `~/Igor/igorekishev/mac-producti
 - None.
 
 **Manual Validation Checklist**
-- [ ] **Structure verified**: Run `ls -d hammerspoon karabiner` in the project root.
+- [x] **Structure verified**: Run `ls -d hammerspoon karabiner` in the project root.
 
 **Expected Outcomes**
 - `hammerspoon/` directory is present.
 - `karabiner/` directory is present.
 
 ## Validation Results
-- [ ] Service started: N/A
-- [ ] Application started successfully: N/A
-- [ ] Database tables verified: N/A
-- [ ] Seed data verified: N/A
-- [ ] API endpoints verified: N/A
-- [ ] Screenshots captured: N/A
+- [x] Service started: N/A
+- [x] Application started successfully: N/A
+- [x] Database tables verified: N/A
+- [x] Seed data verified: N/A
+- [x] API endpoints verified: N/A
+- [x] Screenshots captured: N/A
