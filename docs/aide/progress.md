@@ -14,7 +14,7 @@
 ### Deliverables
 - [ ] ✅ Basic project directory structure initialized in `~/Igor/igorekishev/mac-productivity-suite`.
 - [ ] ✅ Symlink created from the project directory to `~/.hammerspoon/` for seamless local testing.
-- [ ] 📋 Hammerspoon granted necessary Accessibility and Screen Recording permissions in macOS System Settings.
+- [ ] ✅ Hammerspoon granted necessary Accessibility and Screen Recording permissions in macOS System Settings.
 - [ ] 📋 Karabiner-Elements complex modification JSON generated to map `Caps Lock` held to Hyper Key (`Cmd + Opt + Ctrl + Shift`) and `Caps Lock` tapped to `Escape`.
 - [ ] 📋 Basic `init.lua` created to verify Hammerspoon is loading the configuration.
 

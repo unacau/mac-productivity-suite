@@ -4,11 +4,11 @@
 Ensure Hammerspoon is granted the necessary Accessibility, Screen Recording, and Automation permissions in macOS System Settings. These permissions are critical for Hammerspoon to monitor mouse events, control UI elements (Accessibility), capture window information (Screen Recording), and control Safari via AppleScript (Automation) for the web app switcher.
 
 ## Acceptance Criteria
-- [ ] Hammerspoon is granted **Accessibility** permissions in System Settings > Privacy & Security.
-- [ ] Hammerspoon is granted **Screen Recording** permissions (if required for window title/content inspection) in System Settings > Privacy & Security.
-- [ ] Hammerspoon is granted **Automation** permissions to control **Safari** (to allow for tab/window iteration via AppleScript).
-- [ ] A verification script or manual check confirms that Hammerspoon can access the accessibility API (e.g., `hs.accessibilityState()`).
-- [ ] Hammerspoon does not show permission prompts when performing basic window management or application switching.
+- [x] Hammerspoon is granted **Accessibility** permissions in System Settings > Privacy & Security.
+- [x] Hammerspoon is granted **Screen Recording** permissions (if required for window title/content inspection) in System Settings > Privacy & Security.
+- [x] Hammerspoon is granted **Automation** permissions to control **Safari** (to allow for tab/window iteration via AppleScript).
+- [x] A verification script or manual check confirms that Hammerspoon can access the accessibility API (e.g., `hs.accessibilityState()`).
+- [x] Hammerspoon does not show permission prompts when performing basic window management or application switching.
 
 ## Implementation Steps
 1. **Initial Check**: Open Hammerspoon and check the console/log for any permission-related warnings.
@@ -37,7 +37,9 @@ Ensure Hammerspoon is granted the necessary Accessibility, Screen Recording, and
 - Item 002: Setup Local Testing Symlink (so Hammerspoon is running the configuration from this repo).
 
 ## Decisions & Trade-offs
-- **To be updated during implementation.**
+- **Enabled IPC and AppleScript support**: Added `hs.ipc.cliInstall()` and `hs.allowAppleScript(true)` to `init.lua` to allow the CLI and AppleScript to communicate with Hammerspoon for automated verification.
+- **Triggered prompts via CLI**: Used `hs` command to trigger Accessibility and Automation prompts, then relied on user confirmation for Screen Recording.
+- **Verification via Window Titles**: Confirmed that `hs.window.allWindows()` can access titles, which validates both accessibility and the basic functional requirement of screen recording for window identification.
 
 ## Project-Specific Adaptations
 - None.
@@ -52,12 +54,12 @@ Ensure Hammerspoon is granted the necessary Accessibility, Screen Recording, and
 - macOS with Administrator privileges (to grant permissions in System Settings).
 
 **Manual Validation Checklist**
-- [ ] **Application runs**: Hammerspoon is running.
-- [ ] **Services started**: Safari is open.
-- [ ] **Feature verified**: `hs.accessibilityState()` returns `true`.
-- [ ] **Feature verified**: AppleScript to Safari returns a valid response without a permission prompt.
-- [ ] **Data verified**: N/A
-- [ ] **Health checks pass**: N/A
+- [x] **Application runs**: Hammerspoon is running.
+- [x] **Services started**: Safari is open.
+- [x] **Feature verified**: `hs.accessibilityState()` returns `true`.
+- [x] **Feature verified**: AppleScript to Safari returns a valid response without a permission prompt.
+- [x] **Data verified**: N/A
+- [x] **Health checks pass**: N/A
 
 **Expected Outcomes**
 - Hammerspoon has full control over the UI as required for the productivity suite.
@@ -65,15 +67,13 @@ Ensure Hammerspoon is granted the necessary Accessibility, Screen Recording, and
 
 ## Validation Documentation Template
 
-```markdown
 ## Validation Results
-- [ ] Service started: Hammerspoon
-- [ ] Application started successfully
-- [ ] Database tables verified: N/A
-- [ ] Seed data verified: N/A
-- [ ] API endpoints verified: N/A
-- [ ] Screenshots captured: Optional (System Settings permission toggles)
-```
+- [x] Service started: Hammerspoon
+- [x] Application started successfully
+- [x] Database tables verified: N/A
+- [x] Seed data verified: N/A
+- [x] API endpoints verified: N/A
+- [x] Screenshots captured: Optional (System Settings permission toggles)
 
 ## Completion Reminder
 Note that `docs/aide/progress.md` MUST be updated (📋 → 🚧 → ✅) when the item is completed.
