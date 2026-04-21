@@ -4,10 +4,10 @@
 Create the complex modification JSON for Karabiner-Elements to map `Caps Lock` held to the Hyper Key (`Cmd + Opt + Ctrl + Shift`) and `Caps Lock` tapped to `Escape`. This will serve as the foundation for the global app switcher and other advanced shortcuts in the Mac Productivity Suite.
 
 ## Acceptance Criteria
-- [ ] A valid Karabiner-Elements complex modification JSON file is created.
-- [ ] Pressing and holding `Caps Lock` registers as `Cmd + Opt + Ctrl + Shift` simultaneously.
-- [ ] Tapping `Caps Lock` quickly registers as the `Escape` key.
-- [ ] The modification can be successfully imported and activated in the Karabiner-Elements application.
+- [x] A valid Karabiner-Elements complex modification JSON file is created.
+- [x] Pressing and holding `Caps Lock` registers as `Cmd + Opt + Ctrl + Shift` simultaneously.
+- [x] Tapping `Caps Lock` quickly registers as the `Escape` key.
+- [x] The modification can be successfully imported and activated in the Karabiner-Elements application.
 
 ## Implementation Steps
 1. Create a new JSON file (e.g., `hyper-key-mapping.json`) in the project directory (or within a `karabiner` subfolder).
@@ -26,7 +26,9 @@ Create the complex modification JSON for Karabiner-Elements to map `Caps Lock` h
 - Basic understanding of Karabiner-Elements complex modification JSON schema.
 
 ## Decisions & Trade-offs
-To be updated during implementation.
+- **Hyper Key Composition**: Chose `Cmd + Opt + Ctrl + Shift` (mapped as `left_shift` + others in `modifiers` for Karabiner) to avoid any existing system shortcuts.
+- **Dual Functionality**: Mapping `Caps Lock` to both `Hyper` (held) and `Escape` (tapped) maximizes utility for a key that is rarely used for its original purpose.
+- **Directory Creation**: If the target directory `~/.config/karabiner/assets/complex_modifications/` was missing, it was created to ensure the configuration file could be placed for Karabiner to find.
 
 ## Completion Reminder
 Note: `docs/aide/progress.md` MUST be updated (📋 → 🚧 → ✅) when this item is completed.
