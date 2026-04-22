@@ -55,5 +55,8 @@ appSwitcher.bindApp("b", "Brave Browser")
 Run: `hs -c "hs.reload()"`
 Expected: The config reloads successfully. Pressing Hyper+T opens Terminal.
 
+## Completion Reminder
+Note that `docs/aide/progress.md` MUST be updated (📋 → 🚧 → ✅) when this item is completed.
+
 ## Dependencies
 - Item 006 (App Switcher Module Skeleton) must be completed first to provide the `AppSwitcher` module.
