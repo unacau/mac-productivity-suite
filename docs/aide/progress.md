@@ -78,3 +78,20 @@
 - [ ] 📋 All features from previous stages function correctly when loaded simultaneously from a modular `init.lua`.
 - [ ] 📋 Performance is near-instantaneous, with no noticeable lag in app switching or copy-on-select.
 - [ ] 📋 The configuration successfully loads and runs from the `~/.hammerspoon/` symlink without errors.
+
+---
+
+## Detailed Work Items
+
+| ID | Status | Title | Spec |
+| :--- | :--- | :--- | :--- |
+| 001 | ✅ | Initialize project directory structure | [001](items/001-initialize-project-directory-structure.md) |
+| 002 | ✅ | Setup local testing symlink | [002](items/002-setup-local-testing-symlink.md) |
+| 003 | ✅ | Configure system permissions | [003](items/003-configure-system-permissions.md) |
+| 004 | ✅ | Generate Karabiner-Elements Hyper Key mapping | [004](items/004-generate-karabiner-elements-hyper-key-mapping.md) |
+| 005 | ✅ | Create basic init.lua | [005](items/005-create-basic-init-lua.md) |
+| 006 | ✅ | Create app switcher module skeleton | [006](items/006-create-app-switcher-module-skeleton.md) |
+| 007 | ✅ | Implement primary application bindings | [007](items/007-implement-primary-application-bindings.md) |
+| 008 | ✅ | Implement secondary application bindings | [008](items/008-implement-secondary-application-bindings.md) |
+| 009 | 📋 | Implement system application bindings | [009](items/009-implement-system-application-bindings.md) |
+| 010 | 📋 | Investigate Safari web app switcher logic | [010](items/010-investigate-safari-web-app-switcher-logic.md) |

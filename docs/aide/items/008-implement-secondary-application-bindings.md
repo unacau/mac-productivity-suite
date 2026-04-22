@@ -4,14 +4,16 @@
 Implement Hyper Key bindings for secondary productivity and communication applications: TextMate (`M`), Telegram (`L`), and Freeform (`F`). This utilizes the `appSwitcher.bindApp` function to register these specific shortcuts for quick access.
 
 ## Acceptance Criteria
-- [ ] `hammerspoon/init.lua` is updated to bind Hyper Key + `M` to focus/launch TextMate.
-- [ ] `hammerspoon/init.lua` is updated to bind Hyper Key + `L` to focus/launch Telegram.
-- [ ] `hammerspoon/init.lua` is updated to bind Hyper Key + `F` to focus/launch Freeform.
-- [ ] Pressing these shortcuts correctly switches to or launches the respective application.
-- [ ] `docs/aide/progress.md` is updated (📋 → 🚧 → ✅) for the corresponding item upon completion.
+- [x] `hammerspoon/init.lua` is updated to bind Hyper Key + `M` to focus/launch TextMate.
+- [x] `hammerspoon/init.lua` is updated to bind Hyper Key + `L` to focus/launch Telegram.
+- [x] `hammerspoon/init.lua` is updated to bind Hyper Key + `F` to focus/launch Freeform.
+- [x] Pressing these shortcuts correctly switches to or launches the respective application.
+- [x] `docs/aide/progress.md` is updated (📋 → 🚧 → ✅) for the corresponding item upon completion.
 
 ## Decisions & Trade-offs
-To be updated during implementation. The application names will need to match their exact names as installed in macOS (e.g., "TextMate", "Telegram", "Freeform").
+- Verified that application names "TextMate", "Telegram", and "Freeform" are the standard bundle names in macOS.
+- Used `hs -c "hs.reload()"` to verify that the configuration loads without errors.
+- Added a "Detailed Work Items" table to `docs/aide/progress.md` to improve tracking of individual items as per the workflow requirements.
 
 ## Testing Prerequisites
 
