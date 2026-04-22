@@ -93,5 +93,5 @@
 | 006 | ✅ | Create app switcher module skeleton | [006](items/006-create-app-switcher-module-skeleton.md) |
 | 007 | ✅ | Implement primary application bindings | [007](items/007-implement-primary-application-bindings.md) |
 | 008 | ✅ | Implement secondary application bindings | [008](items/008-implement-secondary-application-bindings.md) |
-| 009 | 🚧 | Implement system application bindings | [009](items/009-implement-system-application-bindings.md) |
+| 009 | ✅ | Implement system application bindings | [009](items/009-implement-system-application-bindings.md) |
 | 010 | 📋 | Investigate Safari web app switcher logic | [010](items/010-investigate-safari-web-app-switcher-logic.md) |

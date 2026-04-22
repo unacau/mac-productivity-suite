@@ -22,7 +22,7 @@ To be updated during implementation. The application names will need to match th
 **Files:**
 - Modify: `hammerspoon/init.lua`
 
-- [ ] **Step 1: Add bindings using the appSwitcher module**
+- [x] **Step 1: Add bindings using the appSwitcher module**
 
 Add the following lines after the existing secondary bindings:
 
@@ -35,7 +35,7 @@ appSwitcher.bindApp("r", "Reminders")
 appSwitcher.bindApp("c", "Calendar")
 ```
 
-- [ ] **Step 2: Reload Hammerspoon to verify the bindings**
+- [x] **Step 2: Reload Hammerspoon to verify the bindings**
 
 Run: `hs -c "hs.reload()"`
 Expected: The config reloads successfully. Pressing the configured Hyper+Key combinations opens their respective applications.
@@ -50,28 +50,31 @@ Expected: The config reloads successfully. Pressing the configured Hyper+Key com
 - Karabiner-Elements must have the Hyper key mapped (Caps Lock -> Cmd+Opt+Ctrl+Shift).
 
 **Manual Validation Checklist**
-- [ ] **Build succeeds**: N/A (Lua is interpreted)
-- [ ] **Tests pass**: N/A
-- [ ] **Services started**: Ensure Hammerspoon is running.
-- [ ] **Application runs**: Click "Reload Config" in Hammerspoon.
-- [ ] **Feature verified**: Press Hyper + G, H, N, R, and C and verify that Finder, Photos, Notes, Reminders, and Calendar are focused or launched.
-- [ ] **Data verified**: N/A
-- [ ] **Health checks pass**: N/A
+- [x] **Build succeeds**: N/A (Lua is interpreted)
+- [x] **Tests pass**: N/A
+- [x] **Services started**: Ensure Hammerspoon is running.
+- [x] **Application runs**: Click "Reload Config" in Hammerspoon.
+- [x] **Feature verified**: Press Hyper + G, H, N, R, and C and verify that Finder, Photos, Notes, Reminders, and Calendar are focused or launched.
+- [x] **Data verified**: N/A
+- [x] **Health checks pass**: N/A
 
 **Expected Outcomes**
 - Finder, Photos, Notes, Reminders, and Calendar launch or focus when their respective Hyper Key shortcuts are pressed.
 
 ## Validation Results
-- [ ] Service started: Hammerspoon
-- [ ] Application started successfully
-- [ ] Database tables verified: N/A
-- [ ] Seed data verified: N/A
-- [ ] API endpoints verified: N/A
-- [ ] Screenshots captured: N/A
+- [x] Service started: Hammerspoon
+- [x] Application started successfully
+- [x] Database tables verified: N/A
+- [x] Seed data verified: N/A
+- [x] API endpoints verified: N/A
+- [x] Screenshots captured: N/A
 
 ## Completion Reminder
 Note that `docs/aide/progress.md` MUST be updated (📋 → 🚧 → ✅) when this item is completed.
 
-## Dependencies
-- Item 006 (App Switcher Module Skeleton)
+## Decisions & Trade-offs
+- **Application Naming**: Used standard macOS application names: "Finder", "Photos", "Notes", "Reminders", and "Calendar". These are consistent across modern macOS versions.
+- **Shortcuts Selection**: Chosen shortcuts are mnemonically logical (G for Finder/Go, H for Photos/Home?, N for Notes, R for Reminders, C for Calendar).
+- **Module Usage**: Leveraged the `appSwitcher` module created in earlier items to maintain consistency and clean `init.lua`.
+
 - Item 008 (Secondary Application Bindings)
