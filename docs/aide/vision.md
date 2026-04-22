@@ -28,7 +28,7 @@ The Mac Productivity Suite is a collection of custom enhancements designed to op
         *   `B`: Brave
         *   `M`: TextMate
         *   `L`: Telegram
-        *   `F`: FreeForm
+        *   `F`: Freeform
         *   `G`: Finder
         *   `H`: Photos
         *   `N`: Notes

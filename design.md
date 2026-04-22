@@ -29,7 +29,7 @@ Hammerspoon will act as the engine, utilizing Lua scripts split into modular fil
         *   `B`: Brave
         *   `M`: TextMate
         *   `L`: Telegram
-        *   `F`: FreeForm
+        *   `F`: Freeform
         *   `G`: Finder
         *   `H`: Photos
         *   `N`: Notes

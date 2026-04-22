@@ -29,7 +29,7 @@ This roadmap outlines the staged development of the Mac Productivity Suite. Each
   - `B`: Brave
   - `M`: TextMate
   - `L`: Telegram
-  - `F`: FreeForm
+  - `F`: Freeform
   - `G`: Finder
   - `H`: Photos
   - `N`: Notes

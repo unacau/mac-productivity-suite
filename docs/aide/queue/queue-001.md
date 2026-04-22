@@ -24,7 +24,7 @@ Create `app_switcher.lua` to house the application switching logic and update `i
 Implement Hyper Key bindings for the most frequently used applications: Terminal (`T`), Safari (`S`), and Brave (`B`).
 
 ### Item 008: Implement Secondary Application Bindings
-Implement Hyper Key bindings for productivity and communication applications: TextMate (`M`), Telegram (`L`), and FreeForm (`F`).
+Implement Hyper Key bindings for productivity and communication applications: TextMate (`M`), Telegram (`L`), and Freeform (`F`).
 
 ### Item 009: Implement System Application Bindings
 Implement Hyper Key bindings for built-in macOS system applications: Finder (`G`), Photos (`H`), Notes (`N`), Reminders (`R`), and Calendar (`C`).
