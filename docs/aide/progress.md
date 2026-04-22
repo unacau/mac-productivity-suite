@@ -29,7 +29,7 @@
 ## Stage 2: Global App Switcher (Standard Applications)
 
 ### Deliverables
-- [ ] 🚧 Hammerspoon script (`app_switcher.lua`) to bind Hyper Key + letter combinations to `hs.application.launchOrFocus`.
+- [x] ✅ Hammerspoon script (`app_switcher.lua`) to bind Hyper Key + letter combinations to `hs.application.launchOrFocus`.
 - [ ] 📋 Implementation of the following bindings: `T` (Terminal), `S` (Safari), `B` (Brave), `M` (TextMate), `L` (Telegram), `F` (FreeForm), `G` (Finder), `H` (Photos), `N` (Notes), `R` (Reminders), `C` (Calendar).
 - [ ] 📋 Update `init.lua` to require `app_switcher.lua`.
 
