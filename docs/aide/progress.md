@@ -30,11 +30,11 @@
 
 ### Deliverables
 - [x] ✅ Hammerspoon script (`app_switcher.lua`) to bind Hyper Key + letter combinations to `hs.application.launchOrFocus`.
-- [ ] 📋 Implementation of the following bindings: `T` (Terminal), `S` (Safari), `B` (Brave), `M` (TextMate), `L` (Telegram), `F` (FreeForm), `G` (Finder), `H` (Photos), `N` (Notes), `R` (Reminders), `C` (Calendar).
-- [ ] 📋 Update `init.lua` to require `app_switcher.lua`.
+- [ ] 🚧 Implementation of the following bindings: `T` (Terminal), `S` (Safari), `B` (Brave), `M` (TextMate), `L` (Telegram), `F` (FreeForm), `G` (Finder), `H` (Photos), `N` (Notes), `R` (Reminders), `C` (Calendar).
+- [x] ✅ Update `init.lua` to require `app_switcher.lua`.
 
 ### Acceptance Criteria
-- [ ] 📋 Pressing Hyper Key + `T` focuses the Terminal app (or launches it if not running).
+- [x] ✅ Pressing Hyper Key + `T` focuses the Terminal app (or launches it if not running).
 - [ ] 📋 The same behavior works for all other standard application bindings defined in the deliverables.
 
 ---
