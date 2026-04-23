@@ -1,40 +1,6 @@
 {
   "schema_version": "1.0",
   "extensions": {
-    "aide": {
-      "version": "1.0.0",
-      "source": "local",
-      "manifest_hash": "sha256:13ce845240ea2bdd47c60ad819dd65df8c8987541fc4c0a7a7aebfc66102c184",
-      "enabled": true,
-      "priority": 10,
-      "registered_commands": {
-        "gemini": [
-          "speckit.aide.create-vision",
-          "speckit.aide.create-roadmap",
-          "speckit.aide.create-progress",
-          "speckit.aide.create-queue",
-          "speckit.aide.create-item",
-          "speckit.aide.execute-item",
-          "speckit.aide.feedback-loop"
-        ]
-      },
-      "registered_skills": [],
-      "installed_at": "2026-04-21T20:29:48.419850+00:00"
-    },
-    "checkpoint": {
-      "version": "1.0.0",
-      "source": "local",
-      "manifest_hash": "sha256:f1f8587fcfee109d13e5fd2837df498439695218b32d00083f6e98095fca64c0",
-      "enabled": true,
-      "priority": 10,
-      "registered_commands": {
-        "gemini": [
-          "speckit.checkpoint.commit"
-        ]
-      },
-      "registered_skills": [],
-      "installed_at": "2026-04-21T20:29:48.502882+00:00"
-    },
     "git": {
       "version": "1.0.0",
       "source": "local",
@@ -53,40 +19,39 @@
       "registered_skills": [],
       "installed_at": "2026-04-23T03:02:19.477120+00:00"
     },
-    "superb": {
-      "version": "1.3.0",
+    "aide": {
+      "version": "1.0.0",
       "source": "local",
-      "manifest_hash": "sha256:67185f3f5a9e6617a3fc5e669e9dceeefe12f2a17eb7d5dd7099ac59e3297865",
+      "manifest_hash": "sha256:13ce845240ea2bdd47c60ad819dd65df8c8987541fc4c0a7a7aebfc66102c184",
       "enabled": true,
       "priority": 10,
       "registered_commands": {
         "gemini": [
-          "speckit.superb.check",
-          "speckit.superb.tdd",
-          "speckit.superb.review",
-          "speckit.superb.verify",
-          "speckit.superb.critique",
-          "speckit.superb.debug",
-          "speckit.superb.finish",
-          "speckit.superb.respond"
+          "speckit.aide.create-vision",
+          "speckit.aide.create-roadmap",
+          "speckit.aide.create-progress",
+          "speckit.aide.create-queue",
+          "speckit.aide.create-item",
+          "speckit.aide.execute-item",
+          "speckit.aide.feedback-loop"
         ]
       },
       "registered_skills": [],
-      "installed_at": "2026-04-23T03:06:16.024080+00:00"
+      "installed_at": "2026-04-23T08:01:42.763039+00:00"
     },
-    "aide-strict-bridge": {
-      "version": "1.0.1",
+    "checkpoint": {
+      "version": "1.0.0",
       "source": "local",
-      "manifest_hash": "sha256:839f2cc4c3426d846c2836d9c561efa53d34a00f642d4f3ba7e1aa06249b4446",
+      "manifest_hash": "sha256:f1f8587fcfee109d13e5fd2837df498439695218b32d00083f6e98095fca64c0",
       "enabled": true,
       "priority": 10,
       "registered_commands": {
         "gemini": [
-          "speckit.aide-strict-bridge.check"
+          "speckit.checkpoint.commit"
         ]
       },
       "registered_skills": [],
-      "installed_at": "2026-04-23T03:10:34.157039+00:00"
+      "installed_at": "2026-04-23T08:01:42.843230+00:00"
     }
   }
 }

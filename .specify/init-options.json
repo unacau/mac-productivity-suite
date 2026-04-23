@@ -4,7 +4,6 @@
   "context_file": "GEMINI.md",
   "here": true,
   "integration": "gemini",
-  "preset": null,
   "script": "ps",
-  "speckit_version": "0.7.4.dev0"
+  "speckit_version": "0.7.5"
 }
