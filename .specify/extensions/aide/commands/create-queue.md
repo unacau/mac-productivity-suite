@@ -45,9 +45,3 @@ Save the queue to `docs/aide/queue/queue-NNN.md` (where NNN is the next sequenti
 ## Next Step
 
 Select an item from the queue and start a **new chat session**. Run `/speckit.aide.create-item` with the item description to create a detailed work item specification.
-
-
-### Incremental Commits
-After completing any step or task that results in the creation or modification of project files (including specs, plans, roadmaps, and source code), you MUST call the following command to create an incremental commit:
-
-/speckit.checkpoint.commit

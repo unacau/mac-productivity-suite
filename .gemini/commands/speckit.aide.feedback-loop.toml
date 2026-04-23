@@ -71,4 +71,4 @@ Provide specific, actionable suggestions:
 ## Next Step
 
 After applying the recommended changes, resume the workflow from where you left off. Start a **new chat session** for the next step.
-\n\n### Incremental Commits\nAfter completing any step or task that results in the creation or modification of project files (including specs, plans, roadmaps, and source code), you MUST call the following command to create an incremental commit:\n\n/speckit.checkpoint.commit\n"""
+"""

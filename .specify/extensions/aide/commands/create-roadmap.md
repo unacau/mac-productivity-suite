@@ -51,9 +51,3 @@ Save the completed roadmap to `docs/aide/roadmap.md`.
 ## Next Step
 
 After reviewing the roadmap, start a **new chat session** and run `/speckit.aide.create-progress` to create the progress tracking file.
-
-
-### Incremental Commits
-After completing any step or task that results in the creation or modification of project files (including specs, plans, roadmaps, and source code), you MUST call the following command to create an incremental commit:
-
-/speckit.checkpoint.commit

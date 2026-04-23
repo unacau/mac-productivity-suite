@@ -55,4 +55,14 @@ If you encounter problems (unclear requirements, blocked, need help):
 - **More items in queue?** Start a **new chat session** and run `/speckit.aide.create-item` for the next queue item, then `/speckit.aide.execute-item` to implement it.
 - **Queue exhausted?** Start a **new chat session** and run `/speckit.aide.create-queue` to generate the next batch.
 - **All stages complete?** The project is done!
-\n\n### Incremental Commits\nAfter completing any step or task that results in the creation or modification of project files (including specs, plans, roadmaps, and source code), you MUST call the following command to create an incremental commit:\n\n/speckit.checkpoint.commit\n"""
+
+CRITICAL IMPLEMENTATION INSTRUCTIONS:
+You are operating in a Strict Engineering Environment. DO NOT write the implementation code directly in this chat session.
+
+Instead, you MUST follow this exact procedure:
+1. Read the work item spec.
+2. Use the 'activate_skill' tool to activate 'writing-plans' to break the spec into a bite-sized Task list.
+3. Use the 'activate_skill' tool to activate 'subagent-driven-development'.
+4. Dispatch sub-agents to implement and review each task (they will handle TDD naturally).
+5. When the sub-agents finish all tasks, ask the user: "Implementation complete. Should I run /speckit.checkpoint.commit to save the completed item?" If yes, execute it.
+"""

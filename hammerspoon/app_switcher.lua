@@ -1,6 +1,6 @@
 local AppSwitcher = {}
 
--- Define the Hyper key combination
+-- Define the Hyper key combination as a local variable
 local hyper = {"cmd", "alt", "ctrl", "shift"}
 
 -- Helper function to bind a key to launch or focus an application

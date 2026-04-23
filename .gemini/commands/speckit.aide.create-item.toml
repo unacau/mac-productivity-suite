@@ -51,7 +51,12 @@ Note that `docs/aide/progress.md` MUST be updated (📋 → 🚧 → ✅) when t
 #### 4. Project-Specific Adaptations
 If this project has unique needs (e.g., specific test strategy, deployment process), adapt the template accordingly. Document any template changes in the work item.
 
-#### 5. Testing Prerequisites (CRITICAL)
+#### 5. Robustness Criteria (CRITICAL for System Integrations)
+- **Application Identification:** Always prefer universal identifiers (like macOS Bundle IDs, e.g., `com.apple.Terminal`) over localized or variable names (like application titles) to ensure the logic works across different locales and environments.
+- **Timing & Delays:** When triggering UI events (like keystrokes) after an interaction, include a configurable delay (defaulting to at least 100ms) to ensure the OS has processed the preceding event.
+- **Logging:** Include specific debug logging requirements for critical actions to aid in remote troubleshooting.
+
+#### 6. Testing Prerequisites (CRITICAL)
 
 Document exactly what's needed to test the feature:
 
@@ -102,4 +107,6 @@ Save the work item to `docs/aide/items/NNN-descriptive-name.md`.
 ## Next Step
 
 Start a **new chat session** and run `/speckit.aide.execute-item` with the item number to implement it.
-\n\n### Incremental Commits\nAfter completing any step or task that results in the creation or modification of project files (including specs, plans, roadmaps, and source code), you MUST call the following command to create an incremental commit:\n\n/speckit.checkpoint.commit\n"""
+
+IMPORTANT NEXT STEP: When you finish creating the work item and the user approves it, you MUST immediately ask: "Would you like me to run /speckit.superb.review to check for TDD-readiness, and then /speckit.checkpoint.commit?" If they say yes, execute both commands.
+"""

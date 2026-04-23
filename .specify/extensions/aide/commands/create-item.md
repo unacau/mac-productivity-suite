@@ -101,9 +101,3 @@ Save the work item to `docs/aide/items/NNN-descriptive-name.md`.
 ## Next Step
 
 Start a **new chat session** and run `/speckit.aide.execute-item` with the item number to implement it.
-
-
-### Incremental Commits
-After completing any step or task that results in the creation or modification of project files (including specs, plans, roadmaps, and source code), you MUST call the following command to create an incremental commit:
-
-/speckit.checkpoint.commit

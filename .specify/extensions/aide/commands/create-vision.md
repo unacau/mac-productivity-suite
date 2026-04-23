@@ -56,9 +56,3 @@ Save the completed vision document to `docs/aide/vision.md`.
 ## Next Step
 
 After reviewing the vision document, start a **new chat session** and run `/speckit.aide.create-roadmap` to generate a staged development roadmap.
-
-
-### Incremental Commits
-After completing any step or task that results in the creation or modification of project files (including specs, plans, roadmaps, and source code), you MUST call the following command to create an incremental commit:
-
-/speckit.checkpoint.commit

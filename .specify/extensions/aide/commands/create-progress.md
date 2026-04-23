@@ -47,9 +47,3 @@ Save the completed progress file to `docs/aide/progress.md`.
 ## Next Step
 
 After reviewing the progress file, start a **new chat session** and run `/speckit.aide.create-queue` to generate the first batch of prioritized work items.
-
-
-### Incremental Commits
-After completing any step or task that results in the creation or modification of project files (including specs, plans, roadmaps, and source code), you MUST call the following command to create an incremental commit:
-
-/speckit.checkpoint.commit

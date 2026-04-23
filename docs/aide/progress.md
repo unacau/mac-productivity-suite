@@ -30,54 +30,54 @@
 
 ### Deliverables
 - [x] ✅ Hammerspoon script (`app_switcher.lua`) to bind Hyper Key + letter combinations to `hs.application.launchOrFocus`.
-- [ ] 🚧 Implementation of the following bindings: `T` (Terminal), `S` (Safari), `B` (Brave), `M` (TextMate), `L` (Telegram), `F` (Freeform), `G` (Finder), `H` (Photos), `N` (Notes), `R` (Reminders), `C` (Calendar).
+- [x] ✅ Implementation of the following bindings: `T` (Terminal), `S` (Safari), `B` (Brave), `M` (TextMate), `L` (Telegram), `F` (Freeform), `G` (Finder), `H` (Photos), `N` (Notes), `R` (Reminders), `C` (Calendar).
 - [x] ✅ Update `init.lua` to require `app_switcher.lua`.
 
 ### Acceptance Criteria
 - [x] ✅ Pressing Hyper Key + `T` focuses the Terminal app (or launches it if not running).
-- [ ] 📋 The same behavior works for all other standard application bindings defined in the deliverables.
+- [x] ✅ The same behavior works for all other standard application bindings defined in the deliverables.
 
 ---
 
 ## Stage 3: Safari Web App Switcher Integration
 
 ### Deliverables
-- [ ] 📋 Logic added to `app_switcher.lua` (or a new module) to iterate through open Safari windows/tabs using AppleScript via `hs.osascript` or Hammerspoon's native window management.
-- [ ] 📋 Implementation of the following bindings based on window titles: `D` (SoundCloud), `P` (Spotify).
+- [x] ✅ Logic added to `app_switcher.lua` (or a new module) to iterate through open Safari windows/tabs using AppleScript via `hs.osascript` or Hammerspoon's native window management.
+- [x] ✅ Implementation of the following bindings based on window titles: `D` (SoundCloud), `P` (Spotify).
 
 ### Acceptance Criteria
-- [ ] 📋 With Safari open and playing SoundCloud in any tab/window, pressing Hyper Key + `D` brings that specific Safari window to the front.
-- [ ] 📋 With Safari open and playing Spotify in any tab/window, pressing Hyper Key + `P` brings that specific Safari window to the front.
+- [x] ✅ With Safari open and playing SoundCloud in any tab/window, pressing Hyper Key + `D` brings that specific Safari window to the front.
+- [x] ✅ With Safari open and playing Spotify in any tab/window, pressing Hyper Key + `P` brings that specific Safari window to the front.
 
 ---
 
 ## Stage 4: Copy on Select for Terminal
 
 ### Deliverables
-- [ ] 📋 Hammerspoon script (`copy_on_select.lua`) tracking `leftMouseUp` events via `hs.eventtap`.
-- [ ] 📋 Logic to verify the currently active application is "Terminal".
-- [ ] 📋 Logic to check if a selection actually exists (to prevent clearing the clipboard on a standard click).
-- [ ] 📋 Logic to trigger a `Cmd+C` keystroke after a short delay (e.g., 50ms) upon a valid selection.
-- [ ] 📋 Update `init.lua` to require `copy_on_select.lua`.
+- [x] ✅ Hammerspoon script (`copy_on_select.lua`) tracking `leftMouseUp` events via `hs.eventtap`.
+- [x] ✅ Logic to verify the currently active application is "Terminal".
+- [x] ✅ Logic to check if a selection actually exists (to prevent clearing the clipboard on a standard click).
+- [x] ✅ Logic to trigger a `Cmd+C` keystroke after a short delay (e.g., 50ms) upon a valid selection.
+- [x] ✅ Update `init.lua` to require `copy_on_select.lua`.
 
 ### Acceptance Criteria
-- [ ] 📋 Highlighting text in the native Terminal automatically copies it to the system clipboard without manual input.
-- [ ] 📋 Regular clicks (without drag/selection) in the Terminal do not clear the existing clipboard content or copy an empty string.
-- [ ] 📋 The feature works consistently and does not interfere with mouse actions in other applications.
+- [x] ✅ Highlighting text in the native Terminal automatically copies it to the system clipboard without manual input.
+- [x] ✅ Regular clicks (without drag/selection) in the Terminal do not clear the existing clipboard content or copy an empty string.
+- [x] ✅ The feature works consistently and does not interfere with mouse actions in other applications.
 
 ---
 
 ## Stage 5: Final Refinement, Modularization, and Polish
 
 ### Deliverables
-- [ ] 📋 Code refactored into a clean, modular structure, ensuring `init.lua` properly initializes and handles errors for `copy_on_select.lua` and `app_switcher.lua`.
-- [ ] 📋 Final end-to-end system testing of all features simultaneously.
-- [ ] 📋 Documentation updated (if needed) to reflect the final technical architecture.
+- [x] ✅ Code refactored into a clean, modular structure, ensuring `init.lua` properly initializes and handles errors for `copy_on_select.lua` and `app_switcher.lua`.
+- [x] ✅ Final end-to-end system testing of all features simultaneously.
+- [x] ✅ Documentation updated (if needed) to reflect the final technical architecture.
 
 ### Acceptance Criteria
-- [ ] 📋 All features from previous stages function correctly when loaded simultaneously from a modular `init.lua`.
-- [ ] 📋 Performance is near-instantaneous, with no noticeable lag in app switching or copy-on-select.
-- [ ] 📋 The configuration successfully loads and runs from the `~/.hammerspoon/` symlink without errors.
+- [x] ✅ All features from previous stages function correctly when loaded simultaneously from a modular `init.lua`.
+- [x] ✅ Performance is near-instantaneous, with no noticeable lag in app switching or copy-on-select.
+- [x] ✅ The configuration successfully loads and runs from the `~/.hammerspoon/` symlink without errors.
 
 ---
 
@@ -95,5 +95,14 @@
 | 008 | ✅ | Implement secondary application bindings | [008](items/008-implement-secondary-application-bindings.md) |
 | 009 | ✅ | Implement system application bindings | [009](items/009-implement-system-application-bindings.md) |
 | 010 | ✅ | Investigate Safari web app switcher logic | [010](items/010-investigate-safari-web-app-switcher-logic.md) |
-| 011 | 📋 | Implement Safari Web App Switcher Logic for SoundCloud | [011](items/011-implement-safari-web-app-switcher-logic-for-soundcloud.md) |
-| 012 | 📋 | Implement Safari Web App Switcher Logic for Spotify | [012](items/012-implement-safari-web-app-switcher-logic-for-spotify.md) |
+| 011 | ✅ | Implement Safari Web App Switcher Logic for SoundCloud | [011](items/011-implement-safari-web-app-switcher-logic-for-soundcloud.md) |
+| 012 | ✅ | Implement Safari Web App Switcher Logic for Spotify | [012](items/012-implement-safari-web-app-spotify.md) |
+| 013 | ✅ | Create Copy on Select Module Skeleton | [013](items/013-create-copy-on-select-module-skeleton.md) |
+| 014 | ✅ | Implement leftMouseUp Event Tracking | [014](items/014-implement-left-mouse-up-event-tracking.md) |
+| 015 | ✅ | Implement Terminal Application Verification Logic | [015](items/015-implement-terminal-verification-logic.md) |
+| 016 | ✅ | Implement Selection Verification Logic | [016](items/016-implement-selection-verification-logic.md) |
+| 017 | ✅ | Implement Automated Cmd+C Keystroke | [017](items/017-implement-automated-cmd-c-keystroke.md) |
+| 018 | ✅ | Integrate Copy on Select Module | [018](items/018-integrate-copy-on-select-module.md) |
+| 019 | ✅ | Refactor and Modularize Codebase | [019](items/019-refactor-and-modularize-codebase.md) |
+| 020 | ✅ | Perform Final End-to-End System Testing | [020](items/020-perform-final-end-to-end-system-testing.md) |
+| 021 | ✅ | Update Project Documentation | [021](items/021-update-project-documentation.md) |

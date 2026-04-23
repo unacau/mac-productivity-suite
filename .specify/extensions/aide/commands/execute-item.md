@@ -54,9 +54,3 @@ If you encounter problems (unclear requirements, blocked, need help):
 - **More items in queue?** Start a **new chat session** and run `/speckit.aide.create-item` for the next queue item, then `/speckit.aide.execute-item` to implement it.
 - **Queue exhausted?** Start a **new chat session** and run `/speckit.aide.create-queue` to generate the next batch.
 - **All stages complete?** The project is done!
-
-
-### Incremental Commits
-After completing any step or task that results in the creation or modification of project files (including specs, plans, roadmaps, and source code), you MUST call the following command to create an incremental commit:
-
-/speckit.checkpoint.commit
