@@ -55,6 +55,7 @@ If this project has unique needs (e.g., specific test strategy, deployment proce
 - **Application Identification:** Always prefer universal identifiers (like macOS Bundle IDs, e.g., `com.apple.Terminal`) over localized or variable names (like application titles) to ensure the logic works across different locales and environments.
 - **Timing & Delays:** When triggering UI events (like keystrokes) after an interaction, include a configurable delay (defaulting to at least 100ms) to ensure the OS has processed the preceding event.
 - **Logging:** Include specific debug logging requirements for critical actions to aid in remote troubleshooting.
+- **Ambiguity Check (Web Apps):** If a task mentions "web apps," explicitly clarify if it refers to tabs within a browser (requiring complex logic like AppleScript) or standalone applications (created via Safari's "Add to Dock" or similar features), which can be handled as standard macOS applications.
 
 #### 6. Testing Prerequisites (CRITICAL)
 

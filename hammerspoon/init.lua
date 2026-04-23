@@ -27,28 +27,26 @@ end
 local appSwitcher = loadModule("app_switcher")
 local copyOnSelect = loadModule("copy_on_select", "init")
 
--- Primary Application Bindings
+-- Application Bindings
 if appSwitcher then
+    -- Primary Apps
     appSwitcher.bindApp("t", "Terminal")
     appSwitcher.bindApp("s", "Safari")
     appSwitcher.bindApp("b", "Brave Browser")
 
-    -- Secondary Application Bindings
+    -- Secondary & Web Apps (Standalone)
     appSwitcher.bindApp("m", "TextMate")
     appSwitcher.bindApp("l", "Telegram")
-    appSwitcher.bindApp("f", "Freeform")
+    appSwitcher.bindApp("d", "SoundCloud")
+    appSwitcher.bindApp("p", "Spotify")
 
-    -- System Application Bindings
-    appSwitcher.bindApp("g", "Finder")
+    -- System Apps
+    appSwitcher.bindApp("f", "Finder")
     appSwitcher.bindApp("h", "Photos")
     appSwitcher.bindApp("n", "Notes")
     appSwitcher.bindApp("r", "Reminders")
     appSwitcher.bindApp("c", "Calendar")
-
-    -- Safari Web App Bindings
-    appSwitcher.bindSafariTab("d", "SoundCloud")
-    appSwitcher.bindSafariTab("p", "Spotify")
 end
 
 hs.alert.show("Hammerspoon Config Reloaded")
-print("Hammerspoon configuration loaded from symlink.")
+print("Hammerspoon configuration loaded with updated bindings.")
