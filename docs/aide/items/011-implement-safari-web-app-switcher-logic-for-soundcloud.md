@@ -1,53 +1,46 @@
 # Work Item 011: Implement Safari Web App Switcher Logic for SoundCloud
 
 ## Description
-This work item focuses on adding logic to iterate through open Safari windows and tabs to identify and focus the SoundCloud web application based on its window title, using the `D` key binding in combination with the Hyper Key.
+Add logic to iterate through open Safari windows/tabs to identify and focus the SoundCloud web application based on window title using the `D` binding. This implements the first part of Stage 3: Safari Web App Switcher Integration.
 
 ## Acceptance Criteria
-- [ ] The `app_switcher.lua` (or equivalent module) handles the `D` key press to trigger Safari tab iteration.
-- [ ] The logic successfully finds a Safari tab with "SoundCloud" in its URL or title.
-- [ ] The identified Safari window is brought to the front and the SoundCloud tab is made active.
-- [ ] If SoundCloud is not open in any tab, the script degrades gracefully without throwing unhandled errors.
-- [ ] `docs/aide/progress.md` is updated when the task status changes.
+- With Safari open and playing SoundCloud in any tab/window, pressing Hyper Key + `D` brings that specific Safari window to the front.
+- `docs/aide/progress.md` is updated (📋 → 🚧 → ✅) upon completion of this item.
 
 ## Implementation Steps
-1. Use `hs.osascript.javascript` or `hs.osascript.applescript` to query Safari for its windows and tabs.
-2. Iterate over the tabs, checking if the `name` or `URL` property contains the string "SoundCloud" (case-insensitive if possible).
-3. Once found, use AppleScript/JXA commands to set that specific tab as the `current tab` of its parent window.
-4. Set the `index` of that parent window to `1` (or use `activate`) to bring it to the foreground.
-5. Bind this logic to the `D` key via the existing Hyper Key dispatcher.
+1. Add logic to `app_switcher.lua` (or a dedicated `safari_switcher.lua` module) to search for Safari tabs/windows containing "SoundCloud" in their title.
+2. The logic can utilize `hs.osascript` to run a small AppleScript that iterates through Safari windows and tabs, or `hs.application` if it can read window titles directly.
+3. Bind Hyper Key + `D` to this new logic.
+4. If a new file is created, require it in `init.lua`.
 
 ## Testing Strategy
-- Local, manual testing with multiple Safari windows and tabs to ensure accurate tab targeting and application focus.
+1. Open Safari and navigate to `soundcloud.com`.
+2. Open another app (e.g., Terminal) or a different Safari window so SoundCloud is in the background.
+3. Press Hyper Key + `D` and verify that the SoundCloud window comes to the foreground.
 
 ## Dependencies
-- Basic Hammerspoon configuration and Hyper Key mapping (Items 001-009).
-- Safari web browser running locally.
+- `app_switcher.lua`
+- Hammerspoon accessibility permissions.
 
 ## Decisions & Trade-offs
-- *To be updated during implementation.* (e.g., AppleScript vs JavaScript for Automation (JXA) for performance and reliability).
+- To be updated during implementation.
 
 ## Testing Prerequisites
 
 **Required Services**
-- Safari (native macOS application).
-- Internet connection to open SoundCloud.
+- N/A
 
 **Environment Configuration**
-- Hammerspoon is active and using the `~/.hammerspoon` configuration.
+- macOS with Safari installed.
+- Hammerspoon running with the project configuration loaded.
 
 **Manual Validation Checklist**
-- [ ] **Services started**: Open Safari and load SoundCloud in a background tab. Open at least one other Safari window.
-- [ ] **Application runs**: Load Hammerspoon configuration successfully.
-- [ ] **Feature verified**: Press `Hyper Key + D`. Verify the SoundCloud tab becomes the active tab and its window is brought to the foreground.
-- [ ] **Feature verified**: Close all SoundCloud tabs. Press `Hyper Key + D`. Verify no error alerts appear in the Hammerspoon console.
+- [ ] **Application runs**: Hammerspoon configuration reloaded successfully.
+- [ ] **Feature verified**: Open Safari to SoundCloud, switch to another app, press Hyper + D, and verify Safari with SoundCloud is focused.
 
 **Expected Outcomes**
-- The correct Safari window and tab are brought to the forefront almost instantaneously.
-- The Hammerspoon console shows no errors.
+- The Safari window with SoundCloud is focused when the keybind is pressed.
 
 ## Validation Results
-- [ ] Service started: Safari
-- [ ] Application started successfully: Hammerspoon configuration reloaded
-- [ ] Feature verified: Correct tab focused on match
-- [ ] Feature verified: Graceful fallback when no match is found
+- [ ] Application started successfully: Hammerspoon reloaded without errors.
+- [ ] Feature verified: Safari focused correctly.
