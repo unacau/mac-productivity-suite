@@ -4,18 +4,18 @@
 Research and implement the core logic to iterate through open Safari windows and tabs to identify and focus specific web applications based on their titles. This forms the foundation for mapping Hyper Key shortcuts to specific web apps (like SoundCloud and Spotify) running within Safari.
 
 ## Acceptance Criteria
-- [ ] Logic successfully identifies a Safari tab by its title (or a substring of its title).
-- [ ] If the tab is found, Safari is brought to the front.
-- [ ] If the tab is found, the specific window containing the tab is brought to the front.
-- [ ] If the tab is found, it is made the active tab within its window.
-- [ ] The logic is encapsulated in a reusable Hammerspoon function within `app_switcher.lua` (e.g., `focusSafariTab(titleSubstring)`).
-- [ ] Bindings are implemented for SoundCloud (Hyper + D) and Spotify (Hyper + P).
+- [x] Logic successfully identifies a Safari tab by its title (or a substring of its title).
+- [x] If the tab is found, Safari is brought to the front.
+- [x] If the tab is found, the specific window containing the tab is brought to the front.
+- [x] If the tab is found, it is made the active tab within its window.
+- [x] The logic is encapsulated in a reusable Hammerspoon function within `app_switcher.lua` (e.g., `focusSafariTab(titleSubstring)`).
+- [x] Bindings are implemented for SoundCloud (Hyper + D) and Spotify (Hyper + P).
 
 ## Implementation Steps
-1. **Research AppleScript for Safari:** Investigate the required AppleScript syntax to iterate through Safari windows and tabs, find a tab by title, and make it active.
-2. **Develop AppleScript Wrapper:** Create a Lua function in `app_switcher.lua` that uses `hs.osascript` to execute the AppleScript logic.
-3. **Handle Permissions:** Document and handle the requirement for Hammerspoon to have Automation/Apple Events permissions to control Safari.
-4. **Implement Bindings:** Add the specific Hyper Key bindings for SoundCloud (`D`) and Spotify (`P`) to `app_switcher.lua` using the new wrapper function.
+- [x] **Research AppleScript for Safari:** Investigated AppleScript to iterate through Safari windows/tabs and focus a specific one by title.
+- [x] **Develop AppleScript Wrapper:** Implemented `AppSwitcher.bindSafariTab` in `app_switcher.lua` using `hs.osascript`.
+- [x] **Handle Permissions:** Verified that Hammerspoon requires Automation/Apple Events permission for Safari.
+- [x] **Implement Bindings:** Added Hyper + D and Hyper + P bindings in `init.lua`.
 
 ## Testing Strategy
 1. Open multiple Safari windows with multiple tabs.
@@ -29,7 +29,9 @@ Research and implement the core logic to iterate through open Safari windows and
 - macOS System Settings: Hammerspoon requires permission to control Safari via Apple Events (Privacy & Security -> Automation).
 
 ## Decisions & Trade-offs
-- To be updated during implementation. (e.g., Considering native Hammerspoon window management vs. AppleScript. AppleScript is generally required for tab-level control in Safari).
+- **AppleScript vs Native Hammerspoon:** Chose AppleScript because Safari's tab management is not fully exposed to standard Accessibility APIs used by `hs.window`. AppleScript provides reliable access to tab names and allows setting the `current tab`.
+- **String Formatting:** Used `string.format` to inject the search substring into the AppleScript. While this could have quoting issues if the title contained double quotes, it's sufficient for "SoundCloud" and "Spotify" as specified.
+- **Automation Permissions:** Explicitly noted that macOS will prompt the user for permission when the script first tries to control Safari.
 
 ## Completion Reminder
 When this item is completed, update `docs/aide/progress.md` (📋 → 🚧 → ✅).

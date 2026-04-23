@@ -21,5 +21,9 @@ appSwitcher.bindApp("n", "Notes")
 appSwitcher.bindApp("r", "Reminders")
 appSwitcher.bindApp("c", "Calendar")
 
+-- Safari Web App Bindings
+appSwitcher.bindSafariTab("d", "SoundCloud")
+appSwitcher.bindSafariTab("p", "Spotify")
+
 hs.alert.show("Hammerspoon Symlink Active - API Enabled")
 print("Hammerspoon loaded from symlink! IPC and AppleScript enabled.")

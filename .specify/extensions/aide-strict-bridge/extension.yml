@@ -1,0 +1,62 @@
+schema_version: "1.0"
+
+extension:
+  id: aide-strict-bridge
+  name: "AIDE-Strict Bridge"
+  version: "1.0.1"
+  description: "Automated CLI hooks bridging AIDE, Superpowers Bridge, and Checkpoint."
+  author: senior-engineer
+
+requires:
+  speckit_version: ">=0.7.0"
+  extensions:
+    - name: aide
+    - name: superb
+    - name: checkpoint
+
+provides:
+  commands:
+    - name: speckit.aide-strict-bridge.check
+      file: commands/check.md
+      description: "Check the status of AIDE-Strict hooks."
+
+hooks:
+  after_aide.create-vision:
+    command: "speckit.checkpoint.commit"
+    optional: true
+    prompt: "Commit vision changes?"
+    description: "Auto-commit after AIDE vision creation"
+
+  after_aide.create-roadmap:
+    command: "speckit.checkpoint.commit"
+    optional: true
+    prompt: "Commit roadmap changes?"
+    description: "Auto-commit after AIDE roadmap creation"
+
+  after_aide.create-progress:
+    command: "speckit.checkpoint.commit"
+    optional: true
+    prompt: "Commit progress changes?"
+    description: "Auto-commit after AIDE progress creation"
+
+  after_aide.create-queue:
+    command: "speckit.checkpoint.commit"
+    optional: true
+    prompt: "Commit queue changes?"
+    description: "Auto-commit after AIDE queue creation"
+
+  after_aide.create-item:
+    command: "speckit.superb.review"
+    optional: true
+    prompt: "Review work item?"
+    description: "Review AIDE work item for TDD-readiness"
+
+  before_aide.execute-item:
+    command: "speckit.superb.tdd"
+    optional: false
+    description: "Enforce TDD before AIDE execution"
+
+  after_aide.execute-item:
+    command: "speckit.superb.verify"
+    optional: false
+    description: "Verify AIDE execution"
