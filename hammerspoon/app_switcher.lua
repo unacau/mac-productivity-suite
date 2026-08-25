@@ -257,10 +257,11 @@ local function commitSession()
             else
                 hs.application.launchOrFocus("Google Chrome")
             end
-        elseif selectedItem.selectedChromeProfileIndex then
+        elseif selectedItem.isChrome then
+            local profileIdx = selectedItem.selectedChromeProfileIndex or 1
             local ok, chromeProfiles = pcall(require, "chrome_profiles")
             if ok and chromeProfiles and chromeProfiles.focusProfileByIndex then
-                chromeProfiles.focusProfileByIndex(selectedItem.selectedChromeProfileIndex)
+                chromeProfiles.focusProfileByIndex(profileIdx)
             else
                 hs.application.launchOrFocus("Google Chrome")
             end
@@ -385,7 +386,7 @@ local function handleKey(key)
                 appName = appName,
                 isChrome = isChrome,
                 badge = (isChrome and "1" or nil),
-                selectedChromeProfileIndex = 1,
+                selectedChromeProfileIndex = (isChrome and 1 or nil),
                 chromeThumbnails = (isChrome and chromeThumbs or nil)
             })
         end
