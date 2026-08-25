@@ -1,63 +1,47 @@
-local CopyOnSelect = {}
+local obj = {}
 
--- Configuration
-CopyOnSelect.config = {
-    threshold = 5,
-    copyDelay = 0.1, -- Increased delay to 100ms
-    targetBundleID = "com.apple.Terminal" -- Use bundle ID for robustness
-}
+-- Store local state within the module
+obj.startPos = nil
+obj.dragThreshold = 10
+obj.excludedApps = { "Terminal", "iTerm2", "Console" }
 
--- Store the tap in the table to prevent garbage collection
-CopyOnSelect.tap = nil
--- Store the initial mouse down position
-CopyOnSelect.mouseDownPos = nil
+function obj.init()
+    -- 1. Record mouse position when you click down
+    obj.downTap = hs.eventtap.new({ hs.eventtap.event.types.leftMouseDown }, function(e)
+        obj.startPos = hs.mouse.absolutePosition()
+        return false 
+    end):start()
 
--- Helper function to calculate distance between two points
-local function getDistance(p1, p2)
-    if not p1 or not p2 then return 0 end
-    return math.sqrt((p2.x - p1.x)^2 + (p2.y - p1.y)^2)
-end
+    -- 2. Check position when you release the click
+    obj.upTap = hs.eventtap.new({ hs.eventtap.event.types.leftMouseUp }, function(e)
+        if not obj.startPos then return false end
 
--- Callback for the event tap
-local function handleEvent(event)
-    local eventType = event:getType()
-    
-    if eventType == hs.eventtap.event.types.leftMouseDown then
-        -- Record the starting position
-        CopyOnSelect.mouseDownPos = hs.mouse.getAbsolutePosition()
-    
-    elseif eventType == hs.eventtap.event.types.leftMouseUp then
-        local app = hs.application.frontmostApplication()
-        if app and app:bundleID() == CopyOnSelect.config.targetBundleID then
-            local mouseUpPos = hs.mouse.getAbsolutePosition()
-            local distance = getDistance(CopyOnSelect.mouseDownPos, mouseUpPos)
-            
-            if distance > CopyOnSelect.config.threshold then
-                -- Selection detected, trigger copy after a short delay
-                hs.timer.doAfter(CopyOnSelect.config.copyDelay, function()
-                    print("Automated copy triggered in Terminal")
-                    hs.eventtap.keyStroke({"cmd"}, "c")
-                end)
-            end
+        local endPos = hs.mouse.absolutePosition()
+        local clicks = e:getProperty(hs.eventtap.event.properties.mouseEventClickState)
+        
+        -- Check if current app should be ignored
+        local currentApp = hs.application.frontmostApplication()
+        if currentApp and hs.fnutils.contains(obj.excludedApps, currentApp:name()) then
+            obj.startPos = nil
+            return false
         end
-        -- Reset mouse down position
-        CopyOnSelect.mouseDownPos = nil
-    end
-    
-    -- Return false to let the event propagate to other applications
-    return false
+
+        -- Calculate distance moved
+        local dx = math.abs(endPos.x - obj.startPos.x)
+        local dy = math.abs(endPos.y - obj.startPos.y)
+
+        -- Copy if dragged > threshold OR if double/triple clicked
+        if (dx > obj.dragThreshold or dy > obj.dragThreshold) or (clicks > 1) then
+            hs.timer.doAfter(0.15, function()
+                hs.eventtap.keyStroke({"cmd"}, "c")
+            end)
+        end
+        
+        obj.startPos = nil
+        return false
+    end):start()
+
+    print("Copy-on-Select module initialized successfully.")
 end
 
--- Initialize the module
-function CopyOnSelect.init()
-    -- Create the event tap for leftMouseDown and leftMouseUp
-    CopyOnSelect.tap = hs.eventtap.new({
-        hs.eventtap.event.types.leftMouseDown,
-        hs.eventtap.event.types.leftMouseUp
-    }, handleEvent)
-    
-    -- Start the tap
-    CopyOnSelect.tap:start()
-end
-
-return CopyOnSelect
+return obj

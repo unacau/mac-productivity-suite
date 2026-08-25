@@ -23,35 +23,6 @@ Hammerspoon will act as the engine, utilizing Lua scripts split into modular fil
     *   Includes logic to verify a selection exists (if possible via UIScripting or clipboard comparison) to avoid overwriting the clipboard with empty strings on standard clicks.
 *   **`app_switcher.lua`**:
     *   Binds the Hyper Key + designated letter to launch or focus specific applications.
-    *   **Standard Apps:** Uses `hs.application.launchOrFocus()`.
-        *   `T`: Terminal
-        *   `S`: Safari
-        *   `B`: Brave
-        *   `M`: TextMate
-        *   `L`: Telegram
-        *   `F`: Freeform
-        *   `G`: Finder
-        *   `H`: Photos
-        *   `N`: Notes
-        *   `R`: Reminders
-        *   `C`: Calendar
+    *   Uses `hs.application.launchOrFocus()`.
+
     *   **PWA / Browser-based Apps:** Custom logic to iterate through Safari windows and focus the specific tab/window based on the window title.
-        *   `D`: SoundCloud
-        *   `P`: Spotify
-
-## Implementation Steps (To be executed via SpecKit AIDE)
-
-1.  **Environment Setup:** Create the `~/Igor/igorekishev/mac-productivity-suite` directory and transition the CLI session.
-2.  **Karabiner Setup:** Generate the `karabiner.json` complex modification and instruct the user on how to import it into Karabiner-Elements.
-3.  **Hammerspoon Setup:**
-    *   Create `init.lua`.
-    *   Implement `copy_on_select.lua` and test the Terminal integration.
-    *   Implement `app_switcher.lua` and test the standard app bindings.
-    *   Refine `app_switcher.lua` to handle the Safari PWAs (SoundCloud, Spotify).
-4.  **Deployment:** Symlink or copy the Lua files to `~/.hammerspoon/` and reload the Hammerspoon configuration.
-
-## Verification
-*   Verify `Caps Lock` triggers the Hyper Key modifiers.
-*   Selecting text in the standard macOS Terminal automatically copies it to the clipboard without pressing `Cmd+C`.
-*   Clicking in Terminal without selecting text does *not* clear the clipboard.
-*   Pressing Hyper + designated letters successfully focuses the correct applications, including the specific Safari PWA windows for SoundCloud and Spotify.
