@@ -2,8 +2,9 @@ local ChromeProfiles = {}
 
 -- Modifiers for profile switching
 local hyper = {"cmd", "alt", "ctrl", "shift"}
+local MAX_PROFILES = 4
 
--- Ordered profile definitions matching the Default account pop-up window
+-- 4 Configured Profiles matching user specification
 ChromeProfiles.profiles = {
     {
         number = "1",
@@ -14,50 +15,59 @@ ChromeProfiles.profiles = {
     },
     {
         number = "2",
-        dir = "Profile 9",
-        name = "GCP Free Trial",
-        email = "",
-        menuCandidates = {"GCP Free Trial"}
-    },
-    {
-        number = "3",
         dir = "Profile 2",
         name = "Igor (Al11)",
         email = "igor@almosteleven.com",
         menuCandidates = {"Igor (Al11)", "Al11", "Igor • Al11", "Igor (igor@almosteleven.com)", "Igor Ekishev (Al11)", "Al11"}
     },
     {
-        number = "4",
+        number = "3",
         dir = "Profile 5",
         name = "Igor (GCP Free Trial)",
         email = "igorekishev729@gmail.com",
         menuCandidates = {"Igor (GCP Free Trial)", "Igor • GCP Free Trial", "GCP Free Trial (igorekishev729@gmail.com)", "Igor Ekishev (GCP Free Trial)"}
     },
     {
-        number = "5",
+        number = "4",
         dir = "Profile 1",
         name = "Nastya",
         email = "betapoozytron@gmail.com",
         menuCandidates = {"Nastya (betapoozytron@gmail.com)", "Nastya", "Nastya Muravyova", "Nastya Muravyova (Nastya)"}
     },
-    {
-        number = "6",
-        dir = "Profile 10",
-        name = "Nastya",
-        email = "",
-        menuCandidates = {"Nastya"}
-    },
-    {
-        number = "7",
-        dir = "Profile 8",
-        name = "Zebra",
-        email = "",
-        menuCandidates = {"Zebra"}
-    },
 }
 
 local contextualHotkeys = {}
 local appWatcher = nil
+
+-- Enforce strict maximum 4 profiles limit
+local function validateProfiles()
+    if #ChromeProfiles.profiles > MAX_PROFILES then
+        local errMsg = string.format("ChromeProfiles Error: At most %d profiles allowed, but %d are configured!", MAX_PROFILES, #ChromeProfiles.profiles)
+        hs.alert.show(errMsg, 5)
+        error(errMsg)
+    end
+end
+
+-- Get profile avatar icon from Google Profile Picture.png
+function ChromeProfiles.getProfileIcon(profile)
+    if not profile then return nil end
+    if profile.cachedIcon then return profile.cachedIcon end
+
+    local chromeDir = os.getenv("HOME") .. "/Library/Application Support/Google/Chrome/" .. profile.dir
+    local gaiaPic = chromeDir .. "/Google Profile Picture.png"
+
+    if hs.fs.attributes(gaiaPic) then
+        local img = hs.image.imageFromPath(gaiaPic)
+        if img then
+            profile.cachedIcon = img
+            return img
+        end
+    end
+
+    local chromeIcon = hs.image.imageFromAppBundle("com.google.Chrome")
+    profile.cachedIcon = chromeIcon
+    return chromeIcon
+end
 
 -- Select a profile through Chrome's native macOS Profiles menu bar
 local function selectProfileFromChrome(chrome, profile)
@@ -141,7 +151,7 @@ function ChromeProfiles.focusProfile(profile)
     end)
 end
 
--- Focus by 1-based index
+-- Focus by 1-based index (1..4)
 function ChromeProfiles.focusProfileByIndex(index)
     local p = ChromeProfiles.profiles[index]
     if p then
@@ -170,7 +180,7 @@ local function disableContextualHotkeys()
     contextualHotkeys = {}
 end
 
--- Application watcher: only enable number shortcuts 1..7 when Chrome is frontmost
+-- Application watcher: only enable number shortcuts 1..4 when Chrome is frontmost
 local function handleAppEvent(appName, eventType, app)
     if appName == "Google Chrome" then
         if eventType == hs.application.watcher.activated then
@@ -183,6 +193,7 @@ end
 
 -- Initialize module
 function ChromeProfiles.init()
+    validateProfiles()
     ChromeProfiles.cleanup()
 
     -- Check if Chrome is already frontmost on load
@@ -194,7 +205,7 @@ function ChromeProfiles.init()
     appWatcher = hs.application.watcher.new(handleAppEvent)
     appWatcher:start()
 
-    print("Chrome Profiles module initialized (Contextual hotkeys active when Chrome is focused).")
+    print("Chrome Profiles module initialized (" .. #ChromeProfiles.profiles .. " profiles configured, max " .. MAX_PROFILES .. ").")
     return ChromeProfiles
 end
 

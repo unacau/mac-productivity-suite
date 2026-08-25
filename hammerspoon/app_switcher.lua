@@ -87,7 +87,7 @@ local function updateHUD()
     local count = #items
 
     local cardWidth = 110
-    local cardHeight = 125
+    local cardHeight = 130
     local cardSpacing = 10
     local padding = 16
     local iconSize = 56
@@ -160,14 +160,45 @@ local function updateHUD()
         end
 
         -- App / Profile Icon
-        local icon = item.icon or getAppIcon(item.appName or item.name)
-        local iconX = cardX + (cardWidth - iconSize) / 2
-        local iconY = cardY + 12
-        table.insert(elements, {
-            type = "image",
-            image = icon,
-            frame = { x = iconX, y = iconY, w = iconSize, h = iconSize }
-        })
+        if item.isChrome and not item.isChromeProfile and item.chromeThumbnails then
+            -- Multi-app card for Chrome: render the 4 avatar thumbnails in a row
+            local thumbs = item.chromeThumbnails
+            local thumbSize = 22
+            local thumbSpacing = 3
+            local totalThumbW = (#thumbs * thumbSize) + ((#thumbs - 1) * thumbSpacing)
+            local startThumbX = cardX + (cardWidth - totalThumbW) / 2
+            local thumbY = cardY + 24
+
+            for tIdx, thumbImg in ipairs(thumbs) do
+                local tX = startThumbX + (tIdx - 1) * (thumbSize + thumbSpacing)
+                table.insert(elements, {
+                    type = "image",
+                    image = thumbImg,
+                    frame = { x = tX, y = thumbY, w = thumbSize, h = thumbSize }
+                })
+                -- Highlight border around selected profile thumbnail
+                if (item.selectedChromeProfileIndex or 1) == tIdx then
+                    table.insert(elements, {
+                        type = "rectangle",
+                        action = "stroke",
+                        strokeColor = { red = 0.45, green = 0.85, blue = 1.0, alpha = 1.0 },
+                        strokeWidth = 2,
+                        roundedRectRadii = { xRadius = 11, yRadius = 11 },
+                        frame = { x = tX - 1, y = thumbY - 1, w = thumbSize + 2, h = thumbSize + 2 }
+                    })
+                end
+            end
+        else
+            -- Single profile card or standard app card
+            local icon = item.icon or getAppIcon(item.appName or item.name)
+            local iconX = cardX + (cardWidth - iconSize) / 2
+            local iconY = cardY + 10
+            table.insert(elements, {
+                type = "image",
+                image = icon,
+                frame = { x = iconX, y = iconY, w = iconSize, h = iconSize }
+            })
+        end
 
         -- Number / Subtitle badge
         local badgeText = item.number or item.badge
@@ -177,14 +208,14 @@ local function updateHUD()
                 text = badgeText,
                 textSize = 10,
                 textFont = ".AppleSystemUIFontBold",
-                textColor = { white = 0.75, alpha = (isSelected and 1.0 or 0.6) },
+                textColor = { white = 0.80, alpha = (isSelected and 1.0 or 0.6) },
                 textAlignment = "center",
-                frame = { x = cardX + 4, y = iconY + iconSize + 4, w = cardWidth - 8, h = 14 }
+                frame = { x = cardX + 4, y = cardY + iconSize + 14, w = cardWidth - 8, h = 14 }
             })
         end
 
         -- Title Label
-        local labelY = iconY + iconSize + (badgeText and 18 or 8)
+        local labelY = cardY + iconSize + (badgeText and 28 or 16)
         table.insert(elements, {
             type = "text",
             text = item.displayName or item.name,
@@ -258,12 +289,12 @@ local function initFlagsTap()
     flagsTap:start()
 end
 
--- Setup temporary number hotkeys (1..N) while an AppSwitcher session is active
+-- Setup temporary number hotkeys (1..4) while an AppSwitcher session is active
 local function setupTempNumberHotkeys(hasChrome, chromeIndex)
     clearTempNumberHotkeys()
 
     local ok, chromeProfiles = pcall(require, "chrome_profiles")
-    local numProfiles = (ok and chromeProfiles and chromeProfiles.profiles and #chromeProfiles.profiles) or 7
+    local numProfiles = (ok and chromeProfiles and chromeProfiles.profiles and #chromeProfiles.profiles) or 4
 
     for i = 1, numProfiles do
         local profileNum = i
@@ -273,7 +304,7 @@ local function setupTempNumberHotkeys(hasChrome, chromeIndex)
             if not activeSession then return end
 
             if activeSession.isChromeOnly then
-                -- Session items ARE the profiles directly
+                -- Session items ARE the 4 profiles directly
                 if profileNum <= #activeSession.items then
                     activeSession.selectedIndex = profileNum
                     updateHUD()
@@ -286,8 +317,8 @@ local function setupTempNumberHotkeys(hasChrome, chromeIndex)
 
                 if ok and chromeProfiles and chromeProfiles.profiles[profileNum] then
                     local p = chromeProfiles.profiles[profileNum]
-                    chromeItem.displayName = string.format("Chrome: [%d] %s", profileNum, p.name)
-                    chromeItem.badge = string.format("Profile %d", profileNum)
+                    chromeItem.badge = string.format("%d", profileNum)
+                    chromeItem.displayName = p.name
                 end
 
                 updateHUD()
@@ -319,18 +350,18 @@ local function handleKey(key)
 
     local items = {}
     if isChromeOnly then
-        -- Single app is Google Chrome: directly expand all 7 profiles into HUD
+        -- Single app is Google Chrome: directly expand 4 profiles with their real avatars into HUD
         local ok, chromeProfiles = pcall(require, "chrome_profiles")
         if ok and chromeProfiles and chromeProfiles.profiles then
-            local chromeIcon = getAppIcon("Google Chrome")
             for idx, p in ipairs(chromeProfiles.profiles) do
+                local avatar = chromeProfiles.getProfileIcon(p)
                 table.insert(items, {
                     name = p.name,
                     displayName = p.name,
                     number = p.number,
                     isChromeProfile = true,
                     profileIndex = idx,
-                    icon = chromeIcon
+                    icon = avatar
                 })
             end
         else
@@ -338,14 +369,32 @@ local function handleKey(key)
         end
     else
         -- Multi-app binding: create item for each app
+        local ok, chromeProfiles = pcall(require, "chrome_profiles")
+        local chromeThumbs = {}
+        if hasChrome and ok and chromeProfiles and chromeProfiles.profiles then
+            for _, p in ipairs(chromeProfiles.profiles) do
+                table.insert(chromeThumbs, chromeProfiles.getProfileIcon(p))
+            end
+        end
+
         for _, appName in ipairs(rawApps) do
+            local isChrome = (appName == "Google Chrome")
             table.insert(items, {
                 name = appName,
-                displayName = appName,
+                displayName = (isChrome and "Google Chrome" or appName),
                 appName = appName,
-                isChrome = (appName == "Google Chrome")
+                isChrome = isChrome,
+                badge = (isChrome and "1" or nil),
+                selectedChromeProfileIndex = 1,
+                chromeThumbnails = (isChrome and chromeThumbs or nil)
             })
         end
+    end
+
+    -- If only 1 simple app bound, launch immediately
+    if #items == 1 and not items[1].isChromeProfile then
+        hs.application.launchOrFocus(items[1].name)
+        return
     end
 
     -- If a session is already active for this key, cycle to next item
