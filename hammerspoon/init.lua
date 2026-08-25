@@ -38,7 +38,7 @@ if appSwitcher then
     appSwitcher.bindApp("a", "Antigravity", "Antigravity IDE")
     appSwitcher.bindApp("n", "Notes")
     appSwitcher.bindApp("p", "Photos", "Preview", "Passwords")
-    appSwitcher.bindApp("c", "Google Chrome")
+    appSwitcher.bindApp("c", "Google Chrome", "Calendar")
     appSwitcher.bindApp("m", "Activity Monitor")
     
     appSwitcher.bindApp("f", "Finder", "Freeform")

@@ -2,10 +2,9 @@ local ChromeProfiles = {}
 
 -- Modifiers for profile switching
 local hyper = {"cmd", "alt", "ctrl", "shift"}
-local standardModifiers = {"cmd", "alt", "ctrl"}
 
 -- Ordered profile definitions matching the Default account pop-up window
-local profiles = {
+ChromeProfiles.profiles = {
     {
         number = "1",
         dir = "Default",
@@ -57,12 +56,10 @@ local profiles = {
     },
 }
 
-local hotkeyObjects = {}
+local contextualHotkeys = {}
+local appWatcher = nil
 
 -- Select a profile through Chrome's native macOS Profiles menu bar
--- In Chrome, clicking the profile menu item:
--- 1. Focuses the last active window for that profile if one is already open (no new window created)
--- 2. Opens exactly one new window if no window exists for that profile
 local function selectProfileFromChrome(chrome, profile)
     if not chrome then return false end
 
@@ -120,64 +117,94 @@ end
 
 -- Launch or focus a specific Chrome profile
 function ChromeProfiles.focusProfile(profile)
-    local displayName = profile.name
+    if not profile then return end
 
-    -- Show instant HUD confirmation
+    local displayName = profile.name
     hs.alert.show(string.format("Chrome: [%s] %s", profile.number, displayName), 0.8)
 
     local chrome = hs.application.find("Google Chrome")
 
     if chrome then
-        -- When Chrome is running, use native menu bar profile selection to focus existing window
         local success = selectProfileFromChrome(chrome, profile)
         if success then
             return
         end
     end
 
-    -- Cold start or fallback: launch Chrome targeted to that profile directory without forcing a new instance
+    -- Fallback / Cold start: Launch Chrome directly to profile directory
     local cmd = string.format("open -b com.google.Chrome --args --profile-directory='%s'", profile.dir)
     hs.execute(cmd)
 
     hs.timer.doAfter(0.1, function()
         local c = hs.application.find("Google Chrome")
-        if c then
-            c:activate()
-        end
+        if c then c:activate() end
     end)
 end
 
--- Initialize hotkeys
+-- Focus by 1-based index
+function ChromeProfiles.focusProfileByIndex(index)
+    local p = ChromeProfiles.profiles[index]
+    if p then
+        ChromeProfiles.focusProfile(p)
+    end
+end
+
+-- Enable contextual hotkeys when Chrome is frontmost
+local function enableContextualHotkeys()
+    if #contextualHotkeys > 0 then return end
+
+    for _, p in ipairs(ChromeProfiles.profiles) do
+        local profile = p
+        local hk = hs.hotkey.bind(hyper, profile.number, function()
+            ChromeProfiles.focusProfile(profile)
+        end)
+        table.insert(contextualHotkeys, hk)
+    end
+end
+
+-- Disable contextual hotkeys when Chrome loses focus
+local function disableContextualHotkeys()
+    for _, hk in ipairs(contextualHotkeys) do
+        hk:delete()
+    end
+    contextualHotkeys = {}
+end
+
+-- Application watcher: only enable number shortcuts 1..7 when Chrome is frontmost
+local function handleAppEvent(appName, eventType, app)
+    if appName == "Google Chrome" then
+        if eventType == hs.application.watcher.activated then
+            enableContextualHotkeys()
+        elseif eventType == hs.application.watcher.deactivated then
+            disableContextualHotkeys()
+        end
+    end
+end
+
+-- Initialize module
 function ChromeProfiles.init()
-    -- Clear any existing hotkeys
     ChromeProfiles.cleanup()
 
-    for _, profile in ipairs(profiles) do
-        local p = profile
-
-        -- Bind Hyper (Caps Lock) + Number
-        local hkHyper = hs.hotkey.bind(hyper, p.number, function()
-            ChromeProfiles.focusProfile(p)
-        end)
-        table.insert(hotkeyObjects, hkHyper)
-
-        -- Bind Cmd + Alt + Ctrl + Number
-        local hkStd = hs.hotkey.bind(standardModifiers, p.number, function()
-            ChromeProfiles.focusProfile(p)
-        end)
-        table.insert(hotkeyObjects, hkStd)
+    -- Check if Chrome is already frontmost on load
+    local frontApp = hs.application.frontmostApplication()
+    if frontApp and frontApp:name() == "Google Chrome" then
+        enableContextualHotkeys()
     end
 
-    print("Chrome Profiles module initialized (" .. #profiles .. " profiles configured).")
+    appWatcher = hs.application.watcher.new(handleAppEvent)
+    appWatcher:start()
+
+    print("Chrome Profiles module initialized (Contextual hotkeys active when Chrome is focused).")
     return ChromeProfiles
 end
 
 -- Cleanup on reload
 function ChromeProfiles.cleanup()
-    for _, hk in ipairs(hotkeyObjects) do
-        hk:delete()
+    disableContextualHotkeys()
+    if appWatcher then
+        appWatcher:stop()
+        appWatcher = nil
     end
-    hotkeyObjects = {}
 end
 
 return ChromeProfiles

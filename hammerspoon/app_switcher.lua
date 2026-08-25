@@ -12,6 +12,7 @@ local activeSession = nil
 local hudCanvas = nil
 local flagsTap = nil
 local iconCache = {}
+local tempNumberHotkeys = {}
 
 -- Helper: Retrieve or cache an app's icon
 local function getAppIcon(appName)
@@ -81,15 +82,15 @@ local function updateHUD()
         return
     end
 
-    local apps = activeSession.apps
+    local items = activeSession.items
     local selectedIndex = activeSession.selectedIndex
-    local count = #apps
+    local count = #items
 
     local cardWidth = 110
-    local cardHeight = 120
-    local cardSpacing = 12
+    local cardHeight = 125
+    local cardSpacing = 10
     local padding = 16
-    local iconSize = 64
+    local iconSize = 56
 
     local totalWidth = (padding * 2) + (count * cardWidth) + ((count - 1) * cardSpacing)
     local totalHeight = (padding * 2) + cardHeight
@@ -122,7 +123,7 @@ local function updateHUD()
     table.insert(elements, {
         type = "rectangle",
         action = "fill",
-        fillColor = { red = 0.12, green = 0.12, blue = 0.14, alpha = 0.94 },
+        fillColor = { red = 0.10, green = 0.10, blue = 0.12, alpha = 0.95 },
         roundedRectRadii = { xRadius = 18, yRadius = 18 }
     })
     table.insert(elements, {
@@ -133,32 +134,33 @@ local function updateHUD()
         roundedRectRadii = { xRadius = 18, yRadius = 18 }
     })
 
-    -- Render each app card
-    for i, appName in ipairs(apps) do
+    -- Render each card
+    for i, item in ipairs(items) do
         local cardX = padding + (i - 1) * (cardWidth + cardSpacing)
         local cardY = padding
+        local isSelected = (i == selectedIndex)
 
-        -- Highlight box for currently selected app
-        if i == selectedIndex then
+        -- Highlight box for currently selected item
+        if isSelected then
             table.insert(elements, {
                 type = "rectangle",
                 action = "fill",
-                fillColor = { red = 0.22, green = 0.47, blue = 0.90, alpha = 0.60 },
+                fillColor = { red = 0.22, green = 0.47, blue = 0.90, alpha = 0.65 },
                 roundedRectRadii = { xRadius = 12, yRadius = 12 },
                 frame = { x = cardX, y = cardY, w = cardWidth, h = cardHeight }
             })
             table.insert(elements, {
                 type = "rectangle",
                 action = "stroke",
-                strokeColor = { red = 0.45, green = 0.70, blue = 1.0, alpha = 0.90 },
+                strokeColor = { red = 0.45, green = 0.70, blue = 1.0, alpha = 0.95 },
                 strokeWidth = 2,
                 roundedRectRadii = { xRadius = 12, yRadius = 12 },
                 frame = { x = cardX, y = cardY, w = cardWidth, h = cardHeight }
             })
         end
 
-        -- App Icon
-        local icon = getAppIcon(appName)
+        -- App / Profile Icon
+        local icon = item.icon or getAppIcon(item.appName or item.name)
         local iconX = cardX + (cardWidth - iconSize) / 2
         local iconY = cardY + 12
         table.insert(elements, {
@@ -167,17 +169,31 @@ local function updateHUD()
             frame = { x = iconX, y = iconY, w = iconSize, h = iconSize }
         })
 
-        -- App Label
-        local labelY = iconY + iconSize + 8
+        -- Number / Subtitle badge
+        local badgeText = item.number or item.badge
+        if badgeText then
+            table.insert(elements, {
+                type = "text",
+                text = badgeText,
+                textSize = 10,
+                textFont = ".AppleSystemUIFontBold",
+                textColor = { white = 0.75, alpha = (isSelected and 1.0 or 0.6) },
+                textAlignment = "center",
+                frame = { x = cardX + 4, y = iconY + iconSize + 4, w = cardWidth - 8, h = 14 }
+            })
+        end
+
+        -- Title Label
+        local labelY = iconY + iconSize + (badgeText and 18 or 8)
         table.insert(elements, {
             type = "text",
-            text = appName,
-            textSize = 12,
+            text = item.displayName or item.name,
+            textSize = 11,
             textFont = ".AppleSystemUIFontBold",
-            textColor = { white = 0.95, alpha = (i == selectedIndex and 1.0 or 0.75) },
+            textColor = { white = 0.95, alpha = (isSelected and 1.0 or 0.75) },
             textAlignment = "center",
             textLineBreak = "truncateTail",
-            frame = { x = cardX + 4, y = labelY, w = cardWidth - 8, h = 24 }
+            frame = { x = cardX + 4, y = labelY, w = cardWidth - 8, h = 26 }
         })
     end
 
@@ -185,23 +201,42 @@ local function updateHUD()
     hudCanvas:show()
 end
 
--- Close HUD and launch the selected app
+-- Clear temporary number shortcuts
+local function clearTempNumberHotkeys()
+    for _, hk in ipairs(tempNumberHotkeys) do
+        hk:delete()
+    end
+    tempNumberHotkeys = {}
+end
+
+-- Close HUD and launch the selected app / profile
 local function commitSession()
     if not activeSession then return end
 
-    local targetApp = activeSession.apps[activeSession.selectedIndex]
+    local selectedItem = activeSession.items[activeSession.selectedIndex]
     activeSession = nil
+    clearTempNumberHotkeys()
     updateHUD()
 
-    if targetApp then
-        hs.application.launchOrFocus(targetApp)
+    if selectedItem then
+        if selectedItem.isChromeProfile and selectedItem.profileIndex then
+            local ok, chromeProfiles = pcall(require, "chrome_profiles")
+            if ok and chromeProfiles and chromeProfiles.focusProfileByIndex then
+                chromeProfiles.focusProfileByIndex(selectedItem.profileIndex)
+            else
+                hs.application.launchOrFocus("Google Chrome")
+            end
+        elseif selectedItem.selectedChromeProfileIndex then
+            local ok, chromeProfiles = pcall(require, "chrome_profiles")
+            if ok and chromeProfiles and chromeProfiles.focusProfileByIndex then
+                chromeProfiles.focusProfileByIndex(selectedItem.selectedChromeProfileIndex)
+            else
+                hs.application.launchOrFocus("Google Chrome")
+            end
+        else
+            hs.application.launchOrFocus(selectedItem.appName or selectedItem.name)
+        end
     end
-end
-
--- Cancel session without switching
-local function cancelSession()
-    activeSession = nil
-    updateHUD()
 end
 
 -- Setup flagsChanged event tap to detect Caps Lock (Hyper) release
@@ -223,40 +258,114 @@ local function initFlagsTap()
     flagsTap:start()
 end
 
+-- Setup temporary number hotkeys (1..N) while an AppSwitcher session is active
+local function setupTempNumberHotkeys(hasChrome, chromeIndex)
+    clearTempNumberHotkeys()
+
+    local ok, chromeProfiles = pcall(require, "chrome_profiles")
+    local numProfiles = (ok and chromeProfiles and chromeProfiles.profiles and #chromeProfiles.profiles) or 7
+
+    for i = 1, numProfiles do
+        local profileNum = i
+        local numStr = tostring(profileNum)
+
+        local hk = hs.hotkey.bind(hyper, numStr, function()
+            if not activeSession then return end
+
+            if activeSession.isChromeOnly then
+                -- Session items ARE the profiles directly
+                if profileNum <= #activeSession.items then
+                    activeSession.selectedIndex = profileNum
+                    updateHUD()
+                end
+            elseif hasChrome and chromeIndex then
+                -- Multi-app session: select Chrome item and assign profile index
+                activeSession.selectedIndex = chromeIndex
+                local chromeItem = activeSession.items[chromeIndex]
+                chromeItem.selectedChromeProfileIndex = profileNum
+
+                if ok and chromeProfiles and chromeProfiles.profiles[profileNum] then
+                    local p = chromeProfiles.profiles[profileNum]
+                    chromeItem.displayName = string.format("Chrome: [%d] %s", profileNum, p.name)
+                    chromeItem.badge = string.format("Profile %d", profileNum)
+                end
+
+                updateHUD()
+            end
+        end)
+        table.insert(tempNumberHotkeys, hk)
+    end
+end
+
 -- Handle hotkey press for a key
 local function handleKey(key)
-    local apps = AppSwitcher.bindings[key]
-    if not apps or #apps == 0 then return end
+    local rawApps = AppSwitcher.bindings[key]
+    if not rawApps or #rawApps == 0 then return end
 
-    -- Ensure the eventtap listener is running
     initFlagsTap()
 
-    -- Single app: launch immediately
-    if #apps == 1 then
-        hs.application.launchOrFocus(apps[1])
-        return
+    -- Check if Chrome is in the bound applications list
+    local hasChrome = false
+    local chromeIndex = nil
+    for idx, appName in ipairs(rawApps) do
+        if appName == "Google Chrome" then
+            hasChrome = true
+            chromeIndex = idx
+            break
+        end
     end
 
-    -- If a session is already active for this key, cycle to the next app
+    local isChromeOnly = (hasChrome and #rawApps == 1)
+
+    local items = {}
+    if isChromeOnly then
+        -- Single app is Google Chrome: directly expand all 7 profiles into HUD
+        local ok, chromeProfiles = pcall(require, "chrome_profiles")
+        if ok and chromeProfiles and chromeProfiles.profiles then
+            local chromeIcon = getAppIcon("Google Chrome")
+            for idx, p in ipairs(chromeProfiles.profiles) do
+                table.insert(items, {
+                    name = p.name,
+                    displayName = p.name,
+                    number = p.number,
+                    isChromeProfile = true,
+                    profileIndex = idx,
+                    icon = chromeIcon
+                })
+            end
+        else
+            table.insert(items, { name = "Google Chrome", appName = "Google Chrome" })
+        end
+    else
+        -- Multi-app binding: create item for each app
+        for _, appName in ipairs(rawApps) do
+            table.insert(items, {
+                name = appName,
+                displayName = appName,
+                appName = appName,
+                isChrome = (appName == "Google Chrome")
+            })
+        end
+    end
+
+    -- If a session is already active for this key, cycle to next item
     if activeSession and activeSession.key == key then
-        activeSession.selectedIndex = (activeSession.selectedIndex % #apps) + 1
+        activeSession.selectedIndex = (activeSession.selectedIndex % #items) + 1
         updateHUD()
         return
     end
 
-    -- Starting a new session for this key:
-    -- Determine initial selected index based on frontmost app
+    -- Starting a new session
+    local startIndex = 1
     local frontApp = hs.application.frontmostApplication()
     local frontName = frontApp and frontApp:name()
-    local startIndex = 1
 
-    if frontName then
+    if frontName and not isChromeOnly then
         local lowerFront = string.lower(frontName)
-        for i, appName in ipairs(apps) do
-            local lowerTarget = string.lower(appName)
-            if lowerFront == lowerTarget or string.find(lowerFront, lowerTarget, 1, true) or string.find(lowerTarget, lowerFront, 1, true) then
-                -- Next in sequence
-                startIndex = (i % #apps) + 1
+        for i, it in ipairs(items) do
+            local lowerTarget = string.lower(it.appName or it.name)
+            if lowerFront == lowerTarget or string.find(lowerFront, lowerTarget, 1, true) then
+                startIndex = (i % #items) + 1
                 break
             end
         end
@@ -264,17 +373,19 @@ local function handleKey(key)
 
     activeSession = {
         key = key,
-        apps = apps,
-        selectedIndex = startIndex
+        items = items,
+        selectedIndex = startIndex,
+        isChromeOnly = isChromeOnly
     }
+
+    if hasChrome then
+        setupTempNumberHotkeys(hasChrome, chromeIndex)
+    end
+
     updateHUD()
 end
 
 -- Helper function to bind a key to one or more applications
--- Usage:
---   AppSwitcher.bindApp("c", "Google Chrome")
---   AppSwitcher.bindApp("a", "Antigravity", "Antigravity IDE")
---   AppSwitcher.bindApp("m", {"Spotify", "SoundCloud"})
 function AppSwitcher.bindApp(key, ...)
     local args = {...}
     if not AppSwitcher.bindings[key] then
@@ -303,6 +414,7 @@ end
 
 -- Cleanup function on config reload
 function AppSwitcher.cleanup()
+    clearTempNumberHotkeys()
     if hudCanvas then
         hudCanvas:hide()
         hudCanvas:delete()
