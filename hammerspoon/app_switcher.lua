@@ -408,16 +408,44 @@ local function handleKey(key)
     -- Starting a new session
     local startIndex = 1
     local frontApp = hs.application.frontmostApplication()
-    local frontName = frontApp and frontApp:name()
 
-    if frontName and not isChromeOnly then
-        local lowerFront = string.lower(frontName)
+    if frontApp and not isChromeOnly then
+        local frontName = frontApp:name()
+        local frontBundle = frontApp:bundleID()
+        local lowerFront = frontName and string.lower(frontName)
+        local matchedIndex = nil
+
+        -- Pass 1: Exact name or bundle ID match
         for i, it in ipairs(items) do
-            local lowerTarget = string.lower(it.appName or it.name)
-            if lowerFront == lowerTarget or string.find(lowerFront, lowerTarget, 1, true) then
-                startIndex = (i % #items) + 1
+            local targetName = it.appName or it.name
+            local lowerTarget = string.lower(targetName)
+            if lowerFront and lowerFront == lowerTarget then
+                matchedIndex = i
                 break
             end
+            if frontBundle then
+                local running = hs.application.find(targetName, true)
+                if running and running:bundleID() == frontBundle then
+                    matchedIndex = i
+                    break
+                end
+            end
+        end
+
+        -- Pass 2: Fallback to substring matching only when no exact match was found
+        if not matchedIndex and lowerFront then
+            for i, it in ipairs(items) do
+                local targetName = it.appName or it.name
+                local lowerTarget = string.lower(targetName)
+                if string.find(lowerFront, lowerTarget, 1, true) or string.find(lowerTarget, lowerFront, 1, true) then
+                    matchedIndex = i
+                    break
+                end
+            end
+        end
+
+        if matchedIndex then
+            startIndex = (matchedIndex % #items) + 1
         end
     end
 
