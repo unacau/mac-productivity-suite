@@ -26,22 +26,22 @@ end
 -- Load and initialize modules
 local appSwitcher = loadModule("app_switcher")
 local copyOnSelect = loadModule("copy_on_select", "init")
+local chromeProfiles = loadModule("chrome_profiles", "init")
 
 
 -- Application Bindings
 if appSwitcher then
 
     appSwitcher.bindApp("i", "iTerm")
-    appSwitcher.bindApp("s", "Spotify")
+    appSwitcher.bindApp("s", "Spotify", "SoundCloud", "System Settings")
     appSwitcher.bindApp("t", "Telegram")
-    appSwitcher.bindApp("a", "Antigravity")
-    appSwitcher.bindApp("e", "Antigravity IDE")
+    appSwitcher.bindApp("a", "Antigravity", "Antigravity IDE")
     appSwitcher.bindApp("n", "Notes")
-    appSwitcher.bindApp("p", "Photos")
+    appSwitcher.bindApp("p", "Photos", "Preview", "Passwords")
     appSwitcher.bindApp("c", "Google Chrome")
+    appSwitcher.bindApp("m", "Activity Monitor")
     
-    appSwitcher.bindApp("q", "Finder")
-    appSwitcher.bindApp("d", "SoundCloud")
+    appSwitcher.bindApp("f", "Finder", "Freeform")
     
 end
 
@@ -201,66 +201,6 @@ end)
 
 
 -- ============================================================================
--- Chrome Profiles Extension (Stateful App-Switcher Style)
+-- Chrome Profiles Extension
+-- Managed in chrome_profiles.lua (Keys 1..7 mapped to Default & other profiles)
 -- ============================================================================
-
--- Internal registry mapping profile directories to window IDs
-local chromeProfileRegistry = {
-    ["Default"]   = nil,
-    ["Profile 1"] = nil,
-    ["Profile 2"] = nil
-}
-
-local function launchOrFocusChromeProfile(profileDir)
-    local chrome = hs.application.find("Google Chrome")
-    
-    -- 1. If we already track a valid window for this profile, focus it instantly
-    if chromeProfileRegistry[profileDir] then
-        local win = hs.window.find(chromeProfileRegistry[profileDir])
-        if win and win:application():name() == "Google Chrome" then
-            win:focus()
-            return
-        end
-    end
-
-    -- 2. If no window is tracked yet, snapshot current Chrome window IDs
-    local preLaunchIDs = {}
-    if chrome then
-        for _, win in ipairs(chrome:allWindows()) do
-            preLaunchIDs[win:id()] = true
-        end
-    end
-
-    -- 3. Run the targeted profile command line arguments
-    local cmd = string.format("open -a 'Google Chrome' --args --profile-directory='%s'", profileDir)
-    hs.execute(cmd)
-
-    -- 4. Asynchronous check to latch onto the newly spawned window ID
-    hs.timer.doAfter(0.15, function()
-        local updatedChrome = hs.application.find("Google Chrome")
-        if not updatedChrome then return end
-        
-        -- Identify the newly registered window
-        for _, win in ipairs(updatedChrome:allWindows()) do
-            if win:subrole() == "AXStandardWindow" and not preLaunchIDs[win:id()] then
-                chromeProfileRegistry[profileDir] = win:id()
-                win:focus()
-                return
-            end
-        end
-        
-        -- Fallback: If no new window was spawned, grab the frontmost active window
-        local fallbackWin = updatedChrome:focusedWindow()
-        if fallbackWin then
-            chromeProfileRegistry[profileDir] = fallbackWin:id()
-        end
-    end)
-end
-
--- Define hotkey modifiers (Matches your standard system layout)
-local chromeModifiers = {"cmd", "alt", "ctrl"}
-
--- Bindings for your 3 profiles
-hs.hotkey.bind(chromeModifiers, "1", function() launchOrFocusChromeProfile("Default") end)
-hs.hotkey.bind(chromeModifiers, "2", function() launchOrFocusChromeProfile("Profile 1") end)
-hs.hotkey.bind(chromeModifiers, "3", function() launchOrFocusChromeProfile("Profile 2") end)
