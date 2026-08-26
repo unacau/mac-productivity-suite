@@ -36,6 +36,8 @@ ChromeProfiles.profiles = {
     },
 }
 
+ChromeProfiles.lastActiveProfileIndex = 1
+
 local contextualHotkeys = {}
 local appWatcher = nil
 
@@ -193,6 +195,11 @@ end
 function ChromeProfiles.focusProfile(profile)
     if not profile then return end
 
+    local pIdx = tonumber(profile.number)
+    if pIdx then
+        ChromeProfiles.lastActiveProfileIndex = pIdx
+    end
+
     local chrome = hs.application.find("Google Chrome", true)
 
     if chrome then
@@ -216,6 +223,7 @@ end
 function ChromeProfiles.focusProfileByIndex(index)
     local p = ChromeProfiles.profiles[index]
     if p then
+        ChromeProfiles.lastActiveProfileIndex = index
         ChromeProfiles.focusProfile(p)
     end
 end

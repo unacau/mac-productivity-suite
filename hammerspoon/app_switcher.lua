@@ -18,6 +18,7 @@ local appWatcher = nil
 
 -- Helper: Retrieve or cache an app's icon
 local function getAppIcon(appName)
+    if not appName or appName == "" then return nil end
     if iconCache[appName] then
         return iconCache[appName]
     end
@@ -34,7 +35,7 @@ local function getAppIcon(appName)
             end
         end
         local path = runningApp:path()
-        if path then
+        if path and hs.fs.attributes(path) then
             local img = hs.image.iconForFile(path)
             if img then
                 iconCache[appName] = img
@@ -43,20 +44,24 @@ local function getAppIcon(appName)
         end
     end
 
-    -- 2. Search common macOS application directories
+    -- 2. Search common macOS application directories (verifying existence on disk first)
     local candidatePaths = {
         "/Applications/" .. appName .. ".app",
         "/System/Applications/" .. appName .. ".app",
         "/System/Applications/Utilities/" .. appName .. ".app",
         os.getenv("HOME") .. "/Applications/" .. appName .. ".app",
+        os.getenv("HOME") .. "/Applications/Chrome Apps.localized/" .. appName .. ".app",
+        "/System/Library/CoreServices/" .. appName .. ".app",
         "/Applications/Setapp/" .. appName .. ".app"
     }
 
     for _, path in ipairs(candidatePaths) do
-        local img = hs.image.iconForFile(path)
-        if img then
-            iconCache[appName] = img
-            return img
+        if hs.fs.attributes(path) then
+            local img = hs.image.iconForFile(path)
+            if img then
+                iconCache[appName] = img
+                return img
+            end
         end
     end
 
@@ -67,7 +72,21 @@ local function getAppIcon(appName)
         return img
     end
 
-    -- 4. Fallback default macOS application icon
+    -- 4. Fallback: Search via Spotlight/mdfind for custom installed locations
+    local findCmd = string.format("mdfind \"kMDItemContentType == com.apple.application-bundle && kMDItemFSName == '%s.app'\" 2>/dev/null", appName)
+    local output = hs.execute(findCmd)
+    if output and output ~= "" then
+        local firstPath = string.match(output, "([^\r\n]+)")
+        if firstPath and hs.fs.attributes(firstPath) then
+            local fallbackImg = hs.image.iconForFile(firstPath)
+            if fallbackImg then
+                iconCache[appName] = fallbackImg
+                return fallbackImg
+            end
+        end
+    end
+
+    -- 5. Fallback default macOS application icon
     local generic = hs.image.iconForFile("/System/Library/CoreServices/Finder.app")
     iconCache[appName] = generic
     return generic
@@ -333,16 +352,26 @@ local function commitSession()
     if selectedItem then
         if selectedItem.isChromeProfile and selectedItem.profileIndex then
             local ok, chromeProfiles = pcall(require, "chrome_profiles")
-            if ok and chromeProfiles and chromeProfiles.focusProfileByIndex then
-                chromeProfiles.focusProfileByIndex(selectedItem.profileIndex)
+            if ok and chromeProfiles then
+                chromeProfiles.lastActiveProfileIndex = selectedItem.profileIndex
+                if chromeProfiles.focusProfileByIndex then
+                    chromeProfiles.focusProfileByIndex(selectedItem.profileIndex)
+                else
+                    hs.application.launchOrFocus("Google Chrome")
+                end
             else
                 hs.application.launchOrFocus("Google Chrome")
             end
         elseif selectedItem.isChrome then
             local profileIdx = selectedItem.selectedChromeProfileIndex or 1
             local ok, chromeProfiles = pcall(require, "chrome_profiles")
-            if ok and chromeProfiles and chromeProfiles.focusProfileByIndex then
-                chromeProfiles.focusProfileByIndex(profileIdx)
+            if ok and chromeProfiles then
+                chromeProfiles.lastActiveProfileIndex = profileIdx
+                if chromeProfiles.focusProfileByIndex then
+                    chromeProfiles.focusProfileByIndex(profileIdx)
+                else
+                    hs.application.launchOrFocus("Google Chrome")
+                end
             else
                 hs.application.launchOrFocus("Google Chrome")
             end
@@ -452,6 +481,7 @@ local function handleKey(key)
     else
         -- Multi-app binding: create item for each app
         local ok, chromeProfiles = pcall(require, "chrome_profiles")
+        local lastProfileIdx = (ok and chromeProfiles and chromeProfiles.lastActiveProfileIndex) or 1
         local chromeThumbs = {}
         if hasChrome and ok and chromeProfiles and chromeProfiles.profiles then
             for _, p in ipairs(chromeProfiles.profiles) do
@@ -466,8 +496,8 @@ local function handleKey(key)
                 displayName = (isChrome and "Google Chrome" or appName),
                 appName = appName,
                 isChrome = isChrome,
-                badge = (isChrome and "1" or nil),
-                selectedChromeProfileIndex = (isChrome and 1 or nil),
+                badge = (isChrome and tostring(lastProfileIdx) or nil),
+                selectedChromeProfileIndex = (isChrome and lastProfileIdx or nil),
                 chromeThumbnails = (isChrome and chromeThumbs or nil)
             })
         end
@@ -490,7 +520,19 @@ local function handleKey(key)
     local startIndex = 1
     local frontApp = hs.application.frontmostApplication()
 
-    if frontApp and not isChromeOnly then
+    if isChromeOnly then
+        local ok, chromeProfiles = pcall(require, "chrome_profiles")
+        local lastProf = (ok and chromeProfiles and chromeProfiles.lastActiveProfileIndex) or 1
+
+        if frontApp and (frontApp:name() == "Google Chrome" or frontApp:bundleID() == "com.google.Chrome") then
+            -- Focused window IS Google Chrome: select NEXT profile candidate
+            startIndex = (lastProf % #items) + 1
+        else
+            -- Focused window is OTHER than Google Chrome: select PREVIOUSLY focused profile candidate
+            startIndex = lastProf
+            if startIndex > #items then startIndex = 1 end
+        end
+    elseif frontApp then
         local frontName = frontApp:name()
         local frontBundle = frontApp:bundleID()
         local lowerFront = frontName and string.lower(frontName)
@@ -533,7 +575,7 @@ local function handleKey(key)
             startIndex = AppSwitcher.lastActiveIndex[key] or 1
             if startIndex > #items then startIndex = 1 end
         end
-    elseif not isChromeOnly then
+    else
         startIndex = AppSwitcher.lastActiveIndex[key] or 1
         if startIndex > #items then startIndex = 1 end
     end
