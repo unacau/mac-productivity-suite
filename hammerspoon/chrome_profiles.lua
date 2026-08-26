@@ -200,9 +200,6 @@ end
 function ChromeProfiles.focusProfile(profile)
     if not profile then return end
 
-    local displayName = profile.name
-    hs.alert.show(string.format("Chrome: [%s] %s", profile.number, displayName), 0.8)
-
     local chrome = hs.application.find("Google Chrome")
 
     if chrome then
