@@ -87,10 +87,9 @@ local function updateHUD()
     local count = #items
 
     local cardWidth = 110
-    local cardHeight = 130
+    local cardHeight = 126
     local cardSpacing = 10
     local padding = 16
-    local iconSize = 56
 
     local totalWidth = (padding * 2) + (count * cardWidth) + ((count - 1) * cardSpacing)
     local totalHeight = (padding * 2) + cardHeight
@@ -159,15 +158,40 @@ local function updateHUD()
             })
         end
 
-        -- App / Profile Icon
-        if item.isChrome and not item.isChromeProfile and item.chromeThumbnails then
-            -- Multi-app card for Chrome: render the 4 avatar thumbnails in a row
+        local isMultiAppChrome = item.isChrome and not item.isChromeProfile and item.chromeThumbnails
+
+        if isMultiAppChrome then
+            -- 1. Normal size Google Chrome App Icon
+            local chromeIcon = getAppIcon("Google Chrome")
+            local iconSize = 52
+            local iconX = cardX + (cardWidth - iconSize) / 2
+            local iconY = cardY + 10
+            table.insert(elements, {
+                type = "image",
+                image = chromeIcon,
+                frame = { x = iconX, y = iconY, w = iconSize, h = iconSize }
+            })
+
+            -- 2. Title Label "Google Chrome"
+            local titleY = cardY + 68
+            table.insert(elements, {
+                type = "text",
+                text = item.displayName or item.name,
+                textSize = 11,
+                textFont = ".AppleSystemUIFontBold",
+                textColor = { white = 0.95, alpha = (isSelected and 1.0 or 0.75) },
+                textAlignment = "center",
+                textLineBreak = "truncateTail",
+                frame = { x = cardX + 4, y = titleY, w = cardWidth - 8, h = 18 }
+            })
+
+            -- 3. 4 Profile Avatar Thumbnails placed UNDER "Google Chrome"
             local thumbs = item.chromeThumbnails
-            local thumbSize = 22
-            local thumbSpacing = 3
+            local thumbSize = 16
+            local thumbSpacing = 4
             local totalThumbW = (#thumbs * thumbSize) + ((#thumbs - 1) * thumbSpacing)
             local startThumbX = cardX + (cardWidth - totalThumbW) / 2
-            local thumbY = cardY + 24
+            local thumbY = cardY + 92
 
             for tIdx, thumbImg in ipairs(thumbs) do
                 local tX = startThumbX + (tIdx - 1) * (thumbSize + thumbSpacing)
@@ -176,56 +200,75 @@ local function updateHUD()
                     image = thumbImg,
                     frame = { x = tX, y = thumbY, w = thumbSize, h = thumbSize }
                 })
-                -- Highlight border around selected profile thumbnail
+                -- Circular highlight ring around selected profile thumbnail
                 if (item.selectedChromeProfileIndex or 1) == tIdx then
                     table.insert(elements, {
                         type = "rectangle",
                         action = "stroke",
                         strokeColor = { red = 0.45, green = 0.85, blue = 1.0, alpha = 1.0 },
                         strokeWidth = 2,
-                        roundedRectRadii = { xRadius = 11, yRadius = 11 },
+                        roundedRectRadii = { xRadius = 9, yRadius = 9 },
                         frame = { x = tX - 1, y = thumbY - 1, w = thumbSize + 2, h = thumbSize + 2 }
                     })
                 end
             end
-        else
-            -- Single profile card or standard app card
-            local icon = item.icon or getAppIcon(item.appName or item.name)
+        elseif item.isChromeProfile then
+            -- Single Chrome Profile mode (Hyper+C when bound to Chrome only)
+            local icon = item.icon or getAppIcon(item.name)
+            local iconSize = 52
             local iconX = cardX + (cardWidth - iconSize) / 2
-            local iconY = cardY + 10
+            local iconY = cardY + 12
             table.insert(elements, {
                 type = "image",
                 image = icon,
                 frame = { x = iconX, y = iconY, w = iconSize, h = iconSize }
             })
-        end
 
-        -- Number / Subtitle badge
-        local badgeText = item.number or item.badge
-        if badgeText then
+            if item.number or item.badge then
+                table.insert(elements, {
+                    type = "text",
+                    text = item.number or item.badge,
+                    textSize = 10,
+                    textFont = ".AppleSystemUIFontBold",
+                    textColor = { white = 0.80, alpha = (isSelected and 1.0 or 0.6) },
+                    textAlignment = "center",
+                    frame = { x = cardX + 4, y = cardY + 68, w = cardWidth - 8, h = 14 }
+                })
+            end
+
             table.insert(elements, {
                 type = "text",
-                text = badgeText,
-                textSize = 10,
+                text = item.displayName or item.name,
+                textSize = 11,
                 textFont = ".AppleSystemUIFontBold",
-                textColor = { white = 0.80, alpha = (isSelected and 1.0 or 0.6) },
+                textColor = { white = 0.95, alpha = (isSelected and 1.0 or 0.75) },
                 textAlignment = "center",
-                frame = { x = cardX + 4, y = cardY + iconSize + 14, w = cardWidth - 8, h = 14 }
+                textLineBreak = "truncateTail",
+                frame = { x = cardX + 4, y = cardY + 84, w = cardWidth - 8, h = 22 }
+            })
+        else
+            -- Standard application card (e.g. Calendar, Spotify, Finder)
+            local icon = item.icon or getAppIcon(item.appName or item.name)
+            local iconSize = 52
+            local iconX = cardX + (cardWidth - iconSize) / 2
+            local iconY = cardY + 18
+            table.insert(elements, {
+                type = "image",
+                image = icon,
+                frame = { x = iconX, y = iconY, w = iconSize, h = iconSize }
+            })
+
+            table.insert(elements, {
+                type = "text",
+                text = item.displayName or item.name,
+                textSize = 11,
+                textFont = ".AppleSystemUIFontBold",
+                textColor = { white = 0.95, alpha = (isSelected and 1.0 or 0.75) },
+                textAlignment = "center",
+                textLineBreak = "truncateTail",
+                frame = { x = cardX + 4, y = cardY + 78, w = cardWidth - 8, h = 20 }
             })
         end
-
-        -- Title Label
-        local labelY = cardY + iconSize + (badgeText and 28 or 16)
-        table.insert(elements, {
-            type = "text",
-            text = item.displayName or item.name,
-            textSize = 11,
-            textFont = ".AppleSystemUIFontBold",
-            textColor = { white = 0.95, alpha = (isSelected and 1.0 or 0.75) },
-            textAlignment = "center",
-            textLineBreak = "truncateTail",
-            frame = { x = cardX + 4, y = labelY, w = cardWidth - 8, h = 26 }
-        })
     end
 
     hudCanvas:replaceElements(elements)
@@ -319,7 +362,7 @@ local function setupTempNumberHotkeys(hasChrome, chromeIndex)
                 if ok and chromeProfiles and chromeProfiles.profiles[profileNum] then
                     local p = chromeProfiles.profiles[profileNum]
                     chromeItem.badge = string.format("%d", profileNum)
-                    chromeItem.displayName = p.name
+                    chromeItem.displayName = "Google Chrome"
                 end
 
                 updateHUD()

@@ -48,22 +48,93 @@ local function validateProfiles()
     end
 end
 
--- Get profile avatar icon from Google Profile Picture.png
+-- Helper to create a circular masked image
+local function makeCircularImage(image)
+    if not image then return nil end
+    local sz = image:size()
+    local w = sz.w
+    local h = sz.h
+    local dim = math.min(w, h)
+    if dim <= 0 then return image end
+
+    local c = hs.canvas.new({x = 0, y = 0, w = dim, h = dim})
+    c[1] = {
+        type = "rectangle",
+        action = "strokeAndFill",
+        roundedRectRadii = {xRadius = dim / 2, yRadius = dim / 2},
+        clipToPath = true
+    }
+    c[2] = {
+        type = "image",
+        image = image,
+        frame = {x = (dim - w) / 2, y = (dim - h) / 2, w = w, h = h}
+    }
+    local circularImg = c:imageFromCanvas()
+    c:delete()
+    return circularImg or image
+end
+
+-- Get profile avatar icon (resolves custom theme avatar or Google Profile picture)
 function ChromeProfiles.getProfileIcon(profile)
     if not profile then return nil end
     if profile.cachedIcon then return profile.cachedIcon end
 
-    local chromeDir = os.getenv("HOME") .. "/Library/Application Support/Google/Chrome/" .. profile.dir
-    local gaiaPic = chromeDir .. "/Google Profile Picture.png"
+    local baseDir = hs.configdir or (os.getenv("HOME") .. "/.hammerspoon")
 
-    if hs.fs.attributes(gaiaPic) then
-        local img = hs.image.imageFromPath(gaiaPic)
+    -- 1. Check pre-generated circular profile avatar in assets/profiles/
+    local profileAsset = baseDir .. "/assets/profiles/" .. profile.dir .. ".png"
+    if hs.fs.attributes(profileAsset) then
+        local img = hs.image.imageFromPath(profileAsset)
         if img then
             profile.cachedIcon = img
             return img
         end
     end
 
+    local localStatePath = os.getenv("HOME") .. "/Library/Application Support/Google/Chrome/Local State"
+    local useGaia = true
+    local avatarResource = nil
+
+    if hs.fs.attributes(localStatePath) then
+        local localState = hs.json.read(localStatePath)
+        if localState and localState.profile and localState.profile.info_cache and localState.profile.info_cache[profile.dir] then
+            local info = localState.profile.info_cache[profile.dir]
+            if info.use_gaia_picture == false then
+                useGaia = false
+            end
+            if info.avatar_icon then
+                avatarResource = string.match(info.avatar_icon, "IDR_PROFILE_AVATAR_%d+")
+            end
+        end
+    end
+
+    -- 2. If using custom/theme avatar (e.g. Sunglasses IDR_PROFILE_AVATAR_44)
+    if (not useGaia or avatarResource == "IDR_PROFILE_AVATAR_44") and avatarResource then
+        local assetPath = baseDir .. "/assets/avatars/" .. avatarResource .. ".png"
+        if hs.fs.attributes(assetPath) then
+            local img = hs.image.imageFromPath(assetPath)
+            if img then
+                local circular = makeCircularImage(img)
+                profile.cachedIcon = circular
+                return circular
+            end
+        end
+    end
+
+    -- 3. If using Gaia profile picture and it exists on disk
+    if useGaia then
+        local gaiaPic = os.getenv("HOME") .. "/Library/Application Support/Google/Chrome/" .. profile.dir .. "/Google Profile Picture.png"
+        if hs.fs.attributes(gaiaPic) then
+            local img = hs.image.imageFromPath(gaiaPic)
+            if img then
+                local circular = makeCircularImage(img)
+                profile.cachedIcon = circular
+                return circular
+            end
+        end
+    end
+
+    -- 4. Fallback: Google Chrome application bundle icon
     local chromeIcon = hs.image.imageFromAppBundle("com.google.Chrome")
     profile.cachedIcon = chromeIcon
     return chromeIcon
