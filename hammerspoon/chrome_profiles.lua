@@ -147,48 +147,41 @@ local function selectProfileFromChrome(chrome, profile)
     -- Activate Chrome first so menu is accessible
     chrome:activate()
 
+    local menuCandidates = profile.menuCandidates or {profile.name}
+    local topMenus = {"Profiles", "People"}
+
+    -- Fast path (1-2ms): Directly select without expensive accessibility tree dump
+    for _, menuName in ipairs(topMenus) do
+        for _, candidate in ipairs(menuCandidates) do
+            if chrome:selectMenuItem({menuName, candidate}) then
+                return true
+            end
+        end
+    end
+
+    -- Fallback path: only scan getMenuItems() if fast path failed
     local menuItems = chrome:getMenuItems()
-    local menuName = "Profiles"
     if menuItems then
         for _, topMenu in ipairs(menuItems) do
             if topMenu.AXTitle == "Profiles" or topMenu.AXTitle == "People" then
-                menuName = topMenu.AXTitle
-                break
-            end
-        end
-    end
-
-    -- 1. Try candidate titles directly
-    for _, candidate in ipairs(profile.menuCandidates or {}) do
-        if chrome:selectMenuItem({menuName, candidate}) then
-            return true
-        end
-    end
-
-    -- 2. Inspect menu items tree for partial or case-insensitive matching
-    if menuItems then
-        local profilesMenu = nil
-        for _, topMenu in ipairs(menuItems) do
-            if topMenu.AXTitle == menuName then
-                profilesMenu = topMenu
-                break
-            end
-        end
-
-        if profilesMenu and profilesMenu.AXChildren and profilesMenu.AXChildren[1] then
-            local subItems = profilesMenu.AXChildren[1].AXChildren or {}
-            for _, item in ipairs(subItems) do
-                local title = item.AXTitle
-                if title and title ~= "" and not string.find(title, "^Edit") and not string.find(title, "^Customize") and not string.find(title, "^Manage") then
-                    local lowerTitle = string.lower(title)
-                    for _, candidate in ipairs(profile.menuCandidates or {}) do
-                        if lowerTitle == string.lower(candidate) or string.find(lowerTitle, string.lower(candidate), 1, true) then
-                            if chrome:selectMenuItem({menuName, title}) then
-                                return true
+                local menuName = topMenu.AXTitle
+                if topMenu.AXChildren and topMenu.AXChildren[1] then
+                    local subItems = topMenu.AXChildren[1].AXChildren or {}
+                    for _, item in ipairs(subItems) do
+                        local title = item.AXTitle
+                        if title and title ~= "" and not string.find(title, "^Edit") and not string.find(title, "^Customize") and not string.find(title, "^Manage") then
+                            local lowerTitle = string.lower(title)
+                            for _, candidate in ipairs(menuCandidates) do
+                                if lowerTitle == string.lower(candidate) or string.find(lowerTitle, string.lower(candidate), 1, true) then
+                                    if chrome:selectMenuItem({menuName, title}) then
+                                        return true
+                                    end
+                                end
                             end
                         end
                     end
                 end
+                break
             end
         end
     end
@@ -200,7 +193,7 @@ end
 function ChromeProfiles.focusProfile(profile)
     if not profile then return end
 
-    local chrome = hs.application.find("Google Chrome")
+    local chrome = hs.application.find("Google Chrome", true)
 
     if chrome then
         local success = selectProfileFromChrome(chrome, profile)
@@ -213,8 +206,8 @@ function ChromeProfiles.focusProfile(profile)
     local cmd = string.format("open -b com.google.Chrome --args --profile-directory='%s'", profile.dir)
     hs.execute(cmd)
 
-    hs.timer.doAfter(0.1, function()
-        local c = hs.application.find("Google Chrome")
+    hs.timer.doAfter(0.05, function()
+        local c = hs.application.find("Google Chrome", true)
         if c then c:activate() end
     end)
 end
@@ -263,6 +256,11 @@ end
 function ChromeProfiles.init()
     validateProfiles()
     ChromeProfiles.cleanup()
+
+    -- Pre-warm all profile icons into memory cache so hotkeys execute with 0 disk I/O
+    for _, p in ipairs(ChromeProfiles.profiles) do
+        ChromeProfiles.getProfileIcon(p)
+    end
 
     -- Check if Chrome is already frontmost on load
     local frontApp = hs.application.frontmostApplication()

@@ -6,6 +6,7 @@ local hyper = {"cmd", "alt", "ctrl", "shift"}
 -- Internal registry of key -> list of application names
 AppSwitcher.bindings = {}
 AppSwitcher.hotkeys = {}
+AppSwitcher.lastActiveIndex = {}
 
 -- Active switching session state
 local activeSession = nil
@@ -13,6 +14,7 @@ local hudCanvas = nil
 local flagsTap = nil
 local iconCache = {}
 local tempNumberHotkeys = {}
+local appWatcher = nil
 
 -- Helper: Retrieve or cache an app's icon
 local function getAppIcon(appName)
@@ -21,7 +23,7 @@ local function getAppIcon(appName)
     end
 
     -- 1. Check if application is currently running
-    local runningApp = hs.application.find(appName)
+    local runningApp = hs.application.find(appName, true)
     if runningApp then
         local bundleID = runningApp:bundleID()
         if bundleID then
@@ -283,11 +285,47 @@ local function clearTempNumberHotkeys()
     tempNumberHotkeys = {}
 end
 
+-- Track active application to maintain MRU per shortcut key even when focused outside switcher
+local function handleGlobalAppEvent(appName, eventType, app)
+    if eventType ~= hs.application.watcher.activated then return end
+    if not appName or appName == "" then return end
+
+    local lowerApp = string.lower(appName)
+    local bundle = app and app:bundleID()
+
+    for k, apps in pairs(AppSwitcher.bindings) do
+        if #apps > 1 then
+            for idx, name in ipairs(apps) do
+                local lowerName = string.lower(name)
+                if lowerApp == lowerName then
+                    AppSwitcher.lastActiveIndex[k] = idx
+                    break
+                elseif bundle then
+                    local r = hs.application.find(name, true)
+                    if r and r:bundleID() == bundle then
+                        AppSwitcher.lastActiveIndex[k] = idx
+                        break
+                    end
+                end
+            end
+        end
+    end
+end
+
 -- Close HUD and launch the selected app / profile
 local function commitSession()
     if not activeSession then return end
 
-    local selectedItem = activeSession.items[activeSession.selectedIndex]
+    local currentSession = activeSession
+    local selectedItem = currentSession.items[currentSession.selectedIndex]
+    local sessionKey = currentSession.key
+    local selectedIndex = currentSession.selectedIndex
+
+    -- Record last focused candidate index for this shortcut group
+    if sessionKey and selectedIndex then
+        AppSwitcher.lastActiveIndex[sessionKey] = selectedIndex
+    end
+
     activeSession = nil
     clearTempNumberHotkeys()
     updateHUD()
@@ -488,8 +526,16 @@ local function handleKey(key)
         end
 
         if matchedIndex then
+            -- Focused window IS in the same shortcut group: select NEXT candidate
             startIndex = (matchedIndex % #items) + 1
+        else
+            -- Focused window is OTHER than pressed shortcut: select PREVIOUSLY focused candidate
+            startIndex = AppSwitcher.lastActiveIndex[key] or 1
+            if startIndex > #items then startIndex = 1 end
         end
+    elseif not isChromeOnly then
+        startIndex = AppSwitcher.lastActiveIndex[key] or 1
+        if startIndex > #items then startIndex = 1 end
     end
 
     activeSession = {
@@ -506,6 +552,11 @@ local function handleKey(key)
     updateHUD()
 end
 
+-- Start global application watcher to track MRU across applications
+if not appWatcher then
+    appWatcher = hs.application.watcher.new(handleGlobalAppEvent):start()
+end
+
 -- Helper function to bind a key to one or more applications
 function AppSwitcher.bindApp(key, ...)
     local args = {...}
@@ -518,10 +569,12 @@ function AppSwitcher.bindApp(key, ...)
             for _, name in ipairs(arg) do
                 if type(name) == "string" and name ~= "" then
                     table.insert(AppSwitcher.bindings[key], name)
+                    getAppIcon(name)
                 end
             end
         elseif type(arg) == "string" and arg ~= "" then
             table.insert(AppSwitcher.bindings[key], arg)
+            getAppIcon(arg)
         end
     end
 
@@ -544,6 +597,10 @@ function AppSwitcher.cleanup()
     if flagsTap then
         flagsTap:stop()
         flagsTap = nil
+    end
+    if appWatcher then
+        appWatcher:stop()
+        appWatcher = nil
     end
     activeSession = nil
 end
