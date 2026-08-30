@@ -7,7 +7,7 @@
     <language>en</language>
     <item>
       <title>Version 2.0.0 (Build 1)</title>
-      <pubDate>Mon, 30 Aug 2026 14:24:00 +0000</pubDate>
+      <pubDate>Sun, 30 Aug 2026 17:02:47 +0200</pubDate>
       <sparkle:version>1</sparkle:version>
       <sparkle:shortVersionString>2.0.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
@@ -19,8 +19,8 @@
       </ul>]]></description>
       <enclosure url="https://github.com/unacau/mac-productivity-suite/releases/download/v2.0.0/MacProductivitySuite.dmg"
                  type="application/octet-stream"
-                 sparkle:edSignature="lqG+IQi4MHggWvALtVle7BNgufU5ZSOdl/7m9+cYghkPxugpTC9vKS/5O56xWLnNfqtevGIxJnkOb5/kiPNrDg=="
-                 length="2020216" />
+                 sparkle:edSignature="oTjOw4KpU0ObF/VkqlJajLpPqrxyHWMzuk2W42uNoIMpqMqC8BgO+WnHJkFT5bE4wwAElcvcyNf4EZ6jitu7BA=="
+                 length="2020226" />
     </item>
   </channel>
 </rss>
