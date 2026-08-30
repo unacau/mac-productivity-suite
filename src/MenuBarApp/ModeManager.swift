@@ -64,35 +64,47 @@ final class ModeManager: ObservableObject {
         isKarabinerInstalled = fileManager.fileExists(atPath: "/Applications/Karabiner-Elements.app")
         
         let runningApps = NSWorkspace.shared.runningApplications
-        isHammerspoonRunning = runningApps.contains { $0.bundleIdentifier == "org.hammerspoon.Hammerspoon" }
-        
-        let isAppRunning = runningApps.contains { 
-            $0.bundleIdentifier?.contains("Karabiner") == true || $0.localizedName?.contains("Karabiner") == true 
+        isHammerspoonRunning = runningApps.contains { app in
+            app.bundleIdentifier == "org.hammerspoon.Hammerspoon" ||
+            app.localizedName?.lowercased().contains("hammerspoon") == true
         }
         
+        let isAppRunning = runningApps.contains { app in
+            let bundle = app.bundleIdentifier ?? ""
+            let name = app.localizedName ?? ""
+            return bundle.lowercased().contains("karabiner") ||
+                   bundle.lowercased().contains("pqrs") ||
+                   name.lowercased().contains("karabiner")
+        }
+        
+        // Immediately set from running apps
+        self.isKarabinerRunning = isAppRunning
+        
+        // Also verify background daemons asynchronously
         Task.detached {
             let isDaemonRunning = self.checkKarabinerDaemon()
             await MainActor.run {
-                self.isKarabinerRunning = isAppRunning || isDaemonRunning
+                if isDaemonRunning {
+                    self.isKarabinerRunning = true
+                }
             }
         }
     }
     
     nonisolated private func checkKarabinerDaemon() -> Bool {
         let task = Process()
-        task.launchPath = "/bin/ps"
-        task.arguments = ["ax"]
+        task.launchPath = "/usr/bin/pgrep"
+        task.arguments = ["-if", "karabiner"]
         let pipe = Pipe()
         task.standardOutput = pipe
         do {
             try task.run()
+            let _ = pipe.fileHandleForReading.readDataToEndOfFile()
             task.waitUntilExit()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            if let output = String(data: data, encoding: .utf8) {
-                return output.contains("Karabiner-Core-Service") || output.contains("Karabiner-Console-User-Server")
-            }
-        } catch {}
-        return false
+            return task.terminationStatus == 0
+        } catch {
+            return false
+        }
     }
     
     func loadConfig() {
