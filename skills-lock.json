@@ -1,11 +1,35 @@
 {
   "version": 1,
   "skills": {
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "skillPath": "skills/find-skills/SKILL.md",
+      "computedHash": "b146008599c31057cef1c145774cea5d5afb30e8f43fa802e47a4b461419aaaf"
+    },
+    "hammerspoon": {
+      "source": "plinde/claude-plugins",
+      "sourceType": "github",
+      "skillPath": "hammerspoon/skills/hammerspoon/SKILL.md",
+      "computedHash": "4bf2b94033f9a849ae3a7c92cb045d22f73710dca1ba3ec976a1f7fa674d6587"
+    },
+    "lua": {
+      "source": "mindrally/skills",
+      "sourceType": "github",
+      "skillPath": "lua/SKILL.md",
+      "computedHash": "46a1cb96c640e5dd186aee548d329217338fc160088b81696fbe5e809b150002"
+    },
     "macos-development": {
       "source": "rshankras/claude-code-apple-skills",
       "sourceType": "github",
       "skillPath": "skills/macos/SKILL.md",
       "computedHash": "294b31742ef3f87e13859714c402081845eaebd52e4691c716f5ed38c4013936"
+    },
+    "macos-release": {
+      "source": "fayazara/macos-app-skills",
+      "sourceType": "github",
+      "skillPath": "release/SKILL.md",
+      "computedHash": "b313d525a5b732d02b889ec3772594d5edbc327ddb7471827df3d9abf7e5a0f9"
     }
   }
 }

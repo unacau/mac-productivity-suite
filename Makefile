@@ -1,19 +1,20 @@
-.PHONY: all package clean
+.PHONY: all native full clean verify
 
-APP_NAME = MacProductivitySuite
-VERSION = 1.0.0
-PACKAGE_NAME = $(APP_NAME)-$(VERSION).zip
+all: native full
 
-all: package
+native:
+	@./build_native_app.sh
 
-package:
-	@echo "Packaging $(PACKAGE_NAME)..."
-	@mkdir -p dist/$(APP_NAME)
-	@cp -R hammerspoon dist/$(APP_NAME)/
-	@cp -R karabiner dist/$(APP_NAME)/
-	@cp install.sh dist/$(APP_NAME)/
-	@cd dist && zip -r $(PACKAGE_NAME) $(APP_NAME)
-	@echo "Package created at dist/$(PACKAGE_NAME)"
+full:
+	@./build_full_pkg.sh
+
+verify:
+	@echo "=================================================="
+	@echo " Verifying All Distributables                     "
+	@echo "=================================================="
+	@ls -lh dist/*.pkg
+	@test -f "dist/MacProductivitySuite-Native.pkg" && echo "✅ Native Package: OK ($(shell ls -lh dist/MacProductivitySuite-Native.pkg | awk '{print $$5}'))"
+	@test -f "dist/MacProductivitySuite-Full.pkg" && echo "✅ Full Package (with Karabiner & Hammerspoon): OK ($(shell ls -lh dist/MacProductivitySuite-Full.pkg | awk '{print $$5}'))"
 
 clean:
 	@rm -rf dist
