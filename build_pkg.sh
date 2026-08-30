@@ -142,8 +142,8 @@ echo "[4/4] Generating .pkg installer bundle..."
 pkgbuild \
     --root "$ROOT_DIR" \
     --scripts "$SCRIPTS_DIR" \
-    --identifier "com.igorekishev.macproductivitysuite" \
-    --version "1.0.0" \
+    --identifier "com.unacau.macproductivitysuite" \
+    --version "2.0.0" \
     "$DIST_DIR/$PKG_NAME"
 
 echo "=================================================="

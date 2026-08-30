@@ -6,7 +6,7 @@ BUILD="1"
 APP_NAME="Mac Productivity Suite"
 DMG_FILE="dist/MacProductivitySuite.dmg"
 APPCAST_FILE="appcast.xml"
-REPO="igorekishev/mac-productivity-suite"
+REPO="unacau/mac-productivity-suite"
 
 echo "=================================================="
 echo " Preparing Release v$VERSION (Build $BUILD)       "

@@ -2,7 +2,7 @@
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle"  xmlns:dc="http://purl.org/dc/elements/1.1/">
   <channel>
     <title>Mac Productivity Suite Changelog</title>
-    <link>https://raw.githubusercontent.com/igorekishev/mac-productivity-suite/main/appcast.xml</link>
+    <link>https://raw.githubusercontent.com/unacau/mac-productivity-suite/main/appcast.xml</link>
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
     <item>
@@ -17,10 +17,10 @@
         <li>Automatic Chrome Profiles (Brave, Edge, Chromium)</li>
         <li>New Preferences UI</li>
       </ul>]]></description>
-      <enclosure url="https://github.com/igorekishev/mac-productivity-suite/releases/download/v2.0.0/MacProductivitySuite.dmg"
+      <enclosure url="https://github.com/unacau/mac-productivity-suite/releases/download/v2.0.0/MacProductivitySuite.dmg"
                  type="application/octet-stream"
-                 sparkle:edSignature="lDKJZ10j0N54o1oUQHdli5Pxrg0/X6R6zxfZ9edOKTXkMGIlYuyHTdZzB52s9ujGSujR1XerRJnRy1Q7eUpgAQ=="
-                 length="2020145" />
+                 sparkle:edSignature="lqG+IQi4MHggWvALtVle7BNgufU5ZSOdl/7m9+cYghkPxugpTC9vKS/5O56xWLnNfqtevGIxJnkOb5/kiPNrDg=="
+                 length="2020216" />
     </item>
   </channel>
 </rss>

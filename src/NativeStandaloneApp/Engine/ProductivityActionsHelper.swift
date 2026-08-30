@@ -1,28 +1,38 @@
 import Cocoa
 
-final class ProductivityActionsHelper {
-    static let shared = ProductivityActionsHelper()
+@MainActor
+public final class ProductivityActionsHelper {
+    public static let shared = ProductivityActionsHelper()
     
     private init() {
         setupActions()
     }
     
-    func setupActions() {
+    public func setupActions() {
+        let config = AppConfigManager.shared.config
         let cmdOptCtrlModifiers = KeyCodes.cmdOptCtrlModifiers
         let cmdShiftModifiers = KeyCodes.cmdShiftModifiers
         
         // 1. Dual-column Finder Split: Cmd + Alt + Ctrl + F
-        HotkeyManager.shared.register(keyCode: KeyCodes.kVK_ANSI_F, modifiers: cmdOptCtrlModifiers) {
-            ProductivityActionsHelper.shared.splitFinderWindows()
+        if config.productivityShortcuts.finderSplitEnabled {
+            HotkeyManager.shared.register(keyCode: KeyCodes.kVK_ANSI_F, modifiers: cmdOptCtrlModifiers) {
+                Task { @MainActor in
+                    ProductivityActionsHelper.shared.splitFinderWindows()
+                }
+            }
         }
         
         // 2. Highlight text to markdown note: Cmd + Shift + H
-        HotkeyManager.shared.register(keyCode: KeyCodes.kVK_ANSI_H, modifiers: cmdShiftModifiers) {
-            ProductivityActionsHelper.shared.saveHighlightedText()
+        if config.productivityShortcuts.quickNotesEnabled {
+            HotkeyManager.shared.register(keyCode: KeyCodes.kVK_ANSI_H, modifiers: cmdShiftModifiers) {
+                Task { @MainActor in
+                    ProductivityActionsHelper.shared.saveHighlightedText()
+                }
+            }
         }
     }
     
-    func splitFinderWindows() {
+    public func splitFinderWindows() {
         let script = """
         tell application "Finder"
             if (count Finder windows) > 0 then
@@ -39,7 +49,9 @@ final class ProductivityActionsHelper {
         }
     }
     
-    func saveHighlightedText() {
+    public func saveHighlightedText() {
+        let config = AppConfigManager.shared.config.productivityShortcuts
+        
         // Synthesize Cmd+C
         let src = CGEventSource(stateID: .hidSystemState)
         let keyDown = CGEvent(keyboardEventSource: src, virtualKey: 0x08, keyDown: true)
@@ -52,7 +64,12 @@ final class ProductivityActionsHelper {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             guard let text = NSPasteboard.general.string(forType: .string), !text.isEmpty else { return }
             
-            let dir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/Highlights")
+            var targetDirPath = config.quickNotesDirectory
+            if targetDirPath.hasPrefix("~") {
+                targetDirPath = (NSHomeDirectory() as NSString).appendingPathComponent(String(targetDirPath.dropFirst(2)))
+            }
+            
+            let dir = URL(fileURLWithPath: targetDirPath)
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
             let fileURL = dir.appendingPathComponent("Quick_Notes.md")
             
@@ -65,8 +82,8 @@ final class ProductivityActionsHelper {
             if let data = entry.data(using: .utf8) {
                 if FileManager.default.fileExists(atPath: fileURL.path) {
                     if let fileHandle = try? FileHandle(forWritingTo: fileURL) {
-                        fileHandle.seekToEndOfFile()
-                        fileHandle.write(data)
+                        _ = try? fileHandle.seekToEnd()
+                        try? fileHandle.write(contentsOf: data)
                         try? fileHandle.close()
                     }
                 } else {

@@ -1,28 +1,28 @@
 import SwiftUI
 import Cocoa
 
-struct HUDOverlayView: View {
+public struct HUDOverlayView: View {
     @ObservedObject var engine = AppSwitcherEngine.shared
     
-    var body: some View {
+    public var body: some View {
         HStack(spacing: 12) {
             ForEach(Array(engine.currentItems.enumerated()), id: \.element.id) { index, item in
                 let isSelected = (index == engine.selectedIndex)
                 
-                VStack(spacing: 8) {
+                VStack(spacing: 6) {
                     Image(nsImage: item.icon)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .frame(width: 48, height: 48)
+                        .frame(width: 44, height: 44)
                     
                     Text(item.displayName)
                         .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.75))
                         .lineLimit(1)
-                        .frame(width: 80)
+                        .frame(width: 76)
                 }
-                .padding(.vertical, 12)
-                .padding(.horizontal, 10)
+                .padding(.vertical, 10)
+                .padding(.horizontal, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
                         .fill(isSelected ? Color.blue.opacity(0.65) : Color.white.opacity(0.06))
@@ -33,26 +33,26 @@ struct HUDOverlayView: View {
                 )
             }
         }
-        .padding(16)
+        .padding(14)
         .background(
-            RoundedRectangle(cornerRadius: 18)
-                .fill(Color(nsColor: .windowBackgroundColor).opacity(0.85))
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.black.opacity(0.85))
                 .background(.ultraThinMaterial)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 18)
+            RoundedRectangle(cornerRadius: 16)
                 .stroke(Color.white.opacity(0.2), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.4), radius: 20, x: 0, y: 10)
+        .shadow(color: Color.black.opacity(0.4), radius: 18, x: 0, y: 8)
     }
 }
 
-final class HUDOverlayWindow: NSWindow {
-    static let shared = HUDOverlayWindow()
+public final class HUDOverlayWindow: NSWindow {
+    public static let shared = HUDOverlayWindow()
     
     private init() {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 300, height: 120),
+            contentRect: NSRect(x: 0, y: 0, width: 300, height: 110),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -65,11 +65,11 @@ final class HUDOverlayWindow: NSWindow {
         self.contentView = NSHostingView(rootView: HUDOverlayView())
     }
     
-    func show() {
+    public func show() {
         guard let screen = NSScreen.main else { return }
         
         let screenFrame = screen.frame
-        let fittingSize = self.contentView?.fittingSize ?? NSSize(width: 300, height: 120)
+        let fittingSize = self.contentView?.fittingSize ?? NSSize(width: 300, height: 110)
         let x = screenFrame.origin.x + (screenFrame.width - fittingSize.width) / 2
         let y = screenFrame.origin.y + (screenFrame.height - fittingSize.height) / 2
         
@@ -77,7 +77,7 @@ final class HUDOverlayWindow: NSWindow {
         self.orderFrontRegardless()
     }
     
-    func hide() {
+    public func hide() {
         self.orderOut(nil)
     }
 }

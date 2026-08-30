@@ -1,6 +1,6 @@
-.PHONY: all native full clean verify
+.PHONY: all native full test verify clean
 
-all: native full
+all: native full test verify
 
 native:
 	@./build_native_app.sh
@@ -8,13 +8,16 @@ native:
 full:
 	@./build_full_pkg.sh
 
+test:
+	@./tests/run_tests.sh
+
 verify:
 	@echo "=================================================="
 	@echo " Verifying All Distributables                     "
 	@echo "=================================================="
+	@./verify_pkg.sh dist/MacProductivitySuite-Full.pkg
+	@./verify_pkg.sh dist/MacProductivitySuite-Native.pkg
 	@ls -lh dist/*.pkg
-	@test -f "dist/MacProductivitySuite-Native.pkg" && echo "✅ Native Package: OK ($(shell ls -lh dist/MacProductivitySuite-Native.pkg | awk '{print $$5}'))"
-	@test -f "dist/MacProductivitySuite-Full.pkg" && echo "✅ Full Package (with Karabiner & Hammerspoon): OK ($(shell ls -lh dist/MacProductivitySuite-Full.pkg | awk '{print $$5}'))"
 
 clean:
 	@rm -rf dist

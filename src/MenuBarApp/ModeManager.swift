@@ -111,8 +111,11 @@ final class ModeManager: ObservableObject {
         if fileManager.fileExists(atPath: configURL.path) {
             do {
                 let data = try Data(contentsOf: configURL)
-                let config = try JSONDecoder().decode(AppConfig.self, from: data)
-                self.currentMode = config.mode
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let modeStr = json["mode"] as? String,
+                   let mode = ProductivityMode(rawValue: modeStr) {
+                    self.currentMode = mode
+                }
             } catch {
                 print("Failed to decode config: \(error)")
             }
@@ -120,11 +123,21 @@ final class ModeManager: ObservableObject {
     }
     
     func saveConfig() {
-        let config = AppConfig(mode: currentMode, autoReloadHammerspoon: true)
         do {
             let hsDir = fileManager.homeDirectoryForCurrentUser.appendingPathComponent(".hammerspoon")
             try fileManager.createDirectory(at: hsDir, withIntermediateDirectories: true)
-            let data = try JSONEncoder().encode(config)
+            
+            var json: [String: Any] = [:]
+            if fileManager.fileExists(atPath: configURL.path),
+               let data = try? Data(contentsOf: configURL),
+               let existing = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                json = existing
+            }
+            
+            json["mode"] = currentMode.rawValue
+            json["autoReloadHammerspoon"] = true
+            
+            let data = try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys])
             try data.write(to: configURL)
         } catch {
             print("Failed to save config: \(error)")

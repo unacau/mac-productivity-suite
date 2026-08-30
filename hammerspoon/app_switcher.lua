@@ -634,11 +634,17 @@ function AppSwitcher.bindApp(key, ...)
     end
 end
 
--- Update mode dynamically ("hyper" or "classic")
+-- Update mode dynamically ("hyper", "classic", "ctrl_opt", "cmd_shift")
 function AppSwitcher.setMode(mode)
     if mode == "classic" then
         currentMode = "classic"
         hyper = {"cmd", "alt"}
+    elseif mode == "ctrl_opt" then
+        currentMode = "ctrl_opt"
+        hyper = {"ctrl", "alt"}
+    elseif mode == "cmd_shift" then
+        currentMode = "cmd_shift"
+        hyper = {"cmd", "shift"}
     else
         currentMode = "hyper"
         hyper = {"cmd", "alt", "ctrl", "shift"}
@@ -652,7 +658,6 @@ function AppSwitcher.setMode(mode)
         end)
     end
     print("AppSwitcher mode set to: " .. currentMode)
-    hs.alert.show("AppSwitcher mode: " .. string.upper(currentMode))
 end
 
 -- Get current mode
@@ -663,6 +668,10 @@ end
 -- Cleanup function on config reload
 function AppSwitcher.cleanup()
     clearTempNumberHotkeys()
+    for _, hk in pairs(AppSwitcher.hotkeys) do
+        hk:delete()
+    end
+    AppSwitcher.hotkeys = {}
     if hudCanvas then
         hudCanvas:hide()
         hudCanvas:delete()

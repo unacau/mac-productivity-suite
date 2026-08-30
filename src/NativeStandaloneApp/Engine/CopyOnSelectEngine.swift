@@ -1,38 +1,38 @@
 import Cocoa
 
-final class CopyOnSelectEngine {
-    static let shared = CopyOnSelectEngine()
+@MainActor
+public final class CopyOnSelectEngine {
+    public static let shared = CopyOnSelectEngine()
     
-    private var isEnabled: Bool = true
     private var startPosition: NSPoint?
-    private var globalMonitor: Any?
-    private let dragThreshold: CGFloat = 12.0
-    
-    // Ignore terminal apps that already implement native select-to-copy
-    private let excludedBundleIDs: Set<String> = [
-        "com.apple.Terminal",
-        "com.googlecode.iterm2",
-        "com.apple.Console"
-    ]
+    private var isMonitoring: Bool = false
     
     private init() {
         startMonitoring()
     }
     
-    func setEnabled(_ enabled: Bool) {
-        isEnabled = enabled
+    public func setEnabled(_ enabled: Bool) {
+        AppConfigManager.shared.config.copyOnSelect.enabled = enabled
+        AppConfigManager.shared.save()
     }
     
-    func startMonitoring() {
+    public func startMonitoring() {
+        guard !isMonitoring else { return }
+        isMonitoring = true
+        
         // Global monitor for mouse down to record start position
         NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown]) { [weak self] event in
-            guard let self = self, self.isEnabled else { return }
+            guard let self = self else { return }
+            let config = AppConfigManager.shared.config.copyOnSelect
+            guard config.enabled else { return }
             self.startPosition = NSEvent.mouseLocation
         }
         
         // Global monitor for mouse up to trigger Cmd+C if dragged
         NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseUp]) { [weak self] event in
-            guard let self = self, self.isEnabled, let startPos = self.startPosition else { return }
+            guard let self = self else { return }
+            let config = AppConfigManager.shared.config.copyOnSelect
+            guard config.enabled, let startPos = self.startPosition else { return }
             
             let endPos = NSEvent.mouseLocation
             let dx = abs(endPos.x - startPos.x)
@@ -41,16 +41,20 @@ final class CopyOnSelectEngine {
             
             self.startPosition = nil
             
-            // Check frontmost app bundle ID
+            // Check frontmost app against user-configurable excluded bundle IDs
             if let frontApp = NSWorkspace.shared.frontmostApplication,
-               let bundleID = frontApp.bundleIdentifier,
-               self.excludedBundleIDs.contains(bundleID) {
-                return
+               let bundleID = frontApp.bundleIdentifier {
+                let lowerBundle = bundleID.lowercased()
+                if config.excludedBundleIDs.contains(where: { $0.lowercased() == lowerBundle }) {
+                    return
+                }
             }
             
             // If dragged beyond threshold OR double/triple clicked -> copy selection
-            if (dx > self.dragThreshold || dy > self.dragThreshold) || clickCount > 1 {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+            let threshold = CGFloat(config.dragThreshold)
+            if (dx > threshold || dy > threshold) || clickCount > 1 {
+                let delay = Double(config.copyDelayMs) / 1000.0
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
                     self.synthesizeCopyKeystroke()
                 }
             }

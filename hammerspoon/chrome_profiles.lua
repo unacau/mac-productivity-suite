@@ -3,53 +3,13 @@ local ChromeProfiles = {}
 -- Modifiers for profile switching (can be dynamically switched between "hyper" and "classic")
 local hyper = {"cmd", "alt", "ctrl", "shift"}
 local currentMode = "hyper"
-local MAX_PROFILES = 4
+local MAX_PROFILES = 8
 
--- 4 Configured Profiles matching user specification
-ChromeProfiles.profiles = {
-    {
-        number = "1",
-        dir = "Default",
-        name = "Igor",
-        email = "igorekishev92@gmail.com",
-        menuCandidates = {"Igor", "Igor (igorekishev92@gmail.com)", "Igor Ekishev", "Igor Ekishev (Igor)"}
-    },
-    {
-        number = "2",
-        dir = "Profile 2",
-        name = "Igor (Al11)",
-        email = "igor@almosteleven.com",
-        menuCandidates = {"Igor (Al11)", "Al11", "Igor • Al11", "Igor (igor@almosteleven.com)", "Igor Ekishev (Al11)", "Al11"}
-    },
-    {
-        number = "3",
-        dir = "Profile 5",
-        name = "Igor (GCP Free Trial)",
-        email = "igorekishev729@gmail.com",
-        menuCandidates = {"Igor (GCP Free Trial)", "Igor • GCP Free Trial", "GCP Free Trial (igorekishev729@gmail.com)", "Igor Ekishev (GCP Free Trial)"}
-    },
-    {
-        number = "4",
-        dir = "Profile 1",
-        name = "Nastya",
-        email = "betapoozytron@gmail.com",
-        menuCandidates = {"Nastya (betapoozytron@gmail.com)", "Nastya", "Nastya Muravyova", "Nastya Muravyova (Nastya)"}
-    },
-}
-
+ChromeProfiles.profiles = {}
 ChromeProfiles.lastActiveProfileIndex = 1
 
 local contextualHotkeys = {}
 local appWatcher = nil
-
--- Enforce strict maximum 4 profiles limit
-local function validateProfiles()
-    if #ChromeProfiles.profiles > MAX_PROFILES then
-        local errMsg = string.format("ChromeProfiles Error: At most %d profiles allowed, but %d are configured!", MAX_PROFILES, #ChromeProfiles.profiles)
-        hs.alert.show(errMsg, 5)
-        error(errMsg)
-    end
-end
 
 -- Helper to create a circular masked image
 local function makeCircularImage(image)
@@ -77,6 +37,94 @@ local function makeCircularImage(image)
     return circularImg or image
 end
 
+-- Dynamically discover profiles from Local State file
+function ChromeProfiles.discoverProfiles()
+    local profiles = {}
+    local configPath = (hs.configdir or (os.getenv("HOME") .. "/.hammerspoon")) .. "/config.json"
+    
+    -- 1. Check custom configured profiles in config.json first
+    if hs.fs.attributes(configPath) then
+        local conf = hs.json.read(configPath)
+        if conf and conf.chromeProfiles and #conf.chromeProfiles > 0 then
+            for i, p in ipairs(conf.chromeProfiles) do
+                table.insert(profiles, {
+                    number = tostring(p.index or i),
+                    dir = p.dir or ("Profile " .. tostring(i)),
+                    name = p.name or p.customName or ("Profile " .. tostring(i)),
+                    email = p.email,
+                    menuCandidates = { p.name, p.customName, p.email }
+                })
+            end
+            return profiles
+        end
+    end
+
+    -- 2. Auto-discover from local Chrome / Chromium / Brave data
+    local candidatePaths = {
+        os.getenv("HOME") .. "/Library/Application Support/Google/Chrome/Local State",
+        os.getenv("HOME") .. "/Library/Application Support/BraveSoftware/Brave-Browser/Local State",
+        os.getenv("HOME") .. "/Library/Application Support/Microsoft Edge/Local State",
+        os.getenv("HOME") .. "/Library/Application Support/Chromium/Local State"
+    }
+
+    for _, localStatePath in ipairs(candidatePaths) do
+        if hs.fs.attributes(localStatePath) then
+            local localState = hs.json.read(localStatePath)
+            if localState and localState.profile and localState.profile.info_cache then
+                local infoCache = localState.profile.info_cache
+                local dirKeys = {}
+                for k, _ in pairs(infoCache) do
+                    table.insert(dirKeys, k)
+                end
+
+                table.sort(dirKeys, function(a, b)
+                    if a == "Default" then return true end
+                    if b == "Default" then return false end
+                    return a < b
+                end)
+
+                local idx = 1
+                for _, dirKey in ipairs(dirKeys) do
+                    local info = infoCache[dirKey]
+                    if info then
+                        local profileName = info.name or info.gaia_name or info.user_name or (dirKey == "Default" and "Personal" or dirKey)
+                        local email = info.user_name or info.email
+                        local menuCandidates = { profileName }
+                        if email and email ~= "" then
+                            table.insert(menuCandidates, profileName .. " (" .. email .. ")")
+                            table.insert(menuCandidates, email)
+                        end
+
+                        table.insert(profiles, {
+                            number = tostring(idx),
+                            dir = dirKey,
+                            name = profileName,
+                            email = email,
+                            menuCandidates = menuCandidates
+                        })
+
+                        idx = idx + 1
+                        if idx > MAX_PROFILES then break end
+                    end
+                end
+                break
+            end
+        end
+    end
+
+    -- Fallback default if no profiles found
+    if #profiles == 0 then
+        table.insert(profiles, {
+            number = "1",
+            dir = "Default",
+            name = "Default Profile",
+            menuCandidates = { "Default", "Personal" }
+        })
+    end
+
+    return profiles
+end
+
 -- Get profile avatar icon (resolves custom theme avatar or Google Profile picture)
 function ChromeProfiles.getProfileIcon(profile)
     if not profile then return nil end
@@ -94,51 +142,19 @@ function ChromeProfiles.getProfileIcon(profile)
         end
     end
 
-    local localStatePath = os.getenv("HOME") .. "/Library/Application Support/Google/Chrome/Local State"
-    local useGaia = true
-    local avatarResource = nil
-
-    if hs.fs.attributes(localStatePath) then
-        local localState = hs.json.read(localStatePath)
-        if localState and localState.profile and localState.profile.info_cache and localState.profile.info_cache[profile.dir] then
-            local info = localState.profile.info_cache[profile.dir]
-            if info.use_gaia_picture == false then
-                useGaia = false
-            end
-            if info.avatar_icon then
-                avatarResource = string.match(info.avatar_icon, "IDR_PROFILE_AVATAR_%d+")
-            end
+    -- 2. If using Gaia profile picture and it exists on disk
+    local gaiaPic = os.getenv("HOME") .. "/Library/Application Support/Google/Chrome/" .. profile.dir .. "/Google Profile Picture.png"
+    if hs.fs.attributes(gaiaPic) then
+        local img = hs.image.imageFromPath(gaiaPic)
+        if img then
+            local circular = makeCircularImage(img)
+            profile.cachedIcon = circular
+            return circular
         end
     end
 
-    -- 2. If using custom/theme avatar (e.g. Sunglasses IDR_PROFILE_AVATAR_44)
-    if (not useGaia or avatarResource == "IDR_PROFILE_AVATAR_44") and avatarResource then
-        local assetPath = baseDir .. "/assets/avatars/" .. avatarResource .. ".png"
-        if hs.fs.attributes(assetPath) then
-            local img = hs.image.imageFromPath(assetPath)
-            if img then
-                local circular = makeCircularImage(img)
-                profile.cachedIcon = circular
-                return circular
-            end
-        end
-    end
-
-    -- 3. If using Gaia profile picture and it exists on disk
-    if useGaia then
-        local gaiaPic = os.getenv("HOME") .. "/Library/Application Support/Google/Chrome/" .. profile.dir .. "/Google Profile Picture.png"
-        if hs.fs.attributes(gaiaPic) then
-            local img = hs.image.imageFromPath(gaiaPic)
-            if img then
-                local circular = makeCircularImage(img)
-                profile.cachedIcon = circular
-                return circular
-            end
-        end
-    end
-
-    -- 4. Fallback: Google Chrome application bundle icon
-    local chromeIcon = hs.image.imageFromAppBundle("com.google.Chrome")
+    -- 3. Fallback: Google Chrome application bundle icon
+    local chromeIcon = hs.image.imageFromAppBundle("com.google.Chrome") or hs.image.iconForFile("/System/Library/CoreServices/Finder.app")
     profile.cachedIcon = chromeIcon
     return chromeIcon
 end
@@ -147,7 +163,6 @@ end
 local function selectProfileFromChrome(chrome, profile)
     if not chrome then return false end
 
-    -- Activate Chrome first so menu is accessible
     chrome:activate()
 
     local menuCandidates = profile.menuCandidates or {profile.name}
@@ -202,7 +217,6 @@ function ChromeProfiles.focusProfile(profile)
     end
 
     local chrome = hs.application.find("Google Chrome", true)
-
     if chrome then
         local success = selectProfileFromChrome(chrome, profile)
         if success then
@@ -263,15 +277,14 @@ end
 
 -- Initialize module
 function ChromeProfiles.init()
-    validateProfiles()
     ChromeProfiles.cleanup()
+    ChromeProfiles.profiles = ChromeProfiles.discoverProfiles()
 
-    -- Pre-warm all profile icons into memory cache so hotkeys execute with 0 disk I/O
+    -- Pre-warm all profile icons into memory cache
     for _, p in ipairs(ChromeProfiles.profiles) do
         ChromeProfiles.getProfileIcon(p)
     end
 
-    -- Check if Chrome is already frontmost on load
     local frontApp = hs.application.frontmostApplication()
     if frontApp and frontApp:name() == "Google Chrome" then
         enableContextualHotkeys()
@@ -280,7 +293,7 @@ function ChromeProfiles.init()
     appWatcher = hs.application.watcher.new(handleAppEvent)
     appWatcher:start()
 
-    print("Chrome Profiles module initialized (" .. #ChromeProfiles.profiles .. " profiles configured, max " .. MAX_PROFILES .. ").")
+    print("Chrome Profiles module initialized with " .. #ChromeProfiles.profiles .. " discovered profiles.")
     return ChromeProfiles
 end
 
@@ -289,12 +302,17 @@ function ChromeProfiles.setMode(mode)
     if mode == "classic" then
         currentMode = "classic"
         hyper = {"cmd", "alt"}
+    elseif mode == "ctrl_opt" then
+        currentMode = "ctrl_opt"
+        hyper = {"ctrl", "alt"}
+    elseif mode == "cmd_shift" then
+        currentMode = "cmd_shift"
+        hyper = {"cmd", "shift"}
     else
         currentMode = "hyper"
         hyper = {"cmd", "alt", "ctrl", "shift"}
     end
 
-    -- If contextual hotkeys are currently active, refresh them
     if #contextualHotkeys > 0 then
         disableContextualHotkeys()
         enableContextualHotkeys()

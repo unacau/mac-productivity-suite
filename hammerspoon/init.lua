@@ -23,12 +23,60 @@ local function loadModule(name, initFunc)
     end
 end
 
--- Load and initialize modules
+-- Load modules
 appSwitcher = loadModule("app_switcher")
 copyOnSelect = loadModule("copy_on_select", "init")
 chromeProfiles = loadModule("chrome_profiles", "init")
 
--- Function to apply productivity mode ("hyper" vs "classic")
+-- Config path resolution
+local baseDir = hs.configdir or (os.getenv("HOME") .. "/.hammerspoon")
+local configPath = baseDir .. "/config.json"
+local sharedConfigPath = os.getenv("HOME") .. "/.config/mac-productivity-suite/config.json"
+
+-- Default Universal Configuration
+local defaultBindings = {
+    i = {"Ghostty", "iTerm", "Terminal", "Warp", "Alacritty"},
+    b = {"Google Chrome", "Arc", "Safari", "Brave Browser", "Firefox"},
+    c = {"Google Chrome", "Calendar"},
+    e = {"Cursor", "Visual Studio Code", "Xcode", "Sublime Text", "IntelliJ IDEA"},
+    f = {"Finder", "Freeform"},
+    m = {"Activity Monitor", "Music", "Spotify"},
+    n = {"Notes", "Notion", "Obsidian", "Bear"},
+    p = {"Preview", "Photos", "Passwords"},
+    s = {"Spotify", "Apple Music", "SoundCloud", "System Settings"},
+    t = {"Slack", "Telegram", "Discord", "WhatsApp", "Messages"}
+}
+
+function loadConfig()
+    local targetPath = configPath
+    if not hs.fs.attributes(targetPath) and hs.fs.attributes(sharedConfigPath) then
+        targetPath = sharedConfigPath
+    end
+
+    local conf = nil
+    if hs.fs.attributes(targetPath) then
+        conf = hs.json.read(targetPath)
+    end
+
+    if not conf then
+        conf = {
+            version = "2.0.0",
+            mode = "hyper",
+            bindings = defaultBindings,
+            copyOnSelect = { enabled = true, dragThreshold = 10 },
+            productivityShortcuts = {
+                finderSplitEnabled = true,
+                quickNotesEnabled = true,
+                quickNotesDirectory = os.getenv("HOME") .. "/Documents/Highlights"
+            }
+        }
+        hs.json.write(conf, configPath, true, true)
+    end
+
+    return conf
+end
+
+-- Apply productivity mode ("hyper", "classic", "ctrl_opt", "cmd_shift")
 function setProductivityMode(mode)
     if appSwitcher and appSwitcher.setMode then
         appSwitcher.setMode(mode)
@@ -39,49 +87,71 @@ function setProductivityMode(mode)
     print("Productivity mode applied: " .. tostring(mode))
 end
 
--- Read stored preference from config.json if present
-local configPath = (hs.configdir or (os.getenv("HOME") .. "/.hammerspoon")) .. "/config.json"
-local initialMode = "hyper"
-if hs.fs.attributes(configPath) then
-    local conf = hs.json.read(configPath)
-    if conf and conf.mode then
-        initialMode = conf.mode
+-- Apply configuration dynamically
+function applyConfiguration()
+    local config = loadConfig()
+    local mode = config.mode or "hyper"
+
+    if appSwitcher then
+        -- Clear existing bindings and rebind from config
+        if appSwitcher.cleanup then appSwitcher.cleanup() end
+        appSwitcher.bindings = {}
+        appSwitcher.hotkeys = {}
+
+        local bindings = config.bindings or defaultBindings
+        for key, apps in pairs(bindings) do
+            if type(apps) == "table" then
+                appSwitcher.bindApp(key, table.unpack(apps))
+            elseif type(apps) == "string" then
+                appSwitcher.bindApp(key, apps)
+            end
+        end
+
+        setProductivityMode(mode)
     end
+
+    if chromeProfiles and chromeProfiles.init then
+        chromeProfiles.init()
+        chromeProfiles.setMode(mode)
+    end
+
+    print("Hammerspoon configuration refreshed in " .. mode .. " mode.")
 end
 
--- Application Bindings
-if appSwitcher then
-    appSwitcher.bindApp("i", "iTerm")
-    appSwitcher.bindApp("s", "Spotify", "SoundCloud", "System Settings")
-    appSwitcher.bindApp("t", "Telegram")
-    appSwitcher.bindApp("a", "Antigravity", "Antigravity IDE")
-    appSwitcher.bindApp("n", "Notes")
-    appSwitcher.bindApp("p", "Photos", "Preview", "Passwords")
-    appSwitcher.bindApp("c", "Google Chrome", "Calendar")
-    appSwitcher.bindApp("m", "Activity Monitor")
-    appSwitcher.bindApp("f", "Finder", "Freeform")
-    
-    -- Apply the initial mode (rebinds with correct modifiers)
-    setProductivityMode(initialMode)
-end
+-- Initial load
+applyConfiguration()
+local activeConfig = loadConfig()
+hs.alert.show("Hammerspoon Loaded (" .. string.upper(activeConfig.mode or "HYPER") .. " Mode)")
 
-hs.alert.show("Hammerspoon Loaded (" .. string.upper(initialMode) .. " Mode)")
-print("Hammerspoon configuration loaded in " .. initialMode .. " mode.")
+-- Watch config.json for live reload
+if configWatcher then configWatcher:stop() end
+configWatcher = hs.pathwatcher.new(baseDir, function(files)
+    for _, file in ipairs(files) do
+        if string.match(file, "config%.json$") then
+            print("Detected config.json update, reloading settings...")
+            applyConfiguration()
+            break
+        end
+    end
+end):start()
 
-
--- Key binding: Press Cmd + Shift + H to highlight selected text
+-- ============================================================================
+-- Productivity Action 1: Highlight & Save to Quick Notes (Cmd + Shift + H)
+-- ============================================================================
 hs.hotkey.bind({ "cmd", "shift" }, "H", function()
-    -- 1. Copy the currently highlighted text to clipboard
+    local config = loadConfig()
+    if config.productivityShortcuts and config.productivityShortcuts.quickNotesEnabled == false then
+        return
+    end
+
     hs.eventtap.keyStroke({ "cmd" }, "c")
     hs.timer.doAfter(0.2, function()
         local highlightedText = hs.pasteboard.getContents()
-
         if not highlightedText or highlightedText == "" then
             hs.alert.show("No text selected!")
             return
         end
 
-        -- 2. Fetch the PDF Title and URL directly from Safari via AppleScript
         local appleScript = [[
             tell application "Safari"
                 if (count of windows) is not 0 then
@@ -93,63 +163,46 @@ hs.hotkey.bind({ "cmd", "shift" }, "H", function()
                 end if
             end tell
         ]]
-
         local success, result, _ = hs.osascript.applescript(appleScript)
-        local pdfTitle = "Unknown Document"
-        local pdfURL = "Local or Unknown"
+        local docTitle = (success and result and result[1] ~= "" and result[1]) or "Quick Note"
+        local docURL = (success and result and result[2] ~= "" and result[2]) or "Local"
 
-        if success and result then
-            pdfTitle = result[1] or pdfTitle
-            pdfURL = result[2] or pdfURL
+        local baseStorage = (config.productivityShortcuts and config.productivityShortcuts.quickNotesDirectory) or (os.getenv("HOME") .. "/Documents/Highlights")
+        if string.sub(baseStorage, 1, 2) == "~/" then
+            baseStorage = os.getenv("HOME") .. string.sub(baseStorage, 2)
         end
 
-        -- 3. Prompt user for the Project Context
-        local button, projectTag = hs.dialog.textPrompt(
-            "Categorize Highlight",
-            "Enter Project Name / Tag:",
-            "General", "Save", "Cancel"
+        -- Ensure the directory path is safely quoted for the shell
+        local safeStorage = string.format("%q", baseStorage)
+        os.execute("mkdir -p " .. safeStorage)
+        local storagePath = baseStorage .. "/Quick_Notes.md"
+        local timestamp = os.date("%Y-%m-%d %H:%M:%S")
+        local markdownEntry = string.format(
+            "### Highlighted on %s\n- **Source:** [%s](%s)\n- **Quote:**\n  > %s\n\n---\n\n",
+            timestamp, docTitle, docURL, highlightedText:gsub("\n", "\n  > ")
         )
 
-        if button == "Save" then
-            -- Sanitize project name for file storage
-            projectTag = projectTag:gsub("%s+", "_")
-
-            -- Define where your notes should go (Change this path to your preference!)
-            local storagePath = os.getenv("HOME") .. "/Documents/Highlights/" .. projectTag .. ".md"
-
-            -- 4. Structure the contextual Markdown block
-            local timestamp = os.date("%Y-%m-%d %H:%M:%S")
-            local markdownEntry = string.format(
-                "### Highlighted on %s\n- **Source:** [%s](%s)\n- **Context/Project:** #%s\n- **Quote:**\n  > %s\n\n---\n\n",
-                timestamp, pdfTitle, pdfURL, projectTag, highlightedText:gsub("\n", "\n  > ")
-            )
-
-            -- 5. Append to the local file securely
-            local file = io.open(storagePath, "a")
-            if file then
-                file:write(markdownEntry)
-                file:close()
-                hs.alert.show("Saved to project: " .. projectTag)
-            else
-                -- Create directory if missing and try one more time
-                os.execute("mkdir -p " .. os.getenv("HOME") .. "/Documents/Highlights/")
-                file = io.open(storagePath, "a")
-                if file then
-                    file:write(markdownEntry); file:close()
-                    hs.alert.show("Saved to project: " .. projectTag)
-                else
-                    hs.alert.show("Error saving file locally.")
-                end
-            end
+        local file = io.open(storagePath, "a")
+        if file then
+            file:write(markdownEntry)
+            file:close()
+            hs.alert.show("Saved to Quick Notes!")
+        else
+            hs.alert.show("Error saving note locally.")
         end
     end)
 end)
 
-
+-- ============================================================================
+-- Productivity Action 2: Finder Dual-Column Split (Cmd + Alt + Ctrl + F)
+-- ============================================================================
 hs.window.animationDuration = 0
-
--- Hotkey: Cmd + Alt + Ctrl + F
 hs.hotkey.bind({"cmd", "alt", "ctrl"}, "F", function()
+    local config = loadConfig()
+    if config.productivityShortcuts and config.productivityShortcuts.finderSplitEnabled == false then
+        return
+    end
+
     local win1 = hs.window.focusedWindow()
     if not win1 or win1:application():name() ~= "Finder" then return end
 
@@ -157,14 +210,10 @@ hs.hotkey.bind({"cmd", "alt", "ctrl"}, "F", function()
     local screen = win1:screen()
     local max = screen:frame()
 
-    -- 1. Hide the sidebar on the primary window
     finder:selectMenuItem({"View", "Hide Sidebar"})
-
-    -- 2. Move primary window to the left half
     local leftFrame = hs.geometry.rect(max.x, max.y, max.w / 2, max.h)
     win1:setFrame(leftFrame)
 
-    -- 3. AppleScript to spawn the window AND force Column View natively
     local cloneScript = [[
         tell application "Finder"
             try
@@ -184,13 +233,9 @@ hs.hotkey.bind({"cmd", "alt", "ctrl"}, "F", function()
     ]]
 
     local success, result, raw = hs.osascript.applescript(cloneScript)
-
     if success and result == "SUCCESS" then
-        -- 4. Robustly target and format the secondary window
         hs.timer.doAfter(0.1, function()
             local win2 = nil
-            
-            -- Scan all open Finder windows to find the newly created one
             for _, w in ipairs(finder:allWindows()) do
                 if w:id() ~= win1:id() and w:subrole() == "AXStandardWindow" then
                     win2 = w
@@ -199,28 +244,13 @@ hs.hotkey.bind({"cmd", "alt", "ctrl"}, "F", function()
             end
 
             if win2 then
-                -- Move secondary window to the right half
                 local rightFrame = hs.geometry.rect(max.x + (max.w / 2), max.y, max.w / 2, max.h)
                 win2:setFrame(rightFrame)
-                
-                -- Force window focus to ensure the menu command hits the correct target
                 win2:focus()
-                
-                -- Short execution padding to let the focus stick, then hide the sidebar
                 hs.timer.doAfter(0.05, function()
                     win2:application():selectMenuItem({"View", "Hide Sidebar"})
                 end)
             end
         end)
-    else
-        print("--- Hammerspoon Finder Script Debug ---")
-        print("Success Status:", success)
-        print("Script Result:", result)
     end
 end)
-
-
--- ============================================================================
--- Chrome Profiles Extension
--- Managed in chrome_profiles.lua (Keys 1..7 mapped to Default & other profiles)
--- ============================================================================
