@@ -1,28 +1,28 @@
 # Project: Mac Productivity Suite
 
 ## Tech Stack & Architecture
-- **Native Suite (Swift 6+)**: SwiftUI + AppKit bridging, CGEvent tap interception, NSWorkspace app switching (`src/NativeStandaloneApp`, `src/MenuBarApp`).
-- **Scripted Engine (Lua 5.4)**: Hammerspoon (`~/.hammerspoon/` or `hammerspoon/`), `hs.eventtap`, `hs.application`, `hs.urlevent`.
-- **Keyboard Engine**: Karabiner-Elements complex modifications (`karabiner/hyper-key-mapping.json`).
-- **Distribution**: macOS Installer Packages (`.pkg`), DMG packaging, `pkgbuild` & `productbuild`.
+- **Primary Engine (Swift 6+)**: 100% Pure Native Standalone App (`src/NativeStandaloneApp`) using SwiftUI, AppKit bridging, `CGEvent` taps for Hyper Key handling, and `NSWorkspace` for app switching.
+- **Auto-Updates**: Sparkle Framework integrated into the Native App, tracking `appcast.xml`.
+- **Legacy/Advanced Engine (Lua 5.4)**: Hammerspoon scripts (`hammerspoon/`) serving advanced users alongside Karabiner-Elements (`karabiner/hyper-key-mapping.json`).
+- **Distribution Ecosystem**: `dist/MacProductivitySuite.dmg` (for standard auto-updating users) and `dist/MacProductivitySuite-Full.pkg` (offline installer injecting Hammerspoon/Karabiner).
 
 ## Key Build & Verification Commands
-- Build Native App: `make native` or `./build_native_app.sh`
-- Build Full Bundle (with embedded PKG payloads): `make full` or `./build_full_pkg.sh`
-- Verify Distributables: `make verify` or `./verify_pkg.sh`
-- Clean Build Artifacts: `make clean`
+- **Release Automation**: `./release.sh` (Builds Native app, creates Full PKG + DMG, signs DMG with Sparkle EdDSA, updates `appcast.xml`, and pushes to GitHub releases for `unacau/mac-productivity-suite`).
+- Build Native App: `./build_native_app.sh`
+- Build Full Bundle (Offline PKG): `./build_full_pkg.sh`
+- Local Testing / Installation: `./install.sh`
 
 ## Code Conventions
 - **Swift**:
   - Prefer modern Swift concurrency (`async`/`await`, `@MainActor`) where applicable.
-  - Separate CGEvent monitoring/filtering logic from SwiftUI Views.
-  - Require explicit accessibility permission checks before registering global event taps.
+  - Keep `CGEvent` monitoring/filtering logic strictly separated from SwiftUI Views.
+  - **Always** ensure explicit accessibility permission checks (`AXIsProcessTrusted`) before activating global event taps.
 - **Lua (Hammerspoon)**:
-  - Keep modules decoupled (`copy_on_select.lua`, `app_switcher.lua`, `chrome_profiles.lua`).
+  - Keep modules decoupled (e.g. `app_switcher.lua`, `chrome_profiles.lua`).
   - Always clean up event taps on reload/stop (`tap:stop()`).
-  - Use `hs.timer.delayed.new` / debounce for high-frequency window/mouse events.
 
 ## Guardrails & Boundaries
-- Never commit user configuration tokens, private browser profile paths, or credentials.
-- Do not run unverified root/sudo commands in scripts without user confirmation.
-- Keep installer payloads isolated in `payload_cache/` or `dist/` (always git-ignored).
+- **Sparkle Auto-Updates**: The `.pkg` installs the core apps once. `appcast.xml` and Sparkle exclusively update the `Mac Productivity Suite Native.app` via DMG encapsulation. **Never** attempt to update the `.pkg` payload via Sparkle.
+- **Security**: Never commit user configuration tokens, private browser profile paths, or the raw Sparkle EdDSA keychain. `sparkle_private.key` must remain securely managed.
+- **Dependencies**: Do not introduce any further C++/Objective-C external dependencies for standard Mac productivity logic—leverage native Swift frameworks (`ApplicationServices`, `Carbon`, `AppKit`).
+- **File Hierarchy**: Do not modify installer payloads in `payload_cache/` directly. Always rely on the build scripts to re-assemble the payloads.
