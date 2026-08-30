@@ -54,7 +54,8 @@ public final class CopyOnSelectEngine {
             let threshold = CGFloat(config.dragThreshold)
             if (dx > threshold || dy > threshold) || clickCount > 1 {
                 let delay = Double(config.copyDelayMs) / 1000.0
-                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(delay))
                     self.synthesizeCopyKeystroke()
                 }
             }

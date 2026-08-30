@@ -37,12 +37,12 @@ public final class HotkeyManager {
         }, 1, &eventType, nil, &eventHandler)
         
         if status != noErr {
-            print("Failed to install Carbon event handler: \(status)")
+            AppLogger.getLogger(category: .hotkeys).error("Failed to install Carbon event handler: \(status, privacy: .public)")
         }
     }
     
     public func dispatchHotKey(id: UInt32) {
-        DispatchQueue.main.async {
+        Task { @MainActor in
             self.handlers[id]?()
         }
     }
@@ -68,7 +68,7 @@ public final class HotkeyManager {
             currentID += 1
             return registeredID
         } else {
-            print("Failed to register hotkey for keyCode \(keyCode): \(status)")
+            AppLogger.getLogger(category: .hotkeys).error("Failed to register hotkey for keyCode \(keyCode): \(status)")
             return nil
         }
     }

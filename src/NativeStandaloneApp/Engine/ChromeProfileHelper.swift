@@ -117,7 +117,7 @@ public final class ChromeProfileHelper: ObservableObject {
         }
         
         self.profiles = foundProfiles
-        print("[ChromeProfileHelper] Discovered \(foundProfiles.count) browser profiles.")
+        AppLogger.getLogger(category: .browser).info("Discovered \(foundProfiles.count) browser profiles.")
     }
     
     private func resolveAvatar(baseDir: String, dirKey: String, info: [String: Any]) -> NSImage {
@@ -174,7 +174,8 @@ public final class ChromeProfileHelper: ObservableObject {
         task.arguments = ["-b", bundleID, "--args", "--profile-directory=\(dir)"]
         try? task.run()
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(0.1))
             let apps = NSWorkspace.shared.runningApplications
             if let chrome = apps.first(where: { $0.bundleIdentifier == bundleID }) {
                 chrome.activate()

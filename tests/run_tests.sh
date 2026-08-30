@@ -1,35 +1,15 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 echo "=================================================="
 echo " Running Automated Test Suite                     "
 echo "=================================================="
 
 # 1. Compile and run Swift unit tests
-echo "[1/3] Compiling Swift unit test harness..."
-mkdir -p dist/tests
+echo "[1/3] Running Swift tests via SPM..."
+swift test
 
-swiftc \
-    -parse-as-library \
-    src/NativeStandaloneApp/Engine/HotkeyManager.swift \
-    src/NativeStandaloneApp/Engine/AppConfig.swift \
-    src/NativeStandaloneApp/Engine/AppDiscoveryService.swift \
-    src/NativeStandaloneApp/Engine/ChromeProfileHelper.swift \
-    src/NativeStandaloneApp/Engine/AppSwitcherEngine.swift \
-    src/NativeStandaloneApp/Engine/CopyOnSelectEngine.swift \
-    src/NativeStandaloneApp/Engine/ProductivityActionsHelper.swift \
-    src/NativeStandaloneApp/Views/HUDOverlayWindow.swift \
-    src/NativeStandaloneApp/Views/AppPickerSheet.swift \
-    src/NativeStandaloneApp/Views/SettingsWindow.swift \
-    src/NativeStandaloneApp/Views/MenuBarPopupView.swift \
-    tests/SwiftUnitTests.swift \
-    -o dist/tests/test_runner \
-    -framework Cocoa \
-    -framework SwiftUI \
-    -framework Carbon
-
-echo "[2/3] Executing Swift Unit Tests..."
-./dist/tests/test_runner
+# We skip the legacy execution since SPM handles it
 
 # 2. Check Lua syntax for all Hammerspoon scripts
 echo "[3/3] Checking Lua scripts syntax..."

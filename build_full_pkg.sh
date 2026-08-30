@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 PKG_NAME="MacProductivitySuite-Full.pkg"
 DIST_DIR="dist"
@@ -147,7 +147,7 @@ pkgbuild \
     --root "$ROOT_DIR" \
     --scripts "$SCRIPTS_DIR" \
     --identifier "com.unacau.macproductivitysuite.full" \
-    --version "2.0.0" \
+    --version "2.1.0" \
     "$DIST_DIR/$PKG_NAME"
 
 echo "=================================================="

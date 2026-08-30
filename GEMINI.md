@@ -13,13 +13,18 @@
 - Local Testing / Installation: `./install.sh`
 
 ## Code Conventions
-- **Swift**:
-  - Prefer modern Swift concurrency (`async`/`await`, `@MainActor`) where applicable.
+- **Swift & SwiftUI**:
+  - Strictly follow Swift 6 modern concurrency patterns (`async`/`await`, `@MainActor`, `Sendable`). Avoid legacy GCD where possible.
+  - Adhere to macOS Human Interface Guidelines (HIG) for all SwiftUI components.
   - Keep `CGEvent` monitoring/filtering logic strictly separated from SwiftUI Views.
   - **Always** ensure explicit accessibility permission checks (`AXIsProcessTrusted`) before activating global event taps.
+- **Testing**:
+  - Prefer the modern `Swift Testing` framework over legacy `XCTest` for new tests in the `tests/` directory.
 - **Lua (Hammerspoon)**:
   - Keep modules decoupled (e.g. `app_switcher.lua`, `chrome_profiles.lua`).
   - Always clean up event taps on reload/stop (`tap:stop()`).
+- **Bash Scripting**:
+  - Use defensive bash patterns (`set -euo pipefail`) in all build and release scripts to prevent silent failures during packaging.
 
 ## Guardrails & Boundaries
 - **Sparkle Auto-Updates**: The `.pkg` installs the core apps once. `appcast.xml` and Sparkle exclusively update the `Mac Productivity Suite Native.app` via DMG encapsulation. **Never** attempt to update the `.pkg` payload via Sparkle.

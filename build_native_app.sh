@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 APP_NAME="Mac Productivity Suite Native"
 DIST_DIR="dist"
@@ -29,6 +29,7 @@ SOURCES=(
     "src/NativeStandaloneApp/Engine/AppSwitcherEngine.swift"
     "src/NativeStandaloneApp/Engine/CopyOnSelectEngine.swift"
     "src/NativeStandaloneApp/Engine/ProductivityActionsHelper.swift"
+    "src/NativeStandaloneApp/Engine/AppLogger.swift"
     "src/NativeStandaloneApp/Views/HUDOverlayWindow.swift"
     "src/NativeStandaloneApp/Views/AppPickerSheet.swift"
     "src/NativeStandaloneApp/Views/SettingsWindow.swift"

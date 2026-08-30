@@ -55,7 +55,7 @@ public final class AppDiscoveryService: ObservableObject {
                     }
                 }
                 self.isScanning = false
-                print("[AppDiscovery] Discovered \(apps.count) installed applications on Mac.")
+                AppLogger.getLogger(category: .discovery).info("Discovered \(apps.count) installed applications on Mac.")
             }
         }
     }

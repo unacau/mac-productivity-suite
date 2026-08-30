@@ -50,7 +50,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         
         // 5. Automatically open the welcome/controls popover on first launch so the user sees it immediately
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(0.4))
             self?.showPopover()
         }
     }

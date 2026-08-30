@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 echo "=================================================="
 echo " Installing Mac Productivity Suite (v2.0 Universal)"

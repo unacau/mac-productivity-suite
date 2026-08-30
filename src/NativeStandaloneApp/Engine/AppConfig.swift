@@ -109,7 +109,7 @@ public struct AppConfig: Codable, Equatable {
     
     public static var `default`: AppConfig {
         AppConfig(
-            version: "2.0.0",
+            version: "2.1.0",
             mode: .classic,
             bindings: [
                 "i": ["Ghostty", "iTerm", "Terminal", "Warp", "Alacritty"],
@@ -232,7 +232,7 @@ public final class AppConfigManager: ObservableObject {
                 let decoder = JSONDecoder()
                 if let decoded = try? decoder.decode(AppConfig.self, from: data) {
                     self.config = decoded
-                    print("[ConfigManager] Loaded configuration version \(decoded.version)")
+                    AppLogger.getLogger(category: .config).info("Loaded configuration version \(decoded.version, privacy: .public)")
                     return
                 } else if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                     // Legacy migration
@@ -242,11 +242,11 @@ public final class AppConfigManager: ObservableObject {
                     }
                     self.config = legacy
                     self.save()
-                    print("[ConfigManager] Migrated legacy configuration")
+                    AppLogger.getLogger(category: .config).info("Migrated legacy configuration")
                     return
                 }
             } catch {
-                print("[ConfigManager] Error reading config: \(error)")
+                AppLogger.getLogger(category: .config).error("Error reading config: \(error.localizedDescription, privacy: .public)")
             }
         }
         
@@ -271,12 +271,12 @@ public final class AppConfigManager: ObservableObject {
             try data.write(to: configURL, options: .atomic)
             try data.write(to: hammerspoonConfigURL, options: .atomic)
             
-            print("[ConfigManager] Saved config successfully to \(configURL.path)")
+            AppLogger.getLogger(category: .config).info("Saved config successfully to \(self.configURL.path, privacy: .public)")
             
             // Post notification for live reloading
             NotificationCenter.default.post(name: NSNotification.Name("AppConfigDidChangeNotification"), object: nil)
         } catch {
-            print("[ConfigManager] Error saving config: \(error)")
+            AppLogger.getLogger(category: .config).error("Error saving config: \(error.localizedDescription, privacy: .public)")
         }
     }
     

@@ -1,0 +1,45 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger on version tags (e.g., v2.1.0)
+
+jobs:
+  build-and-release:
+    runs-on: macos-14
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Important for changelog generation
+
+      - name: Select Xcode version
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+
+      - name: Build Native App
+        run: ./build_native_app.sh
+
+      - name: Package Full PKG
+        run: ./build_full_pkg.sh
+
+      - name: Create DMG and Update Appcast
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          # Write the secret to a temporary file for the release script
+          echo "$SPARKLE_PRIVATE_KEY" > sparkle_private.key
+          ./release.sh
+          rm sparkle_private.key
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/MacProductivitySuite.dmg
+            dist/MacProductivitySuite-Full.pkg
+            appcast.xml
+          generate_release_notes: true
+          draft: false
+          prerelease: false

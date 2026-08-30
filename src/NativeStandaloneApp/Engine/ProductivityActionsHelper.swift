@@ -61,7 +61,8 @@ public final class ProductivityActionsHelper {
         keyDown?.post(tap: .cghidEventTap)
         keyUp?.post(tap: .cghidEventTap)
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(0.2))
             guard let text = NSPasteboard.general.string(forType: .string), !text.isEmpty else { return }
             
             var targetDirPath = config.quickNotesDirectory

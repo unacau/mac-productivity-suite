@@ -84,7 +84,7 @@ public final class AppSwitcherEngine: ObservableObject {
         // 3. Re-register productivity actions (Finder split, Quick Notes)
         ProductivityActionsHelper.shared.setupActions()
         
-        print("[AppSwitcherEngine] Registered \(config.bindings.count) app shortcut bindings.")
+        AppLogger.getLogger(category: .engine).info("Registered \(config.bindings.count) app shortcut bindings.")
     }
     
     public func handleKeyPress(key: String) {

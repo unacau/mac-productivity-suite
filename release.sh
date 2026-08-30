@@ -1,8 +1,8 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-VERSION="2.0.0"
-BUILD="1"
+VERSION="2.1.0"
+BUILD="2"
 APP_NAME="Mac Productivity Suite"
 DMG_FILE="dist/MacProductivitySuite.dmg"
 PKG_FILE="dist/MacProductivitySuite-Full.pkg"
@@ -51,36 +51,47 @@ repo = '$REPO'
 ed_sig = '$ED_SIG'
 length = '$LENGTH'
 
-xml_template = f'''<?xml version=\"1.0\" encoding=\"utf-8\"?>
-<rss version=\"2.0\" xmlns:sparkle=\"http://www.andymatuschak.org/xml-namespaces/sparkle\"  xmlns:dc=\"http://purl.org/dc/elements/1.1/\">
-  <channel>
-    <title>Mac Productivity Suite Changelog</title>
-    <link>https://raw.githubusercontent.com/{repo}/main/appcast.xml</link>
-    <description>Most recent changes with links to updates.</description>
-    <language>en</language>
-    <item>
+new_item = f'''    <item>
       <title>Version {version} (Build {build})</title>
       <pubDate>{pub_date}</pubDate>
       <sparkle:version>{build}</sparkle:version>
       <sparkle:shortVersionString>{version}</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <description><![CDATA[<ul>
-        <li>Universal Multi-User Engine</li>
-        <li>Dynamic App Discovery</li>
-        <li>Automatic Chrome Profiles (Brave, Edge, Chromium)</li>
-        <li>New Preferences UI</li>
+        <li>Swift 6 Structured Concurrency &amp; @MainActor Architecture</li>
+        <li>Apple OSLog Unified Structured Telemetry &amp; Diagnostics</li>
+        <li>Hardened Multi-Arch Universal Build Pipeline</li>
+        <li>GitHub Actions CI/CD &amp; Automated Release Workflows</li>
+        <li>Modern Swift Testing Framework Migration</li>
       </ul>]]></description>
       <enclosure url=\"https://github.com/{repo}/releases/download/v{version}/MacProductivitySuite.dmg\"
                  type=\"application/octet-stream\"
                  sparkle:edSignature=\"{ed_sig}\"
                  length=\"{length}\" />
-    </item>
+    </item>'''
+
+if os.path.exists(appcast_file):
+    with open(appcast_file, 'r', encoding='utf-8') as f:
+        content = f.read()
+    if '<item>' in content:
+        updated_content = content.replace('<item>', new_item + '\n    <item>', 1)
+    else:
+        updated_content = content.replace('</channel>', new_item + '\n  </channel>', 1)
+else:
+    updated_content = f'''<?xml version=\"1.0\" encoding=\"utf-8\"?>
+<rss version=\"2.0\" xmlns:sparkle=\"http://www.andymatuschak.org/xml-namespaces/sparkle\"  xmlns:dc=\"http://purl.org/dc/elements/1.1/\">
+  <channel>
+    <title>Mac Productivity Suite Changelog</title>
+    <link>https://raw.githubusercontent.com/{repo}/main/appcast.xml</link>
+    <description>Most recent changes with links to updates.</description>
+    <language>en</language>
+{new_item}
   </channel>
 </rss>
 '''
 
 with open(appcast_file, 'w', encoding='utf-8') as f:
-    f.write(xml_template)
+    f.write(updated_content)
 "
 
 echo "✅ $APPCAST_FILE updated successfully."
