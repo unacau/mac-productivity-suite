@@ -13,143 +13,93 @@ echo " (With Hammerspoon & Karabiner-Elements Bundled)  "
 echo "=================================================="
 
 # Ensure Swift Menu Bar App is compiled
-echo "[*] Compiling Swift Menu Bar App..."
-./build_app.sh
+if [ ! -f "$DIST_DIR/Mac Productivity Suite.app/Contents/MacOS/MacProductivitySuiteBar" ]; then
+    echo "[*] Compiling Swift Menu Bar App..."
+    ./build_app.sh
+fi
 
 echo "[1/4] Preparing build directories..."
-rm -rf "$BUILD_DIR"
-mkdir -p "$ROOT_DIR/Applications" "$SCRIPTS_DIR/binaries"
+rm -rf "$BUILD_DIR" "$DIST_DIR/$PKG_NAME"
+mkdir -p "$ROOT_DIR/Applications" "$SCRIPTS_DIR"
 
-# 1. Payload: Place the Swift Menu Bar App into /Applications
 echo "[2/4] Assembling Application and Config payloads..."
-cp -R "dist/Mac Productivity Suite.app" "$ROOT_DIR/Applications/"
+cp -R "$DIST_DIR/Mac Productivity Suite.app" "$ROOT_DIR/Applications/"
 
-# 2. Scripts Payload: Put configuration directories and offline cached binaries
+# Copy embedded assets into the scripts directory
+cp payload_cache/Hammerspoon.zip "$SCRIPTS_DIR/"
+cp payload_cache/Karabiner.dmg "$SCRIPTS_DIR/"
 cp -R hammerspoon "$SCRIPTS_DIR/"
 cp -R karabiner "$SCRIPTS_DIR/"
-
-# Ensure cached binaries are embedded for 100% offline installation
-if [ -f payload_cache/Hammerspoon.zip ]; then
-    cp payload_cache/Hammerspoon.zip "$SCRIPTS_DIR/binaries/"
-fi
-if [ -f payload_cache/Karabiner.dmg ]; then
-    cp payload_cache/Karabiner.dmg "$SCRIPTS_DIR/binaries/"
-fi
 
 echo "[3/4] Creating self-contained offline postinstall script..."
 cat << 'POSTINSTALL' > "$SCRIPTS_DIR/postinstall"
 #!/bin/bash
 set -e
 
-# Secure Checksums
-HAMMERSPOON_SHA256="11bb1c90faf5427f37c7bd4fe7eab9774ae43e1d5cb020c5b3088dac32849efa"
-HAMMERSPOON_FALLBACK_URL="https://github.com/Hammerspoon/hammerspoon/releases/download/1.1.1/Hammerspoon-1.1.1.zip"
-
-# Determine target console user
-if [ -n "$USER" ] && [ "$USER" != "root" ]; then
-    TARGET_USER="$USER"
-else
-    TARGET_USER=$(stat -f "%Su" /dev/console 2>/dev/null || echo "$SUDO_USER")
-    if [ -z "$TARGET_USER" ] || [ "$TARGET_USER" = "root" ]; then
-        TARGET_USER=$(who | grep console | awk '{print $1}' | head -n 1)
-    fi
+# Target user
+TARGET_USER=$(stat -f "%Su" /dev/console 2>/dev/null || echo "$SUDO_USER")
+if [ -z "$TARGET_USER" ] || [ "$TARGET_USER" = "root" ]; then
+    TARGET_USER=$(who | grep console | awk '{print $1}' | head -n 1)
 fi
 
-USER_HOME=$(dscl . -read /Users/$TARGET_USER NFSHomeDirectory 2>/dev/null | awk '{print $2}')
-if [ -z "$USER_HOME" ]; then
-    USER_HOME="/Users/$TARGET_USER"
-fi
-
-echo "[*] Target user: $TARGET_USER ($USER_HOME)"
-
+USER_HOME=$(dscl . -read /Users/$TARGET_USER NFSHomeDirectory | awk '{print $2}')
 HAMMERSPOON_DIR="$USER_HOME/.hammerspoon"
 KARABINER_DIR="$USER_HOME/.config/karabiner/assets/complex_modifications"
-REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# 1. ALWAYS INSTALL HAMMERSPOON (Core engine for both Classic and Hyper modes)
+# 1. INSTALL HAMMERSPOON
 if [ ! -d "/Applications/Hammerspoon.app" ]; then
     echo "[*] Installing Hammerspoon.app..."
-    if [ -f "$REPO_DIR/binaries/Hammerspoon.zip" ]; then
-        cp "$REPO_DIR/binaries/Hammerspoon.zip" /tmp/Hammerspoon.zip
-    else
-        echo "[*] Downloading Hammerspoon v1.1.1..."
-        curl -L -s -o /tmp/Hammerspoon.zip "$HAMMERSPOON_FALLBACK_URL"
-    fi
-    
-    # Checksum verification
-    ACTUAL_SHA=$(shasum -a 256 /tmp/Hammerspoon.zip | cut -d ' ' -f 1)
-    if [ "$ACTUAL_SHA" != "$HAMMERSPOON_SHA256" ]; then
-        echo "Error: Hammerspoon checksum mismatch!"
-        exit 1
-    fi
-    unzip -q /tmp/Hammerspoon.zip -d /Applications/
-    rm -f /tmp/Hammerspoon.zip
+    unzip -q "$SCRIPTS_DIR/Hammerspoon.zip" -d /Applications/
 fi
 
-# 2. INSTALL KARABINER-ELEMENTS (Included in Full Edition)
-if [ ! -d "/Applications/Karabiner-Elements.app" ]; then
-    echo "[*] Installing Karabiner-Elements.app..."
-    if [ -f "$REPO_DIR/binaries/Karabiner.dmg" ]; then
-        cp "$REPO_DIR/binaries/Karabiner.dmg" /tmp/Karabiner.dmg
-    else
-        echo "[*] Downloading Karabiner-Elements v16.2.0..."
-        curl -L -s -o /tmp/Karabiner.dmg "$KARABINER_FALLBACK_URL"
-    fi
-    
-    # Checksum verification
-    ACTUAL_SHA=$(shasum -a 256 /tmp/Karabiner.dmg | cut -d ' ' -f 1)
-    if [ "$ACTUAL_SHA" != "$KARABINER_SHA256" ]; then
-        echo "Error: Karabiner-Elements checksum mismatch!"
-        exit 1
-    fi
-    hdiutil attach /tmp/Karabiner.dmg -nobrowse -mountpoint /tmp/KarabinerMount
-    installer -pkg /tmp/KarabinerMount/*.pkg -target /
-    hdiutil detach /tmp/KarabinerMount -force
-    rm -f /tmp/Karabiner.dmg
-fi
-
-# 3. INSTALL CONFIGURATIONS
-echo "[*] Setting up user configuration directories..."
+# 2. SETUP CONFIGURATIONS
 sudo -u "$TARGET_USER" mkdir -p "$HAMMERSPOON_DIR"
 sudo -u "$TARGET_USER" mkdir -p "$KARABINER_DIR"
 
-# Backup existing Hammerspoon config if it exists
-if [ -f "$HAMMERSPOON_DIR/init.lua" ]; then
-    echo "[*] Backing up existing Hammerspoon configuration..."
-    sudo -u "$TARGET_USER" mv "$HAMMERSPOON_DIR" "${HAMMERSPOON_DIR}.backup_${TIMESTAMP}"
-    sudo -u "$TARGET_USER" mkdir -p "$HAMMERSPOON_DIR"
-fi
+cp -R "$SCRIPTS_DIR/hammerspoon/"* "$HAMMERSPOON_DIR/"
+cp "$SCRIPTS_DIR/karabiner/hyper-key-mapping.json" "$KARABINER_DIR/"
 
-# Backup existing Karabiner rule if it exists
-if [ -f "$KARABINER_DIR/hyper-key-mapping.json" ]; then
-    echo "[*] Backing up existing Karabiner hyper key rule..."
-    sudo -u "$TARGET_USER" mv "$KARABINER_DIR/hyper-key-mapping.json" "$KARABINER_DIR/hyper-key-mapping.backup_${TIMESTAMP}.json"
-fi
-
-echo "[*] Copying Hammerspoon configuration..."
-cp -R "$REPO_DIR/hammerspoon/"* "$HAMMERSPOON_DIR/"
-
-echo "[*] Copying Karabiner configuration..."
-cp "$REPO_DIR/karabiner/hyper-key-mapping.json" "$KARABINER_DIR/"
-
-# Default to classic mode unless specified
 if [ ! -f "$HAMMERSPOON_DIR/config.json" ]; then
     echo '{"mode":"classic","autoReloadHammerspoon":true}' > "$HAMMERSPOON_DIR/config.json"
 fi
 
-# Fix ownership
 chown -R "$TARGET_USER" "$HAMMERSPOON_DIR"
 chown -R "$TARGET_USER" "$USER_HOME/.config/karabiner" 2>/dev/null || true
 
-# 4. AUTO-LAUNCH HAMMERSPOON AND MAC PRODUCTIVITY SUITE MENU BAR APP FOR THE USER
-echo "[*] Launching installed apps for user $TARGET_USER..."
+# 3. AUTO-LAUNCH APPS
 if [ -n "$TARGET_USER" ] && [ "$TARGET_USER" != "root" ]; then
     sudo -u "$TARGET_USER" open "/Applications/Mac Productivity Suite.app" 2>/dev/null || true
     sudo -u "$TARGET_USER" open "/Applications/Hammerspoon.app" 2>/dev/null || true
 fi
 
-echo "[*] Installation Complete."
+# 4. DEFERRED ASYNCHRONOUS INSTALLATION FOR KARABINER
+# We cannot run 'installer' synchronously in postinstall because 'installd' locks the system.
+# We create a background script that waits for this pkg to finish, then installs Karabiner.
+if [ ! -d "/Applications/Karabiner-Elements.app" ]; then
+    cp "$SCRIPTS_DIR/Karabiner.dmg" /tmp/Karabiner.dmg
+    cat << 'DELAYED_INSTALL' > /tmp/install_karabiner.sh
+#!/bin/bash
+# Wait for the main package installer to finish and release the installd lock
+sleep 5
+
+# Mount DMG silently
+hdiutil attach /tmp/Karabiner.dmg -nobrowse -mountpoint /tmp/KarabinerMount
+
+# Install the pkg
+installer -pkg /tmp/KarabinerMount/*.pkg -target /
+
+# Cleanup
+hdiutil detach /tmp/KarabinerMount -force
+rm -f /tmp/Karabiner.dmg
+rm -f /tmp/install_karabiner.sh
+DELAYED_INSTALL
+
+    chmod +x /tmp/install_karabiner.sh
+    # Launch in background and detach so postinstall can exit cleanly!
+    /tmp/install_karabiner.sh > /tmp/karabiner_install.log 2>&1 & disown
+fi
+
 exit 0
 POSTINSTALL
 
@@ -159,7 +109,7 @@ echo "[4/4] Generating .pkg installer bundle..."
 pkgbuild \
     --root "$ROOT_DIR" \
     --scripts "$SCRIPTS_DIR" \
-    --identifier "com.igorekishev.macproductivitysuite" \
+    --identifier "com.igorekishev.macproductivitysuite.full" \
     --version "1.0.0" \
     "$DIST_DIR/$PKG_NAME"
 
