@@ -60,6 +60,43 @@ sudo -u "$TARGET_USER" mkdir -p "$KARABINER_DIR"
 cp -R "$SCRIPTS_DIR/hammerspoon/"* "$HAMMERSPOON_DIR/"
 cp "$SCRIPTS_DIR/karabiner/hyper-key-mapping.json" "$KARABINER_DIR/"
 
+# Auto-inject Hyper Key rule directly into active profile in karabiner.json
+sudo -u "$TARGET_USER" /usr/bin/python3 -c "
+import json, os
+
+path = '$USER_HOME/.config/karabiner/karabiner.json'
+rule = {
+    'description': 'Caps Lock to Hyper Key (Held) and Escape (Tapped)',
+    'manipulators': [
+        {
+            'type': 'basic',
+            'from': {'key_code': 'caps_lock', 'modifiers': {'optional': ['any']}},
+            'to': [{'key_code': 'left_shift', 'modifiers': ['left_command', 'left_control', 'left_option']}],
+            'to_if_alone': [{'key_code': 'escape'}]
+        }
+    ]
+}
+
+config = {'profiles': [{'name': 'Default profile', 'selected': True, 'complex_modifications': {'rules': []}}]}
+if os.path.exists(path):
+    try:
+        with open(path, 'r') as f:
+            config = json.load(f)
+    except Exception:
+        pass
+
+for p in config.get('profiles', []):
+    if p.get('selected', False) or len(config.get('profiles', [])) == 1:
+        cm = p.setdefault('complex_modifications', {})
+        rules = cm.setdefault('rules', [])
+        if not any('Hyper Key' in r.get('description', '') for r in rules):
+            rules.append(rule)
+
+os.makedirs(os.path.dirname(path), exist_ok=True)
+with open(path, 'w') as f:
+    json.dump(config, f, indent=4)
+" 2>/dev/null || true
+
 if [ ! -f "$HAMMERSPOON_DIR/config.json" ]; then
     echo '{"mode":"classic","autoReloadHammerspoon":true}' > "$HAMMERSPOON_DIR/config.json"
 fi

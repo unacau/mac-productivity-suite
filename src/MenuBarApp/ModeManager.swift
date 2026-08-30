@@ -202,39 +202,104 @@ final class ModeManager: ObservableObject {
     
     func installKarabinerRuleIfNeeded() {
         let home = fileManager.homeDirectoryForCurrentUser
-        let targetDir = home.appendingPathComponent(".config/karabiner/assets/complex_modifications")
-        let targetFile = targetDir.appendingPathComponent("hyper-key-mapping.json")
+        let configDir = home.appendingPathComponent(".config/karabiner")
+        let assetDir = configDir.appendingPathComponent("assets/complex_modifications")
+        let assetFile = assetDir.appendingPathComponent("hyper-key-mapping.json")
+        let configFile = configDir.appendingPathComponent("karabiner.json")
+        
+        let ruleJson = """
+        {
+          "title": "Hyper Key mapping for Mac Productivity Suite",
+          "rules": [
+            {
+              "description": "Caps Lock to Hyper Key (Held) and Escape (Tapped)",
+              "manipulators": [
+                {
+                  "type": "basic",
+                  "from": {
+                    "key_code": "caps_lock",
+                    "modifiers": { "optional": ["any"] }
+                  },
+                  "to": [
+                    {
+                      "key_code": "left_shift",
+                      "modifiers": ["left_command", "left_control", "left_option"]
+                    }
+                  ],
+                  "to_if_alone": [{ "key_code": "escape" }]
+                }
+              ]
+            }
+          ]
+        }
+        """
         
         do {
-            try fileManager.createDirectory(at: targetDir, withIntermediateDirectories: true)
-            if !fileManager.fileExists(atPath: targetFile.path) {
-                let ruleJson = """
-                {
-                  "title": "Hyper Key mapping for Mac Productivity Suite",
-                  "rules": [
-                    {
-                      "description": "Caps Lock to Hyper Key (Held) and Escape (Tapped)",
-                      "manipulators": [
-                        {
-                          "type": "basic",
-                          "from": {
+            try fileManager.createDirectory(at: assetDir, withIntermediateDirectories: true)
+            try ruleJson.write(to: assetFile, atomically: true, encoding: .utf8)
+            
+            // Inject directly into karabiner.json active profile
+            let ruleDict: [String: Any] = [
+                "description": "Caps Lock to Hyper Key (Held) and Escape (Tapped)",
+                "manipulators": [
+                    [
+                        "type": "basic",
+                        "from": [
                             "key_code": "caps_lock",
-                            "modifiers": { "optional": ["any"] }
-                          },
-                          "to": [
-                            {
-                              "key_code": "left_shift",
-                              "modifiers": ["left_command", "left_control", "left_option"]
-                            }
-                          ],
-                          "to_if_alone": [{ "key_code": "escape" }]
-                        }
-                      ]
+                            "modifiers": ["optional": ["any"]]
+                        ],
+                        "to": [
+                            [
+                                "key_code": "left_shift",
+                                "modifiers": ["left_command", "left_control", "left_option"]
+                            ]
+                        ],
+                        "to_if_alone": [
+                            ["key_code": "escape"]
+                        ]
+                    ]
+                ]
+            ]
+            
+            var config: [String: Any] = [:]
+            if fileManager.fileExists(atPath: configFile.path),
+               let data = try? Data(contentsOf: configFile),
+               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                config = json
+            }
+            
+            var profiles = config["profiles"] as? [[String: Any]] ?? [
+                [
+                    "name": "Default profile",
+                    "selected": true,
+                    "complex_modifications": ["rules": []]
+                ]
+            ]
+            
+            var modified = false
+            for i in 0..<profiles.count {
+                if profiles[i]["selected"] as? Bool == true || profiles.count == 1 {
+                    var complexMod = profiles[i]["complex_modifications"] as? [String: Any] ?? ["rules": []]
+                    var rules = complexMod["rules"] as? [[String: Any]] ?? []
+                    
+                    let alreadyExists = rules.contains { rule in
+                        (rule["description"] as? String)?.contains("Hyper Key") == true
                     }
-                  ]
+                    
+                    if !alreadyExists {
+                        rules.append(ruleDict)
+                        complexMod["rules"] = rules
+                        profiles[i]["complex_modifications"] = complexMod
+                        modified = true
+                    }
                 }
-                """
-                try ruleJson.write(to: targetFile, atomically: true, encoding: .utf8)
+            }
+            
+            if modified || !fileManager.fileExists(atPath: configFile.path) {
+                config["profiles"] = profiles
+                let outputData = try JSONSerialization.data(withJSONObject: config, options: [.prettyPrinted, .sortedKeys])
+                try outputData.write(to: configFile)
+                print("Injected Hyper Key rule into karabiner.json successfully.")
             }
         } catch {
             print("Error writing Karabiner rule: \(error)")
