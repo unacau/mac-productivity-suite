@@ -22,5 +22,7 @@
     <true/>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>This app requires AppleEvents access to dynamically configure Hammerspoon.</string>
 </dict>
 </plist>

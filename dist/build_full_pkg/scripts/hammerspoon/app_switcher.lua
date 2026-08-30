@@ -652,6 +652,7 @@ function AppSwitcher.setMode(mode)
         end)
     end
     print("AppSwitcher mode set to: " .. currentMode)
+    hs.alert.show("AppSwitcher mode: " .. string.upper(currentMode))
 end
 
 -- Get current mode

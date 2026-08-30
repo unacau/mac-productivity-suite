@@ -238,6 +238,17 @@ struct StatusIndicator: View {
                         .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
+            } else if isRunning {
+                Button(action: onAction) {
+                    Text("Settings")
+                        .font(.system(size: 9, weight: .bold))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.secondary.opacity(0.15))
+                        .foregroundStyle(.secondary)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
             }
         }
     }
