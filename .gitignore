@@ -1,0 +1,45 @@
+# macOS System Files
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+
+# Build Artifacts & Distribution Packages
+dist/
+build/
+*.pkg
+*.dmg
+*.zip
+*.app/
+*.dSYM/
+*.o
+*.swiftdoc
+*.swiftmodule
+*.abi.json
+
+# Swift Package Manager & Temporary files
+.build/
+.swiftpm/
+test_*.swift
+test_*.sh
+test_main
+/tmp/
+
+# Payloads & Download Caches (Binary dependencies)
+payload_cache/
+binaries/
+
+# User-specific runtime configurations & backups
+*.backup_*
+*.backup
+.hammerspoon/config.json
+
+# IDE & Editor Settings
+.vscode/
+.idea/
+*.xcworkspace/
+xcuserdata/
+DerivedData/
