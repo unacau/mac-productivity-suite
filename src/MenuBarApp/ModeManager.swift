@@ -65,12 +65,20 @@ final class ModeManager: ObservableObject {
         
         let runningApps = NSWorkspace.shared.runningApplications
         isHammerspoonRunning = runningApps.contains { $0.bundleIdentifier == "org.hammerspoon.Hammerspoon" }
-        isKarabinerRunning = runningApps.contains { 
+        
+        let isAppRunning = runningApps.contains { 
             $0.bundleIdentifier?.contains("Karabiner") == true || $0.localizedName?.contains("Karabiner") == true 
-        } || isKarabinerDaemonRunning()
+        }
+        
+        Task.detached {
+            let isDaemonRunning = self.checkKarabinerDaemon()
+            await MainActor.run {
+                self.isKarabinerRunning = isAppRunning || isDaemonRunning
+            }
+        }
     }
     
-    private func isKarabinerDaemonRunning() -> Bool {
+    nonisolated private func checkKarabinerDaemon() -> Bool {
         let task = Process()
         task.launchPath = "/bin/ps"
         task.arguments = ["ax"]
@@ -252,16 +260,13 @@ final class ModeManager: ObservableObject {
     }
     
     private func executeHammerspoonLua(_ lua: String) {
-        let script = "tell application \"Hammerspoon\" to execute lua code \"\(lua)\""
-        var error: NSDictionary?
-        if let appleScript = NSAppleScript(source: script) {
-            appleScript.executeAndReturnError(&error)
-            if error == nil { return }
+        guard isHammerspoonRunning else { return }
+        Task.detached {
+            let script = "tell application \"Hammerspoon\" to execute lua code \"\(lua)\""
+            var error: NSDictionary?
+            if let appleScript = NSAppleScript(source: script) {
+                appleScript.executeAndReturnError(&error)
+            }
         }
-        
-        let task = Process()
-        task.launchPath = "/bin/sh"
-        task.arguments = ["-c", "if which hs >/dev/null; then hs -c \"\(lua)\"; fi"]
-        try? task.run()
     }
 }
