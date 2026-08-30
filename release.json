@@ -1,0 +1,10 @@
+{
+  "app_name": "Mac Productivity Suite",
+  "github_repo": "igorekishev/mac-productivity-suite",
+  "bundle_name": "Mac Productivity Suite Native.app",
+  "dmg_name": "MacProductivitySuite.dmg",
+  "git_branch": "main",
+  "min_system_version": "14.0",
+  "appcast_file": "appcast.xml",
+  "derived_data_prefixes": ["MacProductivitySuite-"]
+}

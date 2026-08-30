@@ -23,11 +23,15 @@ mkdir -p "${MACOS_DIR}" "${CONTENTS_DIR}" "${ROOT_DIR}/Applications" "${SCRIPTS_
 
 SOURCES=(
     "src/NativeStandaloneApp/Engine/HotkeyManager.swift"
+    "src/NativeStandaloneApp/Engine/AppConfig.swift"
+    "src/NativeStandaloneApp/Engine/AppDiscoveryService.swift"
+    "src/NativeStandaloneApp/Engine/ChromeProfileHelper.swift"
     "src/NativeStandaloneApp/Engine/AppSwitcherEngine.swift"
     "src/NativeStandaloneApp/Engine/CopyOnSelectEngine.swift"
-    "src/NativeStandaloneApp/Engine/ChromeProfileHelper.swift"
     "src/NativeStandaloneApp/Engine/ProductivityActionsHelper.swift"
     "src/NativeStandaloneApp/Views/HUDOverlayWindow.swift"
+    "src/NativeStandaloneApp/Views/AppPickerSheet.swift"
+    "src/NativeStandaloneApp/Views/SettingsWindow.swift"
     "src/NativeStandaloneApp/Views/MenuBarPopupView.swift"
     "src/NativeStandaloneApp/main.swift"
 )
@@ -38,6 +42,7 @@ swiftc \
     -target arm64-apple-macos14.0 \
     "${SOURCES[@]}" \
     -o "${BUILD_DIR}/temp/binary_arm64" \
+    -F Frameworks -framework Sparkle \
     -framework Cocoa \
     -framework SwiftUI \
     -framework Carbon \
@@ -49,6 +54,7 @@ swiftc \
     -target x86_64-apple-macos14.0 \
     "${SOURCES[@]}" \
     -o "${BUILD_DIR}/temp/binary_x86_64" \
+    -F Frameworks -framework Sparkle \
     -framework Cocoa \
     -framework SwiftUI \
     -framework Carbon \
@@ -57,44 +63,35 @@ swiftc \
 echo "[3/5] Creating Universal Mach-O Binary with lipo..."
 lipo -create -output "${MACOS_DIR}/MacProductivitySuiteNative" "${BUILD_DIR}/temp/binary_arm64" "${BUILD_DIR}/temp/binary_x86_64"
 
-echo "[4/5] Injecting Info.plist and Code-Signing..."
+echo "[4/5] Embedding Frameworks and Code-Signing..."
+mkdir -p "${CONTENTS_DIR}/Frameworks"
+cp -R "Frameworks/Sparkle.framework" "${CONTENTS_DIR}/Frameworks/"
 cp src/NativeStandaloneApp/Info.plist "${CONTENTS_DIR}/Info.plist"
+
+install_name_tool -add_rpath @executable_path/../Frameworks "${MACOS_DIR}/MacProductivitySuiteNative" || true
+
 codesign --force --deep --sign - "${APP_BUNDLE}"
 
-echo "[5/5] Generating Standalone .pkg Installer..."
-cp -R "${APP_BUNDLE}" "${ROOT_DIR}/Applications/Mac Productivity Suite.app"
+echo "[5/5] Generating DMG Installer..."
+DMG_PATH="${DIST_DIR}/MacProductivitySuite.dmg"
+rm -f "${DMG_PATH}"
 
-cat << 'POSTINSTALL' > "${SCRIPTS_DIR}/postinstall"
-#!/bin/bash
-set -e
-
-# Target user
-TARGET_USER=$(stat -f "%Su" /dev/console 2>/dev/null || echo "$SUDO_USER")
-if [ -z "$TARGET_USER" ] || [ "$TARGET_USER" = "root" ]; then
-    TARGET_USER=$(who | grep console | awk '{print $1}' | head -n 1)
+if command -v create-dmg >/dev/null 2>&1; then
+    create-dmg \
+      --volname "Mac Productivity Suite" \
+      --window-pos 200 120 \
+      --window-size 600 400 \
+      --icon-size 128 \
+      --app-drop-link 400 150 \
+      "${DMG_PATH}" \
+      "${APP_BUNDLE}"
+else
+    echo "create-dmg not found, creating standard DMG..."
+    hdiutil create -volname "Mac Productivity Suite" -srcfolder "${APP_BUNDLE}" -ov -format UDZO "${DMG_PATH}"
 fi
-
-echo "[*] Installed standalone app to /Applications/Mac Productivity Suite.app"
-
-# Auto-launch app for user
-if [ -n "$TARGET_USER" ] && [ "$TARGET_USER" != "root" ]; then
-    sudo -u "$TARGET_USER" open "/Applications/Mac Productivity Suite.app" 2>/dev/null || true
-fi
-
-exit 0
-POSTINSTALL
-
-chmod +x "${SCRIPTS_DIR}/postinstall"
-
-pkgbuild \
-    --root "${ROOT_DIR}" \
-    --scripts "${SCRIPTS_DIR}" \
-    --identifier "com.igorekishev.macproductivitysuite.native" \
-    --version "1.0.0" \
-    "${PKG_PATH}"
 
 echo "=================================================="
 echo " Native Standalone Build Succeeded!"
 echo " App: ${APP_BUNDLE}"
-echo " PKG: ${PKG_PATH}"
+echo " DMG: ${DMG_PATH}"
 echo "=================================================="

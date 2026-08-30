@@ -24,5 +24,9 @@
     <true/>
     <key>NSAppleEventsUsageDescription</key>
     <string>This app requires AppleEvents access to dynamically configure other apps.</string>
+    <key>SUFeedURL</key>
+    <string>https://raw.githubusercontent.com/igorekishev/mac-productivity-suite/main/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>QvYyS6DGXM98MT6n1YWPdJAoV7Lrbr+RrvKT9w97IJI=</string>
 </dict>
 </plist>

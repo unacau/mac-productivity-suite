@@ -1,19 +1,23 @@
 import Cocoa
 import SwiftUI
+import Sparkle
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
+    private var updaterController: SPUStandardUpdaterController!
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Run as accessory in menu bar (no dock icon)
+        // Run as accessory in menu bar (no dock icon by default)
         NSApp.setActivationPolicy(.accessory)
+        
+        // Initialize Sparkle Auto Updater
+        updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
         
         // 1. Setup Status Item in macOS Menu Bar
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusItem.button {
-            // Use standard SF Symbol with fallback
             if let image = NSImage(systemSymbolName: "command", accessibilityDescription: "Mac Productivity Suite") {
                 image.isTemplate = true
                 button.image = image
@@ -32,6 +36,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popover.contentViewController = NSHostingController(rootView: MenuBarPopupView())
         
         // 3. Initialize background productivity engines
+        _ = AppConfigManager.shared
+        _ = AppDiscoveryService.shared
+        _ = ChromeProfileHelper.shared
         _ = AppSwitcherEngine.shared
         _ = CopyOnSelectEngine.shared
         _ = ProductivityActionsHelper.shared
@@ -60,6 +67,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let button = statusItem?.button else { return }
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         popover.contentViewController?.view.window?.makeKey()
+    }
+    
+    @objc public func checkForUpdates() {
+        updaterController.checkForUpdates(self)
     }
 }
 
