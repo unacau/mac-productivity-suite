@@ -7,14 +7,26 @@ This document defines the process for safely shipping updates to the Mac Product
 Before opening a PR that triggers a new release, ensure the following quality gates are met:
 
 - **Code Quality**:
-  - `tests/run_tests.sh` passes successfully.
+  - `tests/run_tests.sh` passes successfully (runs Swift Unit Tests, OS-abstracted Integration Tests, and Lua syntax validation).
   - `build_native_app.sh` compiles cleanly without warnings.
   - Telemetry is present via `AppLogger` (No raw `print()` statements).
 - **Security**:
   - Sparkle EdDSA private keys remain in GitHub Secrets, NEVER committed.
   - `AXIsProcessTrusted` is strictly verified before hooking global macOS events.
 
-## 2. CI/CD Automated Workflow
+## 2. Version Bumping (Semantic Versioning)
+
+The project follows standard Semantic Versioning (a.b.c). A single source of truth is maintained in `VERSION.txt` and `BUILD.txt`.
+
+Before drafting a release, automatically bump the version using one of the following commands:
+```bash
+make bump-patch  # For bug fixes (e.g., 2.1.0 -> 2.1.1)
+make bump-minor  # For new features, non-breaking (e.g., 2.1.1 -> 2.2.0)
+make bump-major  # For major architectural changes (e.g., 2.2.0 -> 3.0.0)
+```
+This automatically increments the build number and updates `Info.plist`, preventing inconsistencies.
+
+## 3. CI/CD Automated Workflow
 
 1. **Pull Requests**: Pushing to any branch or opening a PR triggers `.github/workflows/ci.yml`. This runs the Swift test suite and native build.
 2. **Release (Tagging)**: When a commit is tagged (e.g., `v2.1.0`) and pushed to `main`, `.github/workflows/release.yml` triggers.

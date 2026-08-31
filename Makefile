@@ -1,6 +1,15 @@
-.PHONY: all native full test verify clean
+.PHONY: all native full test verify clean bump-major bump-minor bump-patch
 
 all: native full test verify
+
+bump-major:
+	@./bump_version.sh major
+
+bump-minor:
+	@./bump_version.sh minor
+
+bump-patch:
+	@./bump_version.sh patch
 
 native:
 	@./build_native_app.sh

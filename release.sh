@@ -1,8 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
-VERSION="2.1.0"
-BUILD="2"
+VERSION=$(cat VERSION.txt)
+BUILD=$(cat BUILD.txt)
 APP_NAME="Mac Productivity Suite"
 DMG_FILE="dist/MacProductivitySuite.dmg"
 PKG_FILE="dist/MacProductivitySuite-Full.pkg"

@@ -6,6 +6,7 @@ DIST_DIR="dist"
 BUILD_DIR="$DIST_DIR/build_full_pkg"
 ROOT_DIR="$BUILD_DIR/root"
 SCRIPTS_DIR="$BUILD_DIR/scripts"
+VERSION=$(cat VERSION.txt)
 
 echo "=================================================="
 echo " Building Mac Productivity Suite Full Edition     "
@@ -147,7 +148,7 @@ pkgbuild \
     --root "$ROOT_DIR" \
     --scripts "$SCRIPTS_DIR" \
     --identifier "com.unacau.macproductivitysuite.full" \
-    --version "2.1.0" \
+    --version "$VERSION" \
     "$DIST_DIR/$PKG_NAME"
 
 echo "=================================================="
