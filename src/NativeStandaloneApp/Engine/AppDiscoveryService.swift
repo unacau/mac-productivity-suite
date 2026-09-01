@@ -194,41 +194,48 @@ public final class AppDiscoveryService: ObservableObject {
             return found.isEmpty ? [candidates.first ?? ""] : found
         }
         
-        // 1. Terminal / Shell (i)
-        let terminals = resolveCandidates(["Ghostty", "iTerm", "iTerm2", "Warp", "Alacritty", "kitty", "Terminal"])
-        if !terminals.isEmpty { bindings["i"] = terminals }
-        
-        // 2. Code / IDE / Editor (c)
-        let editors = resolveCandidates(["Cursor", "Visual Studio Code", "Xcode", "Zed", "Sublime Text", "IntelliJ IDEA", "PyCharm", "WebStorm", "Nova"])
-        if !editors.isEmpty { bindings["c"] = editors }
-        
-        // 3. Web Browsers (b)
-        let browsers = resolveCandidates(["Google Chrome", "Arc", "Safari", "Brave Browser", "Firefox", "Microsoft Edge", "Orion"])
-        if !browsers.isEmpty { bindings["b"] = browsers }
-        
-        // 4. Communication & Chat (t)
-        let chats = resolveCandidates(["Slack", "Telegram", "Discord", "WhatsApp", "Messages", "Microsoft Teams", "Zoom"])
-        if !chats.isEmpty { bindings["t"] = chats }
-        
-        // 5. Notes & Knowledge (n)
-        let notes = resolveCandidates(["Notes", "Notion", "Obsidian", "Bear", "Craft", "Logseq", "Reminders"])
-        if !notes.isEmpty { bindings["n"] = notes }
-        
-        // 6. Audio / Music (s)
-        let music = resolveCandidates(["Spotify", "Music", "YouTube Music", "SoundCloud", "Podcasts"])
-        if !music.isEmpty { bindings["s"] = music }
-        
-        // 7. System / Files (f)
+        // 1. Files & Canvas (f) - Finder and Freeform
         let files = resolveCandidates(["Finder", "Freeform"])
         if !files.isEmpty { bindings["f"] = files }
         
-        // 8. Monitor / Utility (m)
-        let monitor = resolveCandidates(["Activity Monitor", "Stats", "CleanMyMac X"])
-        if !monitor.isEmpty { bindings["m"] = monitor }
+        // 2. Chat & Terminal (t) - Telegram and Terminal (iTerm2 if installed, else Terminal)
+        var tCandidates: [String] = []
+        if let telegram = findApp(nameOrBundle: "Telegram") {
+            tCandidates.append(telegram.name)
+        } else {
+            tCandidates.append("Telegram")
+        }
+        let terminalCandidates = resolveCandidates(["iTerm2", "iTerm", "Ghostty", "Warp", "Alacritty", "Terminal"])
+        for term in terminalCandidates {
+            if !tCandidates.contains(term) {
+                tCandidates.append(term)
+                break // Add primary terminal (iTerm2 preferred if installed, else Terminal)
+            }
+        }
+        if !tCandidates.isEmpty { bindings["t"] = tCandidates }
         
-        // 9. Documents / Preview (p)
-        let preview = resolveCandidates(["Preview", "Photos", "Passwords", "Books"])
+        // 3. Media & Documents (p) - Photos, Passwords, Preview
+        let preview = resolveCandidates(["Photos", "Passwords", "Preview"])
         if !preview.isEmpty { bindings["p"] = preview }
+        
+        // 4. Notes & Writing (n) - Notes
+        let notes = resolveCandidates(["Notes", "Notion", "Obsidian"])
+        if !notes.isEmpty { bindings["n"] = notes }
+        
+        // 5. Browser & Profiles (c) - Google Chrome & favorite profiles
+        var chromeList = resolveCandidates(["Google Chrome"])
+        let config = AppConfigManager.shared.config
+        for profId in config.favoriteChromeProfiles {
+            let targetId = profId.hasPrefix("chrome-profile:") ? profId : "chrome-profile:\(profId)"
+            if !chromeList.contains(targetId) {
+                chromeList.append(targetId)
+            }
+        }
+        if !chromeList.isEmpty { bindings["c"] = chromeList }
+        
+        // 6. Settings & System Preferences (s) - Settings
+        let settings = resolveCandidates(["System Settings", "System Preferences"])
+        if !settings.isEmpty { bindings["s"] = settings }
         
         return bindings
     }

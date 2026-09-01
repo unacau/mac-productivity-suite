@@ -5,7 +5,24 @@
     <link>https://raw.githubusercontent.com/unacau/mac-productivity-suite/main/appcast.xml</link>
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
-                <item>
+                    <item>
+      <title>Version 2.4.0 (Build 5)</title>
+      <pubDate>Tue, 01 Sep 2026 23:48:29 +0200</pubDate>
+      <sparkle:version>5</sparkle:version>
+      <sparkle:shortVersionString>2.4.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<ul>
+        <li>Visual HUD overlay feedback on application selection and candidate cycling</li>
+        <li>Standard preset keybindings: F (Finder/Freeform), T (Telegram/Terminal), P (Photos/Passwords/Preview), N (Notes), C (Chrome/Profiles), S (Settings)</li>
+        <li>Interactive Onboarding Setup Wizard with Chrome profile discovery &amp; favorite selection</li>
+        <li>Smart Terminal detection prioritizing iTerm2 over native macOS Terminal</li>
+      </ul>]]></description>
+      <enclosure url="https://github.com/unacau/mac-productivity-suite/releases/download/v2.4.0/MacProductivitySuite.dmg"
+                 type="application/octet-stream"
+                 sparkle:edSignature="SuA30sEikqVIjTPB0WrjUMNRNlPbmh3fI4TXqaCquKbtrwZrM3rnOPLggv59NdvniwrpcQ+lm2YFsWcN+nvLCQ=="
+                 length="1929914" />
+    </item>
+    <item>
       <title>Version 2.3.0 (Build 4)</title>
       <pubDate>Tue, 01 Sep 2026 23:26:40 +0200</pubDate>
       <sparkle:version>4</sparkle:version>

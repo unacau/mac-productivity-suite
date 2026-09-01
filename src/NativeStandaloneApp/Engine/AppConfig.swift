@@ -25,28 +25,53 @@ public struct AppConfig: Codable, Equatable {
     public var version: String
     public var bindings: [String: [String]]
     public var autoDiscoverChromeProfiles: Bool
+    public var hasCompletedOnboarding: Bool
+    public var favoriteChromeProfiles: [String]
+    
+    public init(
+        version: String = "2.1.0",
+        bindings: [String: [String]],
+        autoDiscoverChromeProfiles: Bool = true,
+        hasCompletedOnboarding: Bool = false,
+        favoriteChromeProfiles: [String] = []
+    ) {
+        self.version = version
+        self.bindings = bindings
+        self.autoDiscoverChromeProfiles = autoDiscoverChromeProfiles
+        self.hasCompletedOnboarding = hasCompletedOnboarding
+        self.favoriteChromeProfiles = favoriteChromeProfiles
+    }
     
     public static var `default`: AppConfig {
         AppConfig(
             version: "2.1.0",
             bindings: [
-                "i": ["Ghostty", "iTerm", "Terminal", "Warp", "Alacritty"],
-                "b": ["Google Chrome", "Arc", "Safari", "Brave Browser", "Firefox"],
-                "c": ["Google Chrome", "Calendar"],
-                "e": ["Cursor", "Visual Studio Code", "Xcode", "Sublime Text", "IntelliJ IDEA"],
                 "f": ["Finder", "Freeform"],
-                "m": ["Activity Monitor", "Music", "Spotify"],
-                "n": ["Notes", "Notion", "Obsidian", "Bear"],
-                "p": ["Preview", "Photos", "Passwords"],
-                "s": ["Spotify", "Apple Music", "SoundCloud", "System Settings"],
-                "t": ["Slack", "Telegram", "Discord", "WhatsApp", "Messages"]
+                "t": ["Telegram", "iTerm2", "iTerm", "Terminal"],
+                "p": ["Photos", "Passwords", "Preview"],
+                "n": ["Notes"],
+                "c": ["Google Chrome"],
+                "s": ["System Settings"]
             ],
-            autoDiscoverChromeProfiles: true
+            autoDiscoverChromeProfiles: true,
+            hasCompletedOnboarding: false,
+            favoriteChromeProfiles: []
         )
+    }
+    
+    // Custom decoding for backward compatibility
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.version = try container.decodeIfPresent(String.self, forKey: .version) ?? "2.1.0"
+        self.bindings = try container.decodeIfPresent([String: [String]].self, forKey: .bindings) ?? Self.default.bindings
+        self.autoDiscoverChromeProfiles = try container.decodeIfPresent(Bool.self, forKey: .autoDiscoverChromeProfiles) ?? true
+        self.hasCompletedOnboarding = try container.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding) ?? false
+        self.favoriteChromeProfiles = try container.decodeIfPresent([String].self, forKey: .favoriteChromeProfiles) ?? []
     }
 }
 
 public enum ConfigPreset: String, CaseIterable, Identifiable {
+    case standard = "Standard"
     case developer = "Developer"
     case everyday = "Everyday Mac"
     case creative = "Creative & Media"
@@ -56,6 +81,7 @@ public enum ConfigPreset: String, CaseIterable, Identifiable {
     
     public var description: String {
         switch self {
+        case .standard: return "Standard preset (Finder/Freeform, Telegram/Terminal, Photos/Passwords/Preview, Notes, Chrome, Settings)"
         case .developer: return "Optimized for coding (Terminal, Editors, Chrome, Slack, Notes)"
         case .everyday: return "Standard macOS apps (Browser, Calendar, Music, Notes, Finder)"
         case .creative: return "Media & Design workflows (Figma, Photoshop, Photos, Music)"
@@ -65,6 +91,15 @@ public enum ConfigPreset: String, CaseIterable, Identifiable {
     
     public var bindings: [String: [String]] {
         switch self {
+        case .standard:
+            return [
+                "f": ["Finder", "Freeform"],
+                "t": ["Telegram", "iTerm2", "iTerm", "Terminal"],
+                "p": ["Photos", "Passwords", "Preview"],
+                "n": ["Notes"],
+                "c": ["Google Chrome"],
+                "s": ["System Settings"]
+            ]
         case .developer:
             return [
                 "i": ["Ghostty", "iTerm", "Terminal", "Warp", "Alacritty"],

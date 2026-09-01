@@ -45,6 +45,25 @@ struct ProductivitySuiteTests {
     }
     
     @Test @MainActor
+    func standardPresetBindings() {
+        let standard = ConfigPreset.standard.bindings
+        #expect(standard["f"] == ["Finder", "Freeform"])
+        #expect(standard["p"] == ["Photos", "Passwords", "Preview"])
+        #expect(standard["n"] == ["Notes"])
+        #expect(standard["s"] == ["System Settings"])
+        #expect(standard["c"]?.contains("Google Chrome") == true)
+        #expect(standard["t"]?.contains("Telegram") == true)
+        
+        let defaultConfig = AppConfig.default
+        #expect(defaultConfig.bindings["f"] == ["Finder", "Freeform"])
+        #expect(defaultConfig.bindings["t"]?.contains("Telegram") == true)
+        #expect(defaultConfig.bindings["p"] == ["Photos", "Passwords", "Preview"])
+        #expect(defaultConfig.bindings["n"] == ["Notes"])
+        #expect(defaultConfig.bindings["s"] == ["System Settings"])
+        #expect(defaultConfig.hasCompletedOnboarding == false)
+    }
+    
+    @Test @MainActor
     func chromeProfileParsing() {
         let helper = ChromeProfileHelper.shared
         helper.refreshProfiles()

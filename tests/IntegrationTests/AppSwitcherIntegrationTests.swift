@@ -23,6 +23,7 @@ final class MockHotkeyProvider: @unchecked Sendable, HotkeyProvider {
     }
 }
 
+@Suite(.serialized)
 struct AppSwitcherIntegrationTests {
     
     @Test @MainActor
@@ -71,5 +72,37 @@ struct AppSwitcherIntegrationTests {
         
         #expect(workspace.fallbackNames.count == 1)
         #expect(workspace.fallbackNames.first == "TestAppThatDoesNotExist")
+    }
+    
+    @Test @MainActor
+    func testSingleAppHUDLaunch() async throws {
+        try await Task.sleep(nanoseconds: 500_000_000)
+        
+        let workspace = MockWorkspaceProvider()
+        let hotkeys = MockHotkeyProvider()
+        
+        let engine = AppSwitcherEngine(workspace: workspace, hotkeys: hotkeys)
+        
+        // Single app binding
+        AppConfigManager.shared.config.bindings = [
+            "n": ["Notes"]
+        ]
+        engine.setupBindings()
+        
+        guard let nKeyCode = KeyCodes.keyCode(for: "n") else {
+            Issue.record("Could not find keycode for n")
+            return
+        }
+        
+        hotkeys.simulateKeyPress(keyCode: nKeyCode)
+        try await Task.sleep(nanoseconds: 100_000_000)
+        
+        #expect(engine.isVisible == true, "HUD should be visible for single app selection")
+        #expect(engine.currentItems.count == 1)
+        #expect(engine.currentItems.first?.displayName == "Notes")
+        
+        // Manually trigger dismissal
+        engine.hideHUDOnly()
+        #expect(engine.isVisible == false)
     }
 }

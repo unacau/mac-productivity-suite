@@ -22,6 +22,18 @@ public struct SettingsView: View {
                 Spacer()
                 
                 Button(action: {
+                    OnboardingWindowController.shared.show()
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "sparkles")
+                        Text("Setup Wizard...")
+                    }
+                    .font(.system(size: 12, weight: .semibold))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
+                
+                Button(action: {
                     let smart = AppDiscoveryService.shared.generateSmartBindings()
                     configManager.config.bindings = smart
                     configManager.save()

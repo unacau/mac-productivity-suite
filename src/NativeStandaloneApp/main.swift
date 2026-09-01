@@ -47,10 +47,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             AXIsProcessTrustedWithOptions(options)
         }
         
-        // 5. Automatically open the welcome/controls popover on first launch so the user sees it immediately
+        // 5. Automatically open the onboarding wizard or welcome popover on launch
         Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(0.4))
-            self?.showPopover()
+            if !AppConfigManager.shared.config.hasCompletedOnboarding {
+                OnboardingWindowController.shared.show()
+            } else {
+                self?.showPopover()
+            }
         }
     }
     

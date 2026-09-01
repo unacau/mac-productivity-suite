@@ -33,6 +33,7 @@ SOURCES=(
     "src/NativeStandaloneApp/Views/AppPickerSheet.swift"
     "src/NativeStandaloneApp/Views/SettingsWindow.swift"
     "src/NativeStandaloneApp/Views/MenuBarPopupView.swift"
+    "src/NativeStandaloneApp/Views/OnboardingView.swift"
     "src/NativeStandaloneApp/main.swift"
 )
 

@@ -90,11 +90,27 @@ public struct MenuBarPopupView: View {
             
             VStack(spacing: 4) {
                 Button(action: {
+                    OnboardingWindowController.shared.show()
+                }) {
+                    HStack {
+                        Image(systemName: "sparkles")
+                            .foregroundStyle(Color.accentColor)
+                        Text("Setup Wizard & Profiles...")
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 6)
+                }
+                .buttonStyle(.plain)
+                
+                Button(action: {
                     if let appDelegate = NSApplication.shared.delegate as? AppDelegate {
                         appDelegate.checkForUpdates()
                     }
                 }) {
                     HStack {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .foregroundStyle(.secondary)
                         Text("Check for Updates...")
                         Spacer()
                     }
@@ -107,6 +123,8 @@ public struct MenuBarPopupView: View {
                     NSApplication.shared.terminate(nil)
                 }) {
                     HStack {
+                        Image(systemName: "power")
+                            .foregroundStyle(.secondary)
                         Text("Quit Suite")
                         Spacer()
                     }

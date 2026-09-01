@@ -64,11 +64,10 @@ new_item = f'''    <item>
       <sparkle:shortVersionString>{version}</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <description><![CDATA[<ul>
-        <li>Streamlined, ultra-minimal single-page Settings UI</li>
-        <li>Eliminated obsolete Accessibility permission requirements and prompts</li>
-        <li>Clean app rename to "Mac Productivity Suite" across all distributions</li>
-        <li>Native Chrome profile switching with authentic user avatars</li>
-        <li>Apple OSLog Unified Telemetry &amp; Console.app diagnostics</li>
+        <li>Visual HUD overlay feedback on application selection and candidate cycling</li>
+        <li>Standard preset keybindings: F (Finder/Freeform), T (Telegram/Terminal), P (Photos/Passwords/Preview), N (Notes), C (Chrome/Profiles), S (Settings)</li>
+        <li>Interactive Onboarding Setup Wizard with Chrome profile discovery &amp; favorite selection</li>
+        <li>Smart Terminal detection prioritizing iTerm2 over native macOS Terminal</li>
       </ul>]]></description>
       <enclosure url="https://github.com/{repo}/releases/download/v{version}/MacProductivitySuite.dmg"
                  type="application/octet-stream"
@@ -104,12 +103,18 @@ echo "✅ $APPCAST_FILE updated successfully."
 
 # 4. Git Push & GitHub Release
 echo "[4/4] Publishing to GitHub..."
-git add "$APPCAST_FILE" VERSION.txt BUILD.txt src/NativeStandaloneApp/Info.plist release.sh
-git commit -m "chore: release v$VERSION appcast and installers" || true
+git add -A
+git commit -m "feat(release): release v$VERSION with visual HUD, standard preset, and profile onboarding" || true
+git tag -a "v$VERSION" -m "Release v$VERSION" || true
 git push -u origin main || echo "⚠️  Git push failed. Ensure you have push access to the repository."
+git push origin "v$VERSION" || echo "⚠️  Git push tag failed."
 
 if command -v gh >/dev/null 2>&1; then
-    gh release create "v$VERSION" "$DMG_FILE" "$PKG_FILE" --title "v$VERSION" --notes "Release v$VERSION (Includes Standalone DMG and Full PKG)" || echo "Release v$VERSION might already exist."
+    gh release create "v$VERSION" "$DMG_FILE" "$PKG_FILE" --title "v$VERSION" --notes "### Release v$VERSION
+- **Visual HUD Feedback**: Instant visual HUD overlay feedback upon application selection and candidate cycling.
+- **Standard Preset**: Configured F (Finder/Freeform), T (Telegram/Terminal), P (Photos/Passwords/Preview), N (Notes), C (Chrome/Profiles), S (Settings).
+- **Profile Onboarding Wizard**: 4-step native setup flow to discover and link favorite Chrome profiles.
+- **Smart Terminal Detection**: Automatically detects and binds iTerm2 if installed, or native macOS Terminal." || echo "Release v$VERSION might already exist."
 else
     echo "⚠️  GitHub CLI (gh) not installed. Skip creating GitHub Release."
 fi

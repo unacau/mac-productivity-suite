@@ -10,16 +10,30 @@ public struct HUDOverlayView: View {
                 let isSelected = (index == engine.selectedIndex)
                 
                 VStack(spacing: 6) {
-                    Image(nsImage: item.icon)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 44, height: 44)
+                    ZStack(alignment: .bottomTrailing) {
+                        Image(nsImage: item.icon)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 46, height: 46)
+                            .clipShape(item.isChromeProfile ? AnyShape(Circle()) : AnyShape(RoundedRectangle(cornerRadius: 10)))
+                        
+                        if let badge = item.badge {
+                            Text(badge)
+                                .font(.system(size: 8, weight: .black))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1)
+                                .background(Capsule().fill(Color.blue))
+                                .offset(x: 4, y: 2)
+                        }
+                    }
+                    .frame(width: 48, height: 48)
                     
                     Text(item.displayName)
                         .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.75))
                         .lineLimit(1)
-                        .frame(width: 76)
+                        .frame(width: 80)
                 }
                 .padding(.vertical, 10)
                 .padding(.horizontal, 8)
@@ -43,7 +57,8 @@ public struct HUDOverlayView: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Color.white.opacity(0.2), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.4), radius: 18, x: 0, y: 8)
+        .shadow(color: Color.black.opacity(0.45), radius: 20, x: 0, y: 10)
+        .animation(.spring(response: 0.25, dampingFraction: 0.8), value: engine.selectedIndex)
     }
 }
 
@@ -61,6 +76,7 @@ public final class HUDOverlayWindow: NSWindow {
         self.isOpaque = false
         self.backgroundColor = .clear
         self.level = .floating
+        self.ignoresMouseEvents = true
         self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         self.contentView = NSHostingView(rootView: HUDOverlayView())
     }

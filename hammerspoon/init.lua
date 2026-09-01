@@ -33,18 +33,14 @@ local baseDir = hs.configdir or (os.getenv("HOME") .. "/.hammerspoon")
 local configPath = baseDir .. "/config.json"
 local sharedConfigPath = os.getenv("HOME") .. "/.config/mac-productivity-suite/config.json"
 
--- Default Universal Configuration
+-- Default Universal Configuration (Standard Preset)
 local defaultBindings = {
-    i = {"Ghostty", "iTerm", "Terminal", "Warp", "Alacritty"},
-    b = {"Google Chrome", "Arc", "Safari", "Brave Browser", "Firefox"},
-    c = {"Google Chrome", "Calendar"},
-    e = {"Cursor", "Visual Studio Code", "Xcode", "Sublime Text", "IntelliJ IDEA"},
     f = {"Finder", "Freeform"},
-    m = {"Activity Monitor", "Music", "Spotify"},
-    n = {"Notes", "Notion", "Obsidian", "Bear"},
-    p = {"Preview", "Photos", "Passwords"},
-    s = {"Spotify", "Apple Music", "SoundCloud", "System Settings"},
-    t = {"Slack", "Telegram", "Discord", "WhatsApp", "Messages"}
+    t = {"Telegram", "iTerm2", "iTerm", "Terminal"},
+    p = {"Photos", "Passwords", "Preview"},
+    n = {"Notes"},
+    c = {"Google Chrome"},
+    s = {"System Settings"}
 }
 
 function loadConfig()

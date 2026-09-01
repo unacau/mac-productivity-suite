@@ -95,11 +95,6 @@ public final class AppSwitcherEngine: ObservableObject {
         let config = AppConfigManager.shared.config
         guard let apps = config.bindings[key.lowercased()], !apps.isEmpty else { return }
         
-        if apps.count == 1 {
-            launchOrFocusTarget(apps[0])
-            return
-        }
-        
         var items: [AppSwitcherItem] = []
         for target in apps {
             if target.hasPrefix("chrome-profile:") {
@@ -114,11 +109,34 @@ public final class AppSwitcherEngine: ObservableObject {
                         profileDir: profile.dir,
                         badge: "Chrome"
                     ))
+                } else {
+                    let icon = AppDiscoveryService.shared.iconForApp(nameOrBundle: "Google Chrome")
+                    items.append(AppSwitcherItem(
+                        name: target,
+                        displayName: "Chrome (\(dir))",
+                        icon: icon,
+                        isChromeProfile: true,
+                        profileDir: dir,
+                        badge: "Chrome"
+                    ))
                 }
             } else {
                 let icon = AppDiscoveryService.shared.iconForApp(nameOrBundle: target)
                 items.append(AppSwitcherItem(name: target, displayName: target, icon: icon))
             }
+        }
+        
+        if items.isEmpty { return }
+        
+        if apps.count == 1 {
+            // Single app shortcut: switch immediately AND present HUD visual feedback briefly
+            activeKey = key
+            currentItems = items
+            selectedIndex = 0
+            launchOrFocusTarget(apps[0])
+            showHUD()
+            resetSingleDismissTimer()
+            return
         }
         
         if isVisible && activeKey == key && currentItems.count == items.count {
@@ -139,6 +157,23 @@ public final class AppSwitcherEngine: ObservableObject {
             showHUD()
             resetDismissTimer()
         }
+    }
+    
+    private func resetSingleDismissTimer() {
+        dismissTimer?.invalidate()
+        dismissTimer = Timer.scheduledTimer(withTimeInterval: 0.45, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                self?.hideHUDOnly()
+            }
+        }
+    }
+    
+    public func hideHUDOnly() {
+        dismissTimer?.invalidate()
+        dismissTimer = nil
+        isVisible = false
+        activeKey = nil
+        HUDOverlayWindow.shared.hide()
     }
     
     private func resetDismissTimer() {
