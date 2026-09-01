@@ -1,4 +1,4 @@
-.PHONY: all native full test verify clean bump-major bump-minor bump-patch
+.PHONY: all native full test verify clean bump-major bump-minor bump-patch health monitor diagnostics
 
 all: native full test verify
 
@@ -19,6 +19,15 @@ full:
 
 test:
 	@./tests/run_tests.sh
+
+health:
+	@./scripts/health_check.sh
+
+monitor:
+	@./scripts/monitor_telemetry.sh stream
+
+diagnostics:
+	@./scripts/monitor_telemetry.sh summary 1h
 
 verify:
 	@echo "=================================================="

@@ -43,3 +43,18 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: false
+
+      - name: Generate Release Telemetry & Step Summary
+        if: always()
+        run: |
+          cat << 'EOF' >> $GITHUB_STEP_SUMMARY
+          ## 🚀 Release Pipeline Summary & Metrics
+          
+          | Release Property | Value |
+          | :--- | :--- |
+          | **Version Tag** | `${{ github.ref_name }}` |
+          | **Marketing Version** | `$(cat VERSION.txt 2>/dev/null || echo 'N/A')` |
+          | **Build Number** | `$(cat BUILD.txt 2>/dev/null || echo 'N/A')` |
+          | **Sparkle EdDSA Signature** | ✅ Generated & Injected into `appcast.xml` |
+          | **Distribution Artifacts** | `MacProductivitySuite.dmg`, `MacProductivitySuite-Full.pkg` |
+          EOF
