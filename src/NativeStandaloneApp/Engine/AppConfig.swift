@@ -2,44 +2,6 @@ import Foundation
 import SwiftUI
 import Combine
 
-public enum ProductivityMode: String, CaseIterable, Codable {
-    case classic = "classic"       // Standard ⌥⌘ (Cmd + Option)
-    case hyper = "hyper"           // Caps Lock via Karabiner/EventTap
-    case ctrlOpt = "ctrl_opt"     // ⌃⌥ (Control + Option)
-    case cmdShift = "cmd_shift"   // ⌘⇧ (Command + Shift)
-    
-    public var displayName: String {
-        switch self {
-        case .classic: return "Classic (⌥⌘ Cmd + Option)"
-        case .hyper: return "Hyper Key (Caps Lock)"
-        case .ctrlOpt: return "Control + Option (⌃⌥)"
-        case .cmdShift: return "Command + Shift (⌘⇧)"
-        }
-    }
-    
-    public var shortBadge: String {
-        switch self {
-        case .classic: return "⌥⌘"
-        case .hyper: return "Caps Lock"
-        case .ctrlOpt: return "⌃⌥"
-        case .cmdShift: return "⌘⇧"
-        }
-    }
-    
-    public var carbonModifiers: UInt32 {
-        switch self {
-        case .classic:
-            return KeyCodes.cmdOptModifiers
-        case .hyper:
-            return KeyCodes.hyperModifiers
-        case .ctrlOpt:
-            return KeyCodes.ctrlOptModifiers
-        case .cmdShift:
-            return KeyCodes.cmdShiftModifiers
-        }
-    }
-}
-
 public struct ChromeProfileConfig: Identifiable, Codable, Equatable {
     public var id: String { "\(dir)_\(index)" }
     public var index: Int
@@ -59,58 +21,14 @@ public struct ChromeProfileConfig: Identifiable, Codable, Equatable {
     }
 }
 
-public struct CopyOnSelectConfig: Codable, Equatable {
-    public var enabled: Bool
-    public var dragThreshold: Double
-    public var copyDelayMs: Int
-    public var excludedBundleIDs: [String]
-    
-    public static var `default`: CopyOnSelectConfig {
-        CopyOnSelectConfig(
-            enabled: true,
-            dragThreshold: 10.0,
-            copyDelayMs: 150,
-            excludedBundleIDs: [
-                "com.apple.Terminal",
-                "com.googlecode.iterm2",
-                "com.mitchellh.ghostty",
-                "dev.warp.Warp-Stable",
-                "io.alacritty",
-                "net.kovidgoyal.kitty",
-                "com.apple.Console"
-            ]
-        )
-    }
-}
-
-public struct ProductivityShortcutsConfig: Codable, Equatable {
-    public var finderSplitEnabled: Bool
-    public var quickNotesEnabled: Bool
-    public var quickNotesDirectory: String
-    
-    public static var `default`: ProductivityShortcutsConfig {
-        let defaultDir = (FileManager.default.homeDirectoryForCurrentUser.path as NSString).appendingPathComponent("Documents/Highlights")
-        return ProductivityShortcutsConfig(
-            finderSplitEnabled: true,
-            quickNotesEnabled: true,
-            quickNotesDirectory: defaultDir
-        )
-    }
-}
-
 public struct AppConfig: Codable, Equatable {
     public var version: String
-    public var mode: ProductivityMode
     public var bindings: [String: [String]]
-    public var chromeProfiles: [ChromeProfileConfig]
     public var autoDiscoverChromeProfiles: Bool
-    public var copyOnSelect: CopyOnSelectConfig
-    public var productivityShortcuts: ProductivityShortcutsConfig
     
     public static var `default`: AppConfig {
         AppConfig(
             version: "2.1.0",
-            mode: .classic,
             bindings: [
                 "i": ["Ghostty", "iTerm", "Terminal", "Warp", "Alacritty"],
                 "b": ["Google Chrome", "Arc", "Safari", "Brave Browser", "Firefox"],
@@ -123,10 +41,7 @@ public struct AppConfig: Codable, Equatable {
                 "s": ["Spotify", "Apple Music", "SoundCloud", "System Settings"],
                 "t": ["Slack", "Telegram", "Discord", "WhatsApp", "Messages"]
             ],
-            chromeProfiles: [],
-            autoDiscoverChromeProfiles: true,
-            copyOnSelect: .default,
-            productivityShortcuts: .default
+            autoDiscoverChromeProfiles: true
         )
     }
 }
@@ -204,11 +119,17 @@ public final class AppConfigManager: ObservableObject {
     @Published public var config: AppConfig
     
     public var configURL: URL {
+        if let testDir = ProcessInfo.processInfo.environment["MPS_TEST_CONFIG_DIR"] {
+            return URL(fileURLWithPath: testDir).appendingPathComponent("config.json")
+        }
         let home = FileManager.default.homeDirectoryForCurrentUser
         return home.appendingPathComponent(".config/mac-productivity-suite/config.json")
     }
     
     public var hammerspoonConfigURL: URL {
+        if let testDir = ProcessInfo.processInfo.environment["MPS_TEST_CONFIG_DIR"] {
+            return URL(fileURLWithPath: testDir).appendingPathComponent("hs_config.json")
+        }
         let home = FileManager.default.homeDirectoryForCurrentUser
         return home.appendingPathComponent(".hammerspoon/config.json")
     }
@@ -237,8 +158,8 @@ public final class AppConfigManager: ObservableObject {
                 } else if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                     // Legacy migration
                     var legacy = AppConfig.default
-                    if let modeStr = json["mode"] as? String, let mode = ProductivityMode(rawValue: modeStr) {
-                        legacy.mode = mode
+                    if let bindings = json["bindings"] as? [String: [String]] {
+                        legacy.bindings = bindings
                     }
                     self.config = legacy
                     self.save()
@@ -273,7 +194,6 @@ public final class AppConfigManager: ObservableObject {
             
             AppLogger.getLogger(category: .config).info("Saved config successfully to \(self.configURL.path, privacy: .public)")
             
-            // Post notification for live reloading
             NotificationCenter.default.post(name: NSNotification.Name("AppConfigDidChangeNotification"), object: nil)
         } catch {
             AppLogger.getLogger(category: .config).error("Error saving config: \(error.localizedDescription, privacy: .public)")
@@ -287,11 +207,6 @@ public final class AppConfigManager: ObservableObject {
     
     public func resetToDefaults() {
         config = AppConfig.default
-        save()
-    }
-    
-    public func setMode(_ mode: ProductivityMode) {
-        config.mode = mode
         save()
     }
     

@@ -34,7 +34,15 @@ let package = Package(
                 .product(name: "Testing", package: "swift-testing")
             ],
             path: "tests",
-            exclude: ["run_tests.sh"]
+            exclude: ["run_tests.sh", "IntegrationTests"]
+        ),
+        .testTarget(
+            name: "MacProductivitySuiteIntegrationTests",
+            dependencies: [
+                "AppEngine",
+                .product(name: "Testing", package: "swift-testing")
+            ],
+            path: "tests/IntegrationTests"
         )
     ]
 )

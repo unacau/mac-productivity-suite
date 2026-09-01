@@ -1,21 +1,64 @@
 import SwiftUI
 import Cocoa
 
+struct AppPickerItem: Identifiable {
+    let id = UUID()
+    let name: String
+    let subtitle: String
+    let icon: NSImage
+    let targetId: String
+    let isChromeProfile: Bool
+}
+
 public struct AppPickerSheet: View {
     @ObservedObject var discovery = AppDiscoveryService.shared
     @Binding var isPresented: Bool
     var onSelect: (String) -> Void
     
     @State private var searchText: String = ""
-    @State private var selectedApp: DiscoveredApp?
+    @State private var selectedTargetId: String?
+    
+    var items: [AppPickerItem] {
+        var list: [AppPickerItem] = []
+        
+        // Add Chrome Profiles
+        for p in ChromeProfileHelper.shared.profiles {
+            let icon = p.avatarImage ?? AppDiscoveryService.shared.iconForApp(nameOrBundle: "Google Chrome")
+            list.append(AppPickerItem(
+                name: p.name,
+                subtitle: p.email ?? "Chrome Profile (\(p.dir))",
+                icon: icon,
+                targetId: "chrome-profile:\(p.dir)",
+                isChromeProfile: true
+            ))
+        }
+        
+        // Add Apps
+        for app in discovery.search(query: searchText) {
+            let icon = discovery.iconForApp(nameOrBundle: app.name)
+            list.append(AppPickerItem(
+                name: app.name,
+                subtitle: app.bundleID.isEmpty ? app.path : app.bundleID,
+                icon: icon,
+                targetId: app.name,
+                isChromeProfile: false
+            ))
+        }
+        
+        if searchText.isEmpty {
+            return list
+        } else {
+            let lowerQuery = searchText.lowercased()
+            return list.filter { $0.name.lowercased().contains(lowerQuery) || $0.subtitle.lowercased().contains(lowerQuery) }
+        }
+    }
     
     public var body: some View {
         VStack(spacing: 0) {
-            // Header
             HStack {
                 Image(systemName: "square.grid.2x2.fill")
                     .foregroundStyle(.blue)
-                Text("Select Application")
+                Text("Select Application or Profile")
                     .font(.headline)
                 Spacer()
                 Button(action: { isPresented = false }) {
@@ -29,11 +72,10 @@ public struct AppPickerSheet: View {
             
             Divider()
             
-            // Search Bar
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
-                TextField("Search installed applications...", text: $searchText)
+                TextField("Search apps or Chrome profiles...", text: $searchText)
                     .textFieldStyle(.plain)
                 if !searchText.isEmpty {
                     Button(action: { searchText = "" }) {
@@ -50,20 +92,17 @@ public struct AppPickerSheet: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
             
-            // App List
-            let filteredApps = discovery.search(query: searchText)
-            
             ScrollView {
                 LazyVStack(spacing: 4) {
-                    ForEach(filteredApps) { app in
+                    ForEach(items) { item in
                         AppRowView(
-                            app: app,
-                            isSelected: selectedApp?.id == app.id,
+                            item: item,
+                            isSelected: selectedTargetId == item.targetId,
                             onSelect: {
-                                selectedApp = app
+                                selectedTargetId = item.targetId
                             },
                             onDoubleSelect: {
-                                onSelect(app.name)
+                                onSelect(item.targetId)
                                 isPresented = false
                             }
                         )
@@ -76,7 +115,6 @@ public struct AppPickerSheet: View {
             
             Divider()
             
-            // Footer & Actions
             HStack {
                 Button("Browse Other App...") {
                     browseCustomApp()
@@ -90,14 +128,14 @@ public struct AppPickerSheet: View {
                 }
                 .keyboardShortcut(.cancelAction)
                 
-                Button("Choose Application") {
-                    if let app = selectedApp {
-                        onSelect(app.name)
+                Button("Choose") {
+                    if let t = selectedTargetId {
+                        onSelect(t)
                         isPresented = false
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(selectedApp == nil)
+                .disabled(selectedTargetId == nil)
                 .keyboardShortcut(.defaultAction)
             }
             .padding(16)
@@ -123,24 +161,25 @@ public struct AppPickerSheet: View {
 }
 
 struct AppRowView: View {
-    let app: DiscoveredApp
+    let item: AppPickerItem
     let isSelected: Bool
     let onSelect: () -> Void
     let onDoubleSelect: () -> Void
     
     var body: some View {
         HStack(spacing: 12) {
-            Image(nsImage: AppDiscoveryService.shared.iconForApp(nameOrBundle: app.name))
+            Image(nsImage: item.icon)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 28, height: 28)
+                .clipShape(item.isChromeProfile ? AnyShape(Circle()) : AnyShape(Rectangle()))
             
             VStack(alignment: .leading, spacing: 2) {
-                Text(app.name)
+                Text(item.name)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(isSelected ? Color.white : Color.primary)
                 
-                Text(app.bundleID.isEmpty ? app.path : app.bundleID)
+                Text(item.subtitle)
                     .font(.system(size: 10))
                     .foregroundStyle(isSelected ? Color.white.opacity(0.8) : Color.secondary)
                     .lineLimit(1)

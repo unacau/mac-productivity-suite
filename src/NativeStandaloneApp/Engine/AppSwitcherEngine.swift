@@ -25,7 +25,10 @@ public struct AppSwitcherItem: Identifiable, Equatable {
 
 @MainActor
 public final class AppSwitcherEngine: ObservableObject {
-    public static let shared = AppSwitcherEngine()
+    public static var shared = AppSwitcherEngine(
+        workspace: SystemWorkspaceProvider(),
+        hotkeys: SystemHotkeyProvider(manager: HotkeyManager.shared)
+    )
     
     @Published public var isVisible: Bool = false
     @Published public var currentItems: [AppSwitcherItem] = []
@@ -36,10 +39,15 @@ public final class AppSwitcherEngine: ObservableObject {
     private var lastActiveIndices: [String: Int] = [:]
     private var cancellables = Set<AnyCancellable>()
     
-    private init() {
+    public let workspace: WorkspaceProvider
+    public let hotkeys: HotkeyProvider
+    
+    public init(workspace: WorkspaceProvider, hotkeys: HotkeyProvider) {
+        self.workspace = workspace
+        self.hotkeys = hotkeys
+        
         setupBindings()
         
-        // Listen for config changes
         NotificationCenter.default.publisher(for: NSNotification.Name("AppConfigDidChangeNotification"))
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
@@ -49,31 +57,30 @@ public final class AppSwitcherEngine: ObservableObject {
     }
     
     public func setupBindings() {
-        HotkeyManager.shared.unregisterAll()
+        hotkeys.unregisterAll()
         
         let config = AppConfigManager.shared.config
-        let modifiers = config.mode.carbonModifiers
+        let modifiers = KeyCodes.hyperModifiers // Always use Caps Lock (Hyper)
         
-        // 1. Bind application shortcuts from config
         for (key, apps) in config.bindings {
             guard let keyCode = KeyCodes.keyCode(for: key), !apps.isEmpty else { continue }
             
             let keyStr = key.lowercased()
-            HotkeyManager.shared.register(keyCode: keyCode, modifiers: modifiers) { [weak self] in
+            hotkeys.register(keyCode: keyCode, modifiers: modifiers) { [weak self] in
                 Task { @MainActor in
                     self?.handleKeyPress(key: keyStr)
                 }
             }
         }
         
-        // 2. Bind Browser Profile Shortcuts (1..4) if enabled
+        // Bind Browser Profile Shortcuts (1..9) automatically if enabled
         if config.autoDiscoverChromeProfiles {
-            let numberKeys = ["1", "2", "3", "4"]
+            let numberKeys = ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
             for (idx, numStr) in numberKeys.enumerated() {
                 guard let keyCode = KeyCodes.keyCode(for: numStr) else { continue }
                 let profileIndex = idx + 1
                 
-                HotkeyManager.shared.register(keyCode: keyCode, modifiers: modifiers) {
+                hotkeys.register(keyCode: keyCode, modifiers: modifiers) {
                     Task { @MainActor in
                         ChromeProfileHelper.shared.focusProfile(index: profileIndex)
                     }
@@ -81,41 +88,48 @@ public final class AppSwitcherEngine: ObservableObject {
             }
         }
         
-        // 3. Re-register productivity actions (Finder split, Quick Notes)
-        ProductivityActionsHelper.shared.setupActions()
-        
-        AppLogger.getLogger(category: .engine).info("Registered \(config.bindings.count) app shortcut bindings.")
+        AppLogger.getLogger(category: .engine).info("Registered \(config.bindings.count) app shortcut bindings using Hyper Key.")
     }
     
     public func handleKeyPress(key: String) {
         let config = AppConfigManager.shared.config
         guard let apps = config.bindings[key.lowercased()], !apps.isEmpty else { return }
         
-        // If single app configured, launch immediately
         if apps.count == 1 {
-            launchOrFocusApp(nameOrCandidate: apps[0])
+            launchOrFocusTarget(apps[0])
             return
         }
         
-        // Build items for multiple applications
         var items: [AppSwitcherItem] = []
-        for appName in apps {
-            let icon = AppDiscoveryService.shared.iconForApp(nameOrBundle: appName)
-            items.append(AppSwitcherItem(name: appName, displayName: appName, icon: icon))
+        for target in apps {
+            if target.hasPrefix("chrome-profile:") {
+                let dir = String(target.dropFirst("chrome-profile:".count))
+                if let profile = ChromeProfileHelper.shared.profiles.first(where: { $0.dir == dir }) {
+                    let icon = profile.avatarImage ?? AppDiscoveryService.shared.iconForApp(nameOrBundle: "Google Chrome")
+                    items.append(AppSwitcherItem(
+                        name: target,
+                        displayName: profile.name,
+                        icon: icon,
+                        isChromeProfile: true,
+                        profileDir: profile.dir,
+                        badge: "Chrome"
+                    ))
+                }
+            } else {
+                let icon = AppDiscoveryService.shared.iconForApp(nameOrBundle: target)
+                items.append(AppSwitcherItem(name: target, displayName: target, icon: icon))
+            }
         }
         
         if isVisible && activeKey == key && currentItems.count == items.count {
-            // Cycle to next item
             selectedIndex = (selectedIndex + 1) % items.count
             resetDismissTimer()
         } else {
-            // Start switching session
             activeKey = key
             currentItems = items
             
-            // Check frontmost app to select next candidate
-            let frontAppName = NSWorkspace.shared.frontmostApplication?.localizedName?.lowercased()
-            if let front = frontAppName, let idx = items.firstIndex(where: { $0.name.lowercased() == front }) {
+            let frontAppName = workspace.frontmostApplicationName?.lowercased()
+            if let front = frontAppName, let idx = items.firstIndex(where: { $0.displayName.lowercased() == front }) {
                 selectedIndex = (idx + 1) % items.count
             } else {
                 selectedIndex = lastActiveIndices[key] ?? 0
@@ -129,7 +143,6 @@ public final class AppSwitcherEngine: ObservableObject {
     
     private func resetDismissTimer() {
         dismissTimer?.invalidate()
-        // Automatically commit 750ms after the user stops tapping
         dismissTimer = Timer.scheduledTimer(withTimeInterval: 0.75, repeats: false) { [weak self] _ in
             Task { @MainActor in
                 self?.commitAndHide()
@@ -146,7 +159,7 @@ public final class AppSwitcherEngine: ObservableObject {
             if let key = activeKey {
                 lastActiveIndices[key] = selectedIndex
             }
-            launchOrFocusApp(nameOrCandidate: selected.name)
+            launchOrFocusTarget(selected.name)
         }
         
         isVisible = false
@@ -159,29 +172,30 @@ public final class AppSwitcherEngine: ObservableObject {
         HUDOverlayWindow.shared.show()
     }
     
-    public func launchOrFocusApp(nameOrCandidate: String) {
-        // 1. Try running app match
-        let running = NSWorkspace.shared.runningApplications
+    public func launchOrFocusTarget(_ target: String) {
+        if target.hasPrefix("chrome-profile:") {
+            let dir = String(target.dropFirst("chrome-profile:".count))
+            ChromeProfileHelper.shared.focusProfile(dir: dir)
+            return
+        }
+        
+        let nameOrCandidate = target
+        let running = workspace.runningApps
         if let app = running.first(where: {
             $0.localizedName?.lowercased() == nameOrCandidate.lowercased() ||
             $0.bundleIdentifier?.lowercased() == nameOrCandidate.lowercased() ||
             $0.bundleIdentifier?.lowercased().contains(nameOrCandidate.lowercased()) == true
         }) {
-            app.activate()
+            app.activateApp()
             return
         }
         
-        // 2. Try AppDiscoveryService
         if let discovered = AppDiscoveryService.shared.findApp(nameOrBundle: nameOrCandidate) {
             let url = URL(fileURLWithPath: discovered.path)
-            NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+            workspace.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
             return
         }
         
-        // 3. Fallback open command
-        let task = Process()
-        task.launchPath = "/usr/bin/open"
-        task.arguments = ["-a", nameOrCandidate]
-        try? task.run()
+        workspace.fallbackOpen(nameOrCandidate: nameOrCandidate)
     }
 }

@@ -34,7 +34,7 @@ Provide a universal, high-performance productivity platform for macOS combining 
 ---
 
 ## Architecture & Components
-
+ 
 ```mermaid
 graph TD
     A[Menu Bar Status Item / Popup] --> B[Preferences Window / SettingsView]
@@ -47,11 +47,16 @@ graph TD
     C --> I[ProductivityActionsHelper]
     F --> J[HotkeyManager Carbon Global Tap]
     F --> K[HUDOverlayWindow SwiftUI]
+    F --> O[OSProviders Abstraction Layer]
+    G --> O
     G --> L["Chrome Local State Auto-Discovery"]
+    O -->|Production| M[System Services: NSWorkspace, Carbon, Process]
+    O -->|Testing| N[Mocks: WorkspaceProvider, HotkeyProvider, ProcessProvider]
 ```
 
 ### 1. Configuration & Core Engines (`src/NativeStandaloneApp/Engine/`)
-- `AppConfig.swift`: Codable configuration models, preset definitions, and persistence manager.
+- `AppConfig.swift`: Codable configuration models, preset definitions, and persistence manager. Supports `MPS_TEST_CONFIG_DIR` sandbox override.
+- `OSProviders.swift`: Abstracted OS protocols (`WorkspaceProvider`, `HotkeyProvider`, `ProcessProvider`, `RunningAppProvider`) enabling deterministic, headless dependency injection.
 - `AppDiscoveryService.swift`: Scans macOS applications, resolves icons, and builds smart bindings.
 - `ChromeProfileHelper.swift`: Dynamic profile detection and CLI/AppleScript activation.
 - `AppSwitcherEngine.swift`: Global hotkey dispatcher, candidate resolution, and HUD coordinator.
@@ -69,3 +74,13 @@ graph TD
 - `app_switcher.lua`: Lua app switcher with multi-app HUD canvas.
 - `chrome_profiles.lua`: Dynamic `Local State` parser in Lua.
 - `copy_on_select.lua`: Eventtap-based copy on select.
+
+### 4. Automated Testing Architecture (`tests/`)
+- **Unit Testing Suite (`tests/SwiftUnitTests.swift` / `MacProductivitySuiteTests`)**:
+  - Validates configuration serialization/deserialization, virtual keycode mapping, profile parsing, and exclusion rule lists.
+- **Integration Testing Suite (`tests/IntegrationTests/` / `MacProductivitySuiteIntegrationTests`)**:
+  - `ConfigIntegrationTests.swift`: Verifies seamless legacy configuration migration and multi-version schema upgrades.
+  - `ChromeProfileIntegrationTests.swift`: Tests multi-profile discovery from mocked Chromium `Local State` payloads and profile CLI invocation argument synthesis.
+  - `AppSwitcherIntegrationTests.swift`: Tests mock hotkey event dispatching, multi-candidate HUD cycling, and fallback application launching across decoupled workspace providers.
+- **Test Runner (`tests/run_tests.sh`)**:
+  - Orchestrates SPM unit & integration tests along with Lua syntax checks for Hammerspoon scripts.

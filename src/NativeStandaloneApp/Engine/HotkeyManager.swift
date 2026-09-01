@@ -7,7 +7,7 @@ public final class HotkeyManager {
     
     private var hotkeyRefs: [UInt32: EventHotKeyRef] = [:]
     private var eventHandler: EventHandlerRef?
-    private var handlers: [UInt32: () -> Void] = [:]
+    private var handlers: [UInt32: @Sendable () -> Void] = [:]
     private var currentID: UInt32 = 1
     
     private init() {
@@ -48,7 +48,7 @@ public final class HotkeyManager {
     }
     
     @discardableResult
-    public func register(keyCode: UInt32, modifiers: UInt32, action: @escaping () -> Void) -> UInt32? {
+    public func register(keyCode: UInt32, modifiers: UInt32, action: @escaping @Sendable () -> Void) -> UInt32? {
         let hotKeyID = EventHotKeyID(signature: OSType(0x4D505354), id: currentID) // 'MPST'
         var hotKeyRef: EventHotKeyRef?
         

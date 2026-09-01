@@ -21,6 +21,8 @@ Designed to be immediately useful for **any macOS user** out of the box with zer
 
 ## 📦 Editions & Installation
 
+> 📖 **Detailed Guide**: For a complete visual step-by-step breakdown of all installed files, architecture, and macOS system permissions, see the **[Full Installation & Permissions Guide](docs/INSTALLATION_GUIDE.md)**.
+
 ### 1. Pure Native Standalone Edition (Recommended)
 Zero background daemons, zero third-party dependencies. Runs as a lightweight native macOS accessory app in your menu bar.
 
@@ -75,9 +77,15 @@ sudo installer -pkg dist/MacProductivitySuite-Full.pkg -target /
 
 ## 🧪 Testing & Verification
 
+The suite includes an enterprise-grade automated testing harness covering unit tests, sandboxed integration tests (using OS provider abstractions for CI execution), and script syntax verification.
+
 ```bash
-# Run unit tests
+# Run full automated test suite (Swift Unit + Integration + Lua syntax)
 make test
+# or directly via test runner
+./tests/run_tests.sh
+# or via Swift Package Manager
+swift test
 
 # Verify distributable PKG integrity
 make verify

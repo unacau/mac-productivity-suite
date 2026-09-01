@@ -3,198 +3,121 @@ import Cocoa
 
 public struct MenuBarPopupView: View {
     @ObservedObject var configManager = AppConfigManager.shared
-    @State private var hasAccessibility: Bool = AXIsProcessTrusted()
+    
+    public init() {}
     
     public var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Header
-            HStack(spacing: 8) {
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
                 Image(systemName: "command.square.fill")
-                    .font(.system(size: 20))
-                    .foregroundStyle(.blue)
-                VStack(alignment: .leading, spacing: 1) {
+                    .resizable()
+                    .frame(width: 32, height: 32)
+                    .foregroundStyle(Color.accentColor)
+                
+                VStack(alignment: .leading, spacing: 2) {
                     Text("Mac Productivity Suite")
                         .font(.system(size: 13, weight: .bold))
-                    Text("Version \(configManager.config.version) • \(configManager.config.mode.displayName)")
+                    Text("Version \(configManager.config.version)")
                         .font(.system(size: 10))
                         .foregroundStyle(.secondary)
                 }
+                
                 Spacer()
                 
                 Button(action: {
                     SettingsWindowController.shared.show()
                 }) {
                     Image(systemName: "gearshape.fill")
-                        .font(.system(size: 13))
+                        .font(.system(size: 16))
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
-                .help("Open Preferences (⌘,)")
+                .help("Open Preferences")
             }
-            .padding(.bottom, 2)
+            .padding(16)
             
             Divider()
             
-            // Permissions Alert if missing
-            if !hasAccessibility {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.orange)
-                        Text("Accessibility Permission Required")
-                            .font(.system(size: 11, weight: .bold))
-                    }
-                    Text("Global shortcuts & Copy-on-Select require accessibility access.")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.secondary)
-                    
-                    Button(action: {
-                        let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
-                        AXIsProcessTrustedWithOptions(options)
-                    }) {
-                        Text("Grant Permission")
-                            .font(.system(size: 10, weight: .bold))
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
-                }
-                .padding(8)
-                .background(RoundedRectangle(cornerRadius: 6).fill(Color.orange.opacity(0.1)))
-                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.orange.opacity(0.3), lineWidth: 1))
+            VStack(alignment: .leading, spacing: 12) {
+                Text("QUICK SWITCHER (Hyper + Key)")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
                 
-                Divider()
-            }
-            
-            // Quick Feature Toggle: Copy on Select
-            Toggle(isOn: $configManager.config.copyOnSelect.enabled) {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Copy on Select")
-                        .font(.system(size: 12, weight: .medium))
-                    Text("Copies highlighted text automatically")
-                        .font(.system(size: 9))
-                        .foregroundStyle(.secondary)
+                ScrollView {
+                    LazyVStack(spacing: 8) {
+                        ForEach(Array(configManager.config.bindings.keys.sorted().prefix(6)), id: \.self) { key in
+                            HStack {
+                                Text(key.uppercased())
+                                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                    .frame(width: 24, height: 24)
+                                    .background(Color.secondary.opacity(0.1))
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                                
+                                let apps = configManager.config.bindings[key] ?? []
+                                if apps.isEmpty {
+                                    Text("Unassigned")
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(.secondary)
+                                } else {
+                                    Text(apps.count == 1 ? apps[0] : "\(apps[0]) + \(apps.count - 1) more")
+                                        .font(.system(size: 11))
+                                        .lineLimit(1)
+                                }
+                                
+                                Spacer()
+                            }
+                            .padding(.horizontal, 16)
+                        }
+                    }
                 }
-            }
-            .onChange(of: configManager.config.copyOnSelect.enabled) { _, _ in
-                configManager.save()
-            }
-            
-            Divider()
-            
-            // Dynamic Active Shortcuts List
-            VStack(alignment: .leading, spacing: 6) {
+                .frame(maxHeight: 180)
+                
                 HStack {
-                    Text("ACTIVE SHORTCUTS (\(configManager.config.mode.shortBadge))")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.secondary)
                     Spacer()
                     Button("Edit...") {
                         SettingsWindowController.shared.show()
                     }
                     .buttonStyle(.link)
-                    .font(.system(size: 10))
+                    .font(.system(size: 11))
                 }
-                
-                let sortedKeys = configManager.config.bindings.keys.sorted()
-                let displayKeys = Array(sortedKeys.prefix(7))
-                
-                if displayKeys.isEmpty {
-                    Text("No shortcuts configured yet.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(displayKeys, id: \.self) { key in
-                        let apps = configManager.config.bindings[key] ?? []
-                        let appSummary = apps.joined(separator: " / ")
-                        ShortcutRow(
-                            keys: "\(configManager.config.mode.shortBadge) + \(key.uppercased())",
-                            description: appSummary.isEmpty ? "(No apps)" : appSummary
-                        )
-                    }
-                    
-                    if sortedKeys.count > 7 {
-                        Text("+ \(sortedKeys.count - 7) more shortcuts in Settings")
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundStyle(.secondary)
-                            .padding(.top, 2)
-                    }
-                }
-                
-                if configManager.config.autoDiscoverChromeProfiles {
-                    ShortcutRow(
-                        keys: "\(configManager.config.mode.shortBadge) + 1..4",
-                        description: "Chrome / Browser Profiles"
-                    )
-                }
-                
-                if configManager.config.productivityShortcuts.finderSplitEnabled {
-                    ShortcutRow(
-                        keys: "⌥⌘⌃ + F",
-                        description: "Finder Dual-Column Split"
-                    )
-                }
+                .padding(.horizontal, 16)
             }
             
             Divider()
+                .padding(.top, 8)
             
-            // Footer with Settings, Updates, and Quit
-            HStack {
-                Button("Preferences...") {
-                    SettingsWindowController.shared.show()
-                }
-                .buttonStyle(.plain)
-                .font(.system(size: 11))
-                
-                Spacer()
-                
-                Button("Check for Updates...") {
-                    if let delegate = NSApp.delegate as? AppDelegate {
-                        delegate.checkForUpdates()
+            VStack(spacing: 4) {
+                Button(action: {
+                    if let appDelegate = NSApplication.shared.delegate as? AppDelegate {
+                        appDelegate.checkForUpdates()
                     }
+                }) {
+                    HStack {
+                        Text("Check for Updates...")
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 6)
                 }
                 .buttonStyle(.plain)
-                .font(.system(size: 11))
                 
-                Spacer()
-                
-                Button("Quit") {
+                Button(action: {
                     NSApplication.shared.terminate(nil)
+                }) {
+                    HStack {
+                        Text("Quit Suite")
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 6)
                 }
                 .buttonStyle(.plain)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.red)
             }
+            .padding(.vertical, 8)
         }
-        .padding(14)
         .frame(width: 320)
-        .onAppear {
-            hasAccessibility = AXIsProcessTrusted()
-        }
-    }
-}
-
-public struct ShortcutRow: View {
-    public let keys: String
-    public let description: String
-    
-    public var body: some View {
-        HStack {
-            Text(keys)
-                .font(.system(size: 9, weight: .bold, design: .monospaced))
-                .padding(.horizontal, 5)
-                .padding(.vertical, 2)
-                .background(Color.blue.opacity(0.12))
-                .foregroundStyle(.blue)
-                .clipShape(RoundedRectangle(cornerRadius: 4))
-            
-            Spacer()
-            
-            Text(description)
-                .font(.system(size: 11))
-                .foregroundStyle(.primary)
-                .lineLimit(1)
-                .truncationMode(.tail)
-        }
+        .background(Color(nsColor: .windowBackgroundColor))
     }
 }

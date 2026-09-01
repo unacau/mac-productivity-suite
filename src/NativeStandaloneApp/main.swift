@@ -40,8 +40,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         _ = AppDiscoveryService.shared
         _ = ChromeProfileHelper.shared
         _ = AppSwitcherEngine.shared
-        _ = CopyOnSelectEngine.shared
-        _ = ProductivityActionsHelper.shared
         
         // 4. Check & prompt accessibility immediately if not trusted
         if !AXIsProcessTrusted() {

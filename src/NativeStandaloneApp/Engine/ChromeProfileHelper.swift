@@ -19,7 +19,10 @@ public struct DiscoveredChromeProfile: Identifiable, Equatable {
 
 @MainActor
 public final class ChromeProfileHelper: ObservableObject {
-    public static let shared = ChromeProfileHelper()
+    public static var shared = ChromeProfileHelper(
+        workspace: SystemWorkspaceProvider(),
+        process: SystemProcessProvider()
+    )
     
     @Published public var profiles: [DiscoveredChromeProfile] = []
     @Published public var isChromeInstalled: Bool = false
@@ -27,7 +30,12 @@ public final class ChromeProfileHelper: ObservableObject {
     
     private var cachedIcons: [String: NSImage] = [:]
     
-    private init() {
+    public let workspace: WorkspaceProvider
+    public let process: ProcessProvider
+    
+    public init(workspace: WorkspaceProvider, process: ProcessProvider) {
+        self.workspace = workspace
+        self.process = process
         refreshProfiles()
     }
     
@@ -36,12 +44,17 @@ public final class ChromeProfileHelper: ObservableObject {
         let chromeAppPath = "/Applications/Google Chrome.app"
         self.isChromeInstalled = fileManager.fileExists(atPath: chromeAppPath)
         
-        let localStatePaths = [
-            "\(NSHomeDirectory())/Library/Application Support/Google/Chrome/Local State",
-            "\(NSHomeDirectory())/Library/Application Support/BraveSoftware/Brave-Browser/Local State",
-            "\(NSHomeDirectory())/Library/Application Support/Microsoft Edge/Local State",
-            "\(NSHomeDirectory())/Library/Application Support/Chromium/Local State"
-        ]
+        let localStatePaths: [String] = {
+            if let testDir = ProcessInfo.processInfo.environment["MPS_TEST_CONFIG_DIR"] {
+                return ["\(testDir)/Local State"]
+            }
+            return [
+                "\(NSHomeDirectory())/Library/Application Support/Google/Chrome/Local State",
+                "\(NSHomeDirectory())/Library/Application Support/BraveSoftware/Brave-Browser/Local State",
+                "\(NSHomeDirectory())/Library/Application Support/Microsoft Edge/Local State",
+                "\(NSHomeDirectory())/Library/Application Support/Chromium/Local State"
+            ]
+        }()
         
         var foundProfiles: [DiscoveredChromeProfile] = []
         var discoveredBundleID = "com.google.Chrome"
@@ -169,16 +182,13 @@ public final class ChromeProfileHelper: ObservableObject {
         let bundleID = self.browserBundleID
         
         // Launch via command line argument --profile-directory
-        let task = Process()
-        task.launchPath = "/usr/bin/open"
-        task.arguments = ["-b", bundleID, "--args", "--profile-directory=\(dir)"]
-        try? task.run()
+        try? process.runCommand(launchPath: "/usr/bin/open", arguments: ["-b", bundleID, "--args", "--profile-directory=\(dir)"])
         
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(0.1))
-            let apps = NSWorkspace.shared.runningApplications
+            let apps = workspace.runningApps
             if let chrome = apps.first(where: { $0.bundleIdentifier == bundleID }) {
-                chrome.activate()
+                chrome.activateApp()
             }
         }
     }
