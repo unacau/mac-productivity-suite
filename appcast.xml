@@ -5,7 +5,25 @@
     <link>https://raw.githubusercontent.com/unacau/mac-productivity-suite/main/appcast.xml</link>
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
-        <item>
+            <item>
+      <title>Version 2.2.0 (Build 3)</title>
+      <pubDate>Tue, 01 Sep 2026 20:00:39 +0200</pubDate>
+      <sparkle:version>3</sparkle:version>
+      <sparkle:shortVersionString>2.2.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<ul>
+        <li>Swift 6 Structured Concurrency &amp; @MainActor Architecture</li>
+        <li>Apple OSLog Unified Structured Telemetry &amp; Diagnostics</li>
+        <li>Hardened Multi-Arch Universal Build Pipeline</li>
+        <li>GitHub Actions CI/CD &amp; Automated Release Workflows</li>
+        <li>Modern Swift Testing Framework Migration</li>
+      </ul>]]></description>
+      <enclosure url="https://github.com/unacau/mac-productivity-suite/releases/download/v2.2.0/MacProductivitySuite.dmg"
+                 type="application/octet-stream"
+                 sparkle:edSignature="++h39YlIvR2vTfJp257pl6slfziUD46/DD7KJuc8xmOl3EMvlBCJoFsFQLtDfPaEI4O4/JBCJhH+KsjVRU3YCg=="
+                 length="1890071" />
+    </item>
+    <item>
       <title>Version 2.1.0 (Build 2)</title>
       <pubDate>Sun, 30 Aug 2026 18:12:38 +0200</pubDate>
       <sparkle:version>2</sparkle:version>
