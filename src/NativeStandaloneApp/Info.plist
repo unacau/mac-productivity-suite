@@ -5,9 +5,9 @@
 	<key>CFBundleDisplayName</key>
 	<string>Mac Productivity Suite</string>
 	<key>CFBundleExecutable</key>
-	<string>MacProductivitySuiteNative</string>
+	<string>MacProductivitySuite</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.unacau.macproductivitysuite.native</string>
+	<string>com.unacau.macproductivitysuite</string>
 	<key>CFBundleName</key>
 	<string>Mac Productivity Suite</string>
 	<key>CFBundlePackageType</key>

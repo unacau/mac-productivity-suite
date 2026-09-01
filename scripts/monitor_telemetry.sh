@@ -7,8 +7,8 @@ set -euo pipefail
 # ==============================================================================
 
 SUBSYSTEM="com.macproductivity.suite"
-BUNDLE_ID="com.unacau.macproductivitysuite.native"
-PREDICATE="subsystem == \"${SUBSYSTEM}\" or process == \"MacProductivitySuiteNative\""
+BUNDLE_ID="com.unacau.macproductivitysuite"
+PREDICATE="subsystem == \"${SUBSYSTEM}\" or process == \"MacProductivitySuite\""
 
 usage() {
     cat << EOF

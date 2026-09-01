@@ -28,9 +28,9 @@ fi
 
 # 2. Check Build Outputs & Binaries
 echo -n "[2/5] Checking Build Artifacts & Universal Binary... "
-APP_BUNDLE="dist/Mac Productivity Suite Native.app"
+APP_BUNDLE="dist/Mac Productivity Suite.app"
 if [ -d "$APP_BUNDLE" ]; then
-    BINARY="$APP_BUNDLE/Contents/MacOS/MacProductivitySuiteNative"
+    BINARY="$APP_BUNDLE/Contents/MacOS/MacProductivitySuite"
     if [ -f "$BINARY" ]; then
         ARCHS=$(lipo -archs "$BINARY" 2>/dev/null || echo "Unknown")
         echo "✅ Present (Architectures: $ARCHS)"

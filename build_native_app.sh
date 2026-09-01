@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-APP_NAME="Mac Productivity Suite Native"
+APP_NAME="Mac Productivity Suite"
 DIST_DIR="dist"
 APP_BUNDLE="${DIST_DIR}/${APP_NAME}.app"
 CONTENTS_DIR="${APP_BUNDLE}/Contents"
@@ -13,7 +13,7 @@ ROOT_DIR="${BUILD_DIR}/root"
 SCRIPTS_DIR="${BUILD_DIR}/scripts"
 
 echo "=================================================="
-echo " Building 100% Pure Native Standalone Edition     "
+echo " Building 100% Pure Standalone Edition            "
 echo " Target: Universal (arm64 & x86_64) macOS 14.0+   "
 echo " Compatible with macOS 14 (Sonoma), 15 (Sequoia)..."
 echo "=================================================="
@@ -61,14 +61,14 @@ swiftc \
     -O
 
 echo "[3/5] Creating Universal Mach-O Binary with lipo..."
-lipo -create -output "${MACOS_DIR}/MacProductivitySuiteNative" "${BUILD_DIR}/temp/binary_arm64" "${BUILD_DIR}/temp/binary_x86_64"
+lipo -create -output "${MACOS_DIR}/MacProductivitySuite" "${BUILD_DIR}/temp/binary_arm64" "${BUILD_DIR}/temp/binary_x86_64"
 
 echo "[4/5] Embedding Frameworks and Code-Signing..."
 mkdir -p "${CONTENTS_DIR}/Frameworks"
 cp -R "Frameworks/Sparkle.framework" "${CONTENTS_DIR}/Frameworks/"
 cp src/NativeStandaloneApp/Info.plist "${CONTENTS_DIR}/Info.plist"
 
-install_name_tool -add_rpath @executable_path/../Frameworks "${MACOS_DIR}/MacProductivitySuiteNative" || true
+install_name_tool -add_rpath @executable_path/../Frameworks "${MACOS_DIR}/MacProductivitySuite" || true
 
 codesign --force --deep --sign - "${APP_BUNDLE}"
 
@@ -91,7 +91,7 @@ else
 fi
 
 echo "=================================================="
-echo " Native Standalone Build Succeeded!"
+echo " Standalone Build Succeeded!"
 echo " App: ${APP_BUNDLE}"
 echo " DMG: ${DMG_PATH}"
 echo "=================================================="

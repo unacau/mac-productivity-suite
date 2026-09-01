@@ -14,8 +14,8 @@ echo " (With Hammerspoon & Karabiner-Elements Bundled)  "
 echo "=================================================="
 
 # Ensure Swift Menu Bar App is compiled
-if [ ! -d "$DIST_DIR/Mac Productivity Suite Native.app" ]; then
-    echo "[*] Compiling Swift Native App..."
+if [ ! -d "$DIST_DIR/Mac Productivity Suite.app" ]; then
+    echo "[*] Compiling Swift App..."
     ./build_native_app.sh
 fi
 
@@ -24,7 +24,7 @@ rm -rf "$BUILD_DIR" "$DIST_DIR/$PKG_NAME"
 mkdir -p "$ROOT_DIR/Applications" "$SCRIPTS_DIR"
 
 echo "[2/4] Assembling Application and Config payloads..."
-cp -R "$DIST_DIR/Mac Productivity Suite Native.app" "$ROOT_DIR/Applications/"
+cp -R "$DIST_DIR/Mac Productivity Suite.app" "$ROOT_DIR/Applications/"
 
 # Copy embedded assets into the scripts directory
 cp payload_cache/Hammerspoon.zip "$SCRIPTS_DIR/"
@@ -107,7 +107,7 @@ chown -R "$TARGET_USER" "$USER_HOME/.config/karabiner" 2>/dev/null || true
 
 # 3. AUTO-LAUNCH APPS
 if [ -n "$TARGET_USER" ] && [ "$TARGET_USER" != "root" ]; then
-    sudo -u "$TARGET_USER" open "/Applications/Mac Productivity Suite Native.app" 2>/dev/null || true
+    sudo -u "$TARGET_USER" open "/Applications/Mac Productivity Suite.app" 2>/dev/null || true
     sudo -u "$TARGET_USER" open "/Applications/Hammerspoon.app" 2>/dev/null || true
 fi
 

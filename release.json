@@ -1,7 +1,7 @@
 {
   "app_name": "Mac Productivity Suite",
   "github_repo": "unacau/mac-productivity-suite",
-  "bundle_name": "Mac Productivity Suite Native.app",
+  "bundle_name": "Mac Productivity Suite.app",
   "dmg_name": "MacProductivitySuite.dmg",
   "git_branch": "main",
   "min_system_version": "14.0",
