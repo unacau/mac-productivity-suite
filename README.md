@@ -1,97 +1,102 @@
-# Mac Productivity Suite (v2.0 Universal)
+# Mac Productivity Suite (v2.2 Universal)
 
-A high-performance, universal macOS productivity platform built in modern Swift and SwiftUI (with an optional Hammerspoon / Karabiner scripted engine).
+A high-performance, ultra-minimal macOS productivity tool built in modern Swift 6 and SwiftUI.
 
-Designed to be immediately useful for **any macOS user** out of the box with zero hardcoded settings, intelligent automatic app detection, dynamic browser profile switching, global copy-on-select, and an interactive Preferences manager.
+Designed to eliminate workflow friction: switch instantly between favorite apps and specific Google Chrome profiles using the **Caps Lock (Hyper)** key, without accessibility permission hurdles, bloated background processes, or hardcoded settings.
 
 ---
 
 ## ⚡ Highlights
 
-- **🚀 Universal App Switcher**: Single-key switching between your favorite apps (`⌥⌘ + Key` or `Caps Lock + Key`).
-- **🔍 Smart Auto-Detection**: 1-click scan of your Mac to automatically configure shortcuts for your installed code editors, browsers, terminals, chat apps, and music players.
-- **🌐 Dynamic Browser Profiles**: Automatically discovers and switches Google Chrome, Brave, Edge, and Chromium profiles (Keys `1..4`) with real profile avatars without manual setup.
-- **📋 Global Copy on Select**: Highlight or double-click any text to automatically copy it to your clipboard.
-- **🎛️ Interactive Preferences UI**: Built-in macOS Settings window (`⌘,`) with searchable app picker, key customization, and presets.
-- **📁 Finder Dual-Column Split (`⌥⌘⌃ + F`)**: Instantly creates side-by-side synchronized Finder windows in column view.
-- **📝 Highlight to Quick Notes (`⌘⇧ + H`)**: Automatically saves selected text with source timestamps into Markdown.
-- **⚙️ Unified JSON Configuration**: Shared config at `~/.config/mac-productivity-suite/config.json`.
+- **🚀 Hyper Key App Switcher**: Lightning-fast switching and cycling between your favorite apps using `Caps Lock + Key`.
+- **🌐 Dynamic Browser Profiles**: Discovers Google Chrome profiles and renders authentic user avatars. Switch between profiles with `Caps Lock + 1..9`.
+- **🔍 1-Click Smart Detection**: Automatically detects installed IDEs, terminals, browsers, and communicators to map clean default bindings.
+- **✨ Pure Minimalism**: Single-page Settings UI. No complex tabs, no permission locks, no unnecessary import/export bloat.
+- **🛡️ Native & Zero-Permission**: Uses native Carbon hotkey registration and AppKit activation—no macOS Accessibility permission prompts or event tap interference required.
+- **⚙️ Unified JSON Configuration**: Stored cleanly at `~/.config/mac-productivity-suite/config.json`.
 
 ---
 
-## 📦 Editions & Installation
+## 📦 Installation & Packaging
 
-> 📖 **Detailed Guide**: For a complete visual step-by-step breakdown of all installed files, architecture, and macOS system permissions, see the **[Full Installation & Permissions Guide](docs/INSTALLATION_GUIDE.md)**.
-
-### 1. Pure Native Standalone Edition (Recommended)
-Zero background daemons, zero third-party dependencies. Runs as a lightweight native macOS accessory app in your menu bar.
+### 1. Pure Native Standalone Edition
+Runs as a lightweight native macOS accessory app in your menu bar.
 
 ```bash
-# Build native universal app (arm64 & x86_64)
+# Build native universal app & DMG (arm64 & x86_64)
 make native
 
-# Run installer pkg
-sudo installer -pkg dist/MacProductivitySuite-Native.pkg -target /
-```
-
-### 2. Full Edition (with Hammerspoon & Karabiner-Elements)
-Includes native menu bar controls with bundled offline installers for Hammerspoon and Karabiner-Elements for Caps Lock Hyper Key remapping.
-
-```bash
-# Build full bundle
-make full
-
-# Run full package installer
+# Or run the installer PKG
 sudo installer -pkg dist/MacProductivitySuite-Full.pkg -target /
 ```
 
 ---
 
-## 🛠️ Built-in Presets
+## 📊 Monitoring & Telemetry (Diagnostics)
 
-| Preset | Shortcuts & Apps |
-| :--- | :--- |
-| **Developer** | `i`: Terminal (Ghostty / iTerm / Warp / Terminal)<br>`c`: Editor (Cursor / VS Code / Xcode / Zed)<br>`b`: Browser (Chrome / Arc / Safari / Firefox)<br>`t`: Chat (Slack / Telegram / Discord)<br>`n`: Notes (Notes / Obsidian / Notion) |
-| **Everyday Mac** | `b`: Safari / Chrome<br>`c`: Calendar<br>`m`: Music / Spotify / Messages<br>`n`: Notes / Reminders<br>`p`: Photos / Preview |
-| **Creative & Media**| `d`: Figma / Sketch<br>`p`: Photoshop / Pixelmator Pro / Photos<br>`i`: Illustrator / Affinity<br>`m`: Spotify / Music |
-| **Minimalist** | `t`: Terminal<br>`b`: Browser<br>`n`: Notes<br>`f`: Finder |
+The app logs directly to Apple's **macOS Unified Logging System (`os_log`)** under the subsystem `com.macproductivity.suite`. This provides zero-overhead, privacy-first, local telemetry that can be inspected on any Mac without developer tools or repository checkouts.
 
----
+### A. Visual Monitoring via macOS Console App
+For users or testing on another Mac without using the terminal:
+1. Open **Console.app** (`/System/Applications/Utilities/Console.app` or via Spotlight).
+2. In the search box in the top-right corner, enter:
+   ```text
+   subsystem:com.macproductivity.suite
+   ```
+3. Click **Start streaming** in the toolbar to observe real-time keypresses, app activations, and profile switches.
 
-## ⌨️ Default Shortcuts
+### B. Command-Line Log Ingestion (Any Mac)
+You or an end-user can run native `log` commands directly in the macOS Terminal:
 
-| Shortcut | Action | Description |
-| :--- | :--- | :--- |
-| `⌥⌘ + I` | Terminal Switcher | Cycles between installed terminals (`Ghostty`, `iTerm`, `Terminal`, `Warp`) |
-| `⌥⌘ + B` | Browser Switcher | Cycles between installed browsers (`Chrome`, `Arc`, `Safari`, `Firefox`) |
-| `⌥⌘ + C` | Editor / Calendar | Cycles between configured IDEs or Calendar |
-| `⌥⌘ + T` | Chat / Comms | Cycles between `Slack`, `Telegram`, `Discord`, `Messages` |
-| `⌥⌘ + N` | Notes | Opens `Notes`, `Obsidian`, `Notion` |
-| `⌥⌘ + S` | Audio / Music | Switches between `Spotify`, `Apple Music`, `SoundCloud` |
-| `⌥⌘ + F` | Finder | Focuses or opens Finder |
-| `⌥⌘ + 1..4`| Browser Profiles | Instantly activates Chrome / Brave / Edge profile slot 1..4 |
-| `⌥⌘⌃ + F`| Dual Finder Split | Spawns side-by-side synchronized column view Finder windows |
-| `⌘⇧ + H` | Save Highlight | Appends highlighted text to `~/Documents/Highlights/Quick_Notes.md` |
+- **Live Real-Time Stream:**
+  ```bash
+  log stream --predicate 'subsystem == "com.macproductivity.suite"' --level debug
+  ```
+
+- **Inspect Recent Errors & Faults (Past 1 Hour):**
+  ```bash
+  log show --predicate 'subsystem == "com.macproductivity.suite" and (messageType == error or messageType == fault)' --last 1h
+  ```
+
+- **Export Diagnostic Bundle for Support / Debugging:**
+  Generate a diagnostic log dump on the Desktop:
+  ```bash
+  log show --predicate 'subsystem == "com.macproductivity.suite"' --last 24h > ~/Desktop/mps-debug-logs.txt
+  ```
+
+### C. Developer Repository Helpers
+When working inside this repository, convenient make targets are available:
+```bash
+# Stream live logs
+make monitor
+
+# Generate 1-hour metrics and category distribution summary
+make diagnostics
+
+# Filter error stream over custom timeframes
+./scripts/monitor_telemetry.sh errors 30m
+```
+
+### D. Crash Diagnostics
+If the app terminates unexpectedly, macOS automatically records crash reports:
+- **Location:** `~/Library/Logs/DiagnosticReports/` (Look for `MacProductivitySuiteNative-*.ips` or `.crash`)
+- **Console App:** Accessible directly in **Console.app** under the **Crash Reports** tab.
 
 ---
 
 ## 🧪 Testing & Verification
 
-The suite includes an enterprise-grade automated testing harness covering unit tests, sandboxed integration tests (using OS provider abstractions for CI execution), and script syntax verification.
+The suite includes an automated test harness covering unit tests, sandboxed integration tests (using OS provider abstractions), and health checks.
 
 ```bash
-# Run full automated test suite (Swift Unit + Integration + Lua syntax)
+# Run automated test suite
 make test
-# or directly via test runner
-./tests/run_tests.sh
-# or via Swift Package Manager
+
+# Run 5-point system health check
+make health
+
+# SPM Direct
 swift test
-
-# Verify distributable PKG integrity
-make verify
-
-# Build all binaries and packages
-make all
 ```
 
 ---
