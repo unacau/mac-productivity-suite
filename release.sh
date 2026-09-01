@@ -38,18 +38,24 @@ echo "✅ Signature generated."
 
 # 3. Update Appcast
 echo "[3/4] Updating Appcast..."
-PUB_DATE=$(date -R)
+export APPCAST_FILE="$APPCAST_FILE"
+export VERSION="$VERSION"
+export BUILD="$BUILD"
+export PUB_DATE="$(date -R)"
+export REPO="$REPO"
+export ED_SIG="$ED_SIG"
+export LENGTH="$LENGTH"
 
-python3 -c "
+python3 - << 'PYEOF'
 import os
 
-appcast_file = '$APPCAST_FILE'
-version = '$VERSION'
-build = '$BUILD'
-pub_date = '$PUB_DATE'
-repo = '$REPO'
-ed_sig = '$ED_SIG'
-length = '$LENGTH'
+appcast_file = os.environ['APPCAST_FILE']
+version = os.environ['VERSION']
+build = os.environ['BUILD']
+pub_date = os.environ['PUB_DATE']
+repo = os.environ['REPO']
+ed_sig = os.environ['ED_SIG']
+length = os.environ['LENGTH']
 
 new_item = f'''    <item>
       <title>Version {version} (Build {build})</title>
@@ -58,16 +64,16 @@ new_item = f'''    <item>
       <sparkle:shortVersionString>{version}</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <description><![CDATA[<ul>
-        <li>Swift 6 Structured Concurrency &amp; @MainActor Architecture</li>
-        <li>Apple OSLog Unified Structured Telemetry &amp; Diagnostics</li>
-        <li>Hardened Multi-Arch Universal Build Pipeline</li>
-        <li>GitHub Actions CI/CD &amp; Automated Release Workflows</li>
-        <li>Modern Swift Testing Framework Migration</li>
+        <li>Streamlined, ultra-minimal single-page Settings UI</li>
+        <li>Eliminated obsolete Accessibility permission requirements and prompts</li>
+        <li>Clean app rename to "Mac Productivity Suite" across all distributions</li>
+        <li>Native Chrome profile switching with authentic user avatars</li>
+        <li>Apple OSLog Unified Telemetry &amp; Console.app diagnostics</li>
       </ul>]]></description>
-      <enclosure url=\"https://github.com/{repo}/releases/download/v{version}/MacProductivitySuite.dmg\"
-                 type=\"application/octet-stream\"
-                 sparkle:edSignature=\"{ed_sig}\"
-                 length=\"{length}\" />
+      <enclosure url="https://github.com/{repo}/releases/download/v{version}/MacProductivitySuite.dmg"
+                 type="application/octet-stream"
+                 sparkle:edSignature="{ed_sig}"
+                 length="{length}" />
     </item>'''
 
 if os.path.exists(appcast_file):
@@ -78,8 +84,8 @@ if os.path.exists(appcast_file):
     else:
         updated_content = content.replace('</channel>', new_item + '\n  </channel>', 1)
 else:
-    updated_content = f'''<?xml version=\"1.0\" encoding=\"utf-8\"?>
-<rss version=\"2.0\" xmlns:sparkle=\"http://www.andymatuschak.org/xml-namespaces/sparkle\"  xmlns:dc=\"http://purl.org/dc/elements/1.1/\">
+    updated_content = f'''<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle"  xmlns:dc="http://purl.org/dc/elements/1.1/">
   <channel>
     <title>Mac Productivity Suite Changelog</title>
     <link>https://raw.githubusercontent.com/{repo}/main/appcast.xml</link>
@@ -92,13 +98,13 @@ else:
 
 with open(appcast_file, 'w', encoding='utf-8') as f:
     f.write(updated_content)
-"
+PYEOF
 
 echo "✅ $APPCAST_FILE updated successfully."
 
 # 4. Git Push & GitHub Release
 echo "[4/4] Publishing to GitHub..."
-git add "$APPCAST_FILE"
+git add "$APPCAST_FILE" VERSION.txt BUILD.txt src/NativeStandaloneApp/Info.plist release.sh
 git commit -m "chore: release v$VERSION appcast and installers" || true
 git push -u origin main || echo "⚠️  Git push failed. Ensure you have push access to the repository."
 

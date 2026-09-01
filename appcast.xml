@@ -5,7 +5,25 @@
     <link>https://raw.githubusercontent.com/unacau/mac-productivity-suite/main/appcast.xml</link>
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
-            <item>
+                <item>
+      <title>Version 2.3.0 (Build 4)</title>
+      <pubDate>Tue, 01 Sep 2026 23:26:40 +0200</pubDate>
+      <sparkle:version>4</sparkle:version>
+      <sparkle:shortVersionString>2.3.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<ul>
+        <li>Streamlined, ultra-minimal single-page Settings UI</li>
+        <li>Eliminated obsolete Accessibility permission requirements and prompts</li>
+        <li>Clean app rename to "Mac Productivity Suite" across all distributions</li>
+        <li>Native Chrome profile switching with authentic user avatars</li>
+        <li>Apple OSLog Unified Telemetry &amp; Console.app diagnostics</li>
+      </ul>]]></description>
+      <enclosure url="https://github.com/unacau/mac-productivity-suite/releases/download/v2.3.0/MacProductivitySuite.dmg"
+                 type="application/octet-stream"
+                 sparkle:edSignature="EgWG9Cae66UQr1dmKhunTSe4TLNfQTMOn67gZ4s6C80xDiOBrfwl6w+9yrUXdo+tBGYfoKAUm2vY7QqovS1uCg=="
+                 length="1778607" />
+    </item>
+    <item>
       <title>Version 2.2.0 (Build 3)</title>
       <pubDate>Tue, 01 Sep 2026 20:00:39 +0200</pubDate>
       <sparkle:version>3</sparkle:version>
