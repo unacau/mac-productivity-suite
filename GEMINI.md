@@ -38,12 +38,16 @@
   - Strictly adhere to Swift 6 modern concurrency patterns (`async`/`await`, `@MainActor`, `Sendable`). Avoid legacy GCD / `DispatchQueue` where possible.
   - **Strict Concurrency Captures**: When using `[weak self]` inside a concurrent `@MainActor` `Task`, always safely bind it first (`guard let engine = self else { return }`). Do not pass `self?` directly into the `Task` block, as Swift 6 treats `weak self` as a mutable variable, failing CI builds.
   - **Explicit Module Imports**: Always include explicit `import AppKit` alongside `import Cocoa` when referencing types like `NSImage`, because strict Swift 6 CI environments (like GitHub Actions) will not implicitly bridge them.
+  - **Sub-process Execution & ARC**: When executing external binaries synchronously via `Process()`, **always** include `task.waitUntilExit()`. Failing to do so causes Swift ARC to deallocate the `Process` instance upon function return, prematurely killing child tasks like `/usr/bin/hidutil`.
   - Adhere to macOS Human Interface Guidelines (HIG) for all SwiftUI views, menus, and HUD overlays.
   - Keep low-level `CGEvent` monitoring/filtering logic strictly separated in `Engine/` services away from SwiftUI Views.
   - **Always** leverage `OSProviders.swift` abstraction protocols (`WorkspaceProvider`, `HotkeyProvider`, `ProcessProvider`) in core engines to preserve testability and prevent hardcoded system side-effects.
   - **Always** ensure explicit accessibility permission checks (`AXIsProcessTrusted()`) before registering or activating global event taps. Only prompt for permissions interactively on user action, never blindly on headless startup.
   - Gracefully handle event tap disablement events (`kCGEventTapDisabledByTimeout`, `kCGEventTapDisabledByUserInput`) by re-enabling the tap via `CGEvent.tapEnable(tap: true)`.
   - Instrument structured logs using `AppLogger.getLogger(category:)` (os.Logger) rather than raw `print()` statements.
+- **macOS Automation & AppleScript**:
+  - **Never** use `NSAppleScript` targeting "System Events" for UI scripting (e.g., clicking menu items). This triggers intrusive Automation permission prompts that degrade the user experience.
+  - **Always** prefer native UNIX tools or AppleEvents via the `open` command (e.g., `open -b com.google.Chrome --args --profile-directory=...`) to interact with other apps cleanly and silently.
 - **Testing**:
   - Use the modern `Swift Testing` framework (`import Testing`, `@Test`, `#expect`) for all unit and integration tests.
   - Unit tests live in `tests/SwiftUnitTests.swift` (`MacProductivitySuiteTests` target).
@@ -63,6 +67,7 @@
 2. **Event Tap & Accessibility Verification**:
    - Never initiate global event tapping without verifying accessibility permissions using `AXIsProcessTrusted()`.
    - Always handle tap auto-disablement (`kCGEventTapDisabledByTimeout`, `kCGEventTapDisabledByUserInput`) to prevent freeze or loss of input control.
+   - **macOS Accessibility Bug Handling**: If `AXIsProcessTrusted()` returns `true` but `CGEvent.tapCreate` returns `nil`, it is likely a macOS cdhash caching bug caused by ad-hoc code signature updates. The app must visibly alert the user to manually remove (`-`) and re-add (`+`) the app in System Settings, rather than silently failing.
 3. **Mandatory Pre-Execution Test & Health Discipline**:
    - Always run `make test` or `make health` to verify any modifications to Swift engine logic, models, or configurations before completing tasks.
 4. **Semantic Versioning Enforcement**:
