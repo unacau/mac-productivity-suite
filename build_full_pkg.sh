@@ -26,6 +26,20 @@ mkdir -p "$ROOT_DIR/Applications" "$SCRIPTS_DIR"
 echo "[2/4] Assembling Application and Config payloads..."
 cp -R "$DIST_DIR/Mac Productivity Suite.app" "$ROOT_DIR/Applications/"
 
+# Ensure embedded assets exist in payload_cache
+mkdir -p payload_cache
+if [ ! -f "payload_cache/Hammerspoon.zip" ]; then
+    echo "[*] Downloading Hammerspoon release payload..."
+    curl -sSL "https://github.com/Hammerspoon/hammerspoon/releases/download/1.0.0/Hammerspoon-1.0.0.zip" -o payload_cache/Hammerspoon.zip || \
+    curl -sSL "https://github.com/Hammerspoon/hammerspoon/releases/latest/download/Hammerspoon.zip" -o payload_cache/Hammerspoon.zip
+fi
+
+if [ ! -f "payload_cache/Karabiner.dmg" ]; then
+    echo "[*] Downloading Karabiner-Elements release payload..."
+    curl -sSL "https://github.com/pqrs-org/Karabiner-Elements/releases/download/v15.3.0/Karabiner-Elements-15.3.0.dmg" -o payload_cache/Karabiner.dmg || \
+    curl -sSL "https://pqrs.org/osx/karabiner/files/Karabiner-Elements-15.3.0.dmg" -o payload_cache/Karabiner.dmg
+fi
+
 # Copy embedded assets into the scripts directory
 cp payload_cache/Hammerspoon.zip "$SCRIPTS_DIR/"
 cp payload_cache/Karabiner.dmg "$SCRIPTS_DIR/"
