@@ -30,7 +30,7 @@ public final class ChromeProfileHelper: ObservableObject {
     @Published public var browserBundleID: String = "com.google.Chrome"
     
     private var cachedIcons: [String: NSImage] = [:]
-    private var scriptCache: [String: NSAppleScript] = [:]
+
     
     public let workspace: WorkspaceProvider
     public let process: ProcessProvider
@@ -287,77 +287,11 @@ public final class ChromeProfileHelper: ObservableObject {
         focusProfile(dir: p.dir)
     }
     
-    private func getCompiledAppleScript(for profileName: String, email: String) -> NSAppleScript? {
-        let cacheKey = "\(profileName)::\(email)"
-        if let cached = scriptCache[cacheKey] {
-            return cached
-        }
-        let escapedName = profileName.replacingOccurrences(of: "\"", with: "\\\"")
-        let escapedEmail = email.replacingOccurrences(of: "\"", with: "\\\"")
-        let scriptSource = """
-        tell application "Google Chrome" to activate
-        tell application "System Events"
-            tell process "Google Chrome"
-                if exists menu "Profiles" of menu bar 1 then
-                    set pMenu to menu "Profiles" of menu bar 1
-                    set targetName to "\(escapedName)"
-                    set targetEmail to "\(escapedEmail)"
-                    
-                    -- Pass 1: exact match
-                    if targetName is not "" and (exists menu item targetName of pMenu) then
-                        click menu item targetName of pMenu
-                        return "OK"
-                    end if
-                    
-                    -- Pass 2: candidate scan (menu items matching profile name or email)
-                    repeat with mi in (every menu item of pMenu)
-                        set miName to name of mi
-                        if miName is not missing value then
-                            if (targetName is not "" and miName contains targetName) or (targetEmail is not "" and miName contains targetEmail) then
-                                click mi
-                                return "OK"
-                            end if
-                        end if
-                    end repeat
-                end if
-            end tell
-        end tell
-        return "FALLBACK"
-        """
-        if let script = NSAppleScript(source: scriptSource) {
-            var err: NSDictionary?
-            _ = script.compileAndReturnError(&err)
-            scriptCache[cacheKey] = script
-            return script
-        }
-        return nil
-    }
-    
     public func focusProfile(dir: String) {
         let bundleID = self.browserBundleID
-        let profile = profiles.first(where: { $0.dir == dir })
-        let profileName = profile?.name ?? dir
-        let profileEmail = profile?.email ?? ""
         
-        // In headless or test environments without trusted accessibility, skip AppleScript to prevent hanging
-        if AppConfigManager.testOverrideDirectory != nil || !AXIsProcessTrusted() {
-            try? process.runCommand(launchPath: "/usr/bin/open", arguments: ["-b", bundleID, "--args", "--profile-directory=\(dir)"])
-            return
-        }
-        
-        // 1. If Chrome is already running, switch profile via compiled AppleScript (sub-millisecond execution)
-        let isRunning = workspace.runningApps.contains(where: { $0.bundleIdentifier == bundleID })
-        if isRunning {
-            if let appleScript = getCompiledAppleScript(for: profileName, email: profileEmail) {
-                var errorDict: NSDictionary?
-                let result = appleScript.executeAndReturnError(&errorDict)
-                if result.stringValue == "OK" {
-                    return
-                }
-            }
-        }
-        
-        // 2. Fallback / Cold start: Launch via command line argument --profile-directory
+        // Launch or focus via command line argument --profile-directory
+        // This natively brings the existing profile window to the front or opens a new one
         try? process.runCommand(launchPath: "/usr/bin/open", arguments: ["-b", bundleID, "--args", "--profile-directory=\(dir)"])
         
         Task { @MainActor in

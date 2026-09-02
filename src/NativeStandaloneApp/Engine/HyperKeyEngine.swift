@@ -94,6 +94,14 @@ public final class HyperKeyEngine: @unchecked Sendable {
             userInfo: selfPtr
         ) else {
             AppLogger.getLogger(category: .engine).error("Failed to create CGEventTap for HyperKeyEngine.")
+            Task { @MainActor in
+                let alert = NSAlert()
+                alert.messageText = "macOS Accessibility Bug Detected"
+                alert.informativeText = "Mac Productivity Suite has Accessibility permission, but macOS denied the global event tap. This usually happens when the app is updated and macOS caches the old signature.\n\nPlease go to System Settings > Privacy & Security > Accessibility, remove the app with the '-' button, and add it back with the '+' button."
+                alert.alertStyle = .critical
+                alert.addButton(withTitle: "OK")
+                alert.runModal()
+            }
             return
         }
         
