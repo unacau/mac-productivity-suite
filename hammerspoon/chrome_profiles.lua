@@ -131,77 +131,85 @@ function ChromeProfiles.getProfileIcon(profile)
     if profile.cachedIcon then return profile.cachedIcon end
 
     local baseDir = hs.configdir or (os.getenv("HOME") .. "/.hammerspoon")
+    local sharedConfigDir = os.getenv("HOME") .. "/.config/mac-productivity-suite"
 
-    -- 1. Check pre-generated circular profile avatar in assets/profiles/
-    local profileAsset = baseDir .. "/assets/profiles/" .. profile.dir .. ".png"
-    if hs.fs.attributes(profileAsset) then
-        local img = hs.image.imageFromPath(profileAsset)
-        if img then
-            profile.cachedIcon = img
-            return img
+    local candidatePaths = {
+        baseDir .. "/assets/profiles/" .. profile.dir .. ".png",
+        sharedConfigDir .. "/assets/profiles/" .. profile.dir .. ".png",
+        os.getenv("HOME") .. "/Library/Application Support/Google/Chrome/" .. profile.dir .. "/Google Profile Picture.png",
+        os.getenv("HOME") .. "/Library/Application Support/Google/Chrome/" .. profile.dir .. "/Google Profile Picture.jpg",
+        os.getenv("HOME") .. "/Library/Application Support/Google/Chrome/" .. profile.dir .. "/Google Profile Picture",
+        os.getenv("HOME") .. "/Library/Application Support/BraveSoftware/Brave-Browser/" .. profile.dir .. "/Google Profile Picture.png",
+        os.getenv("HOME") .. "/Library/Application Support/Microsoft Edge/" .. profile.dir .. "/Edge Profile Picture.png"
+    }
+
+    for _, picPath in ipairs(candidatePaths) do
+        if hs.fs.attributes(picPath) then
+            local img = hs.image.imageFromPath(picPath)
+            if img then
+                local circular = makeCircularImage(img)
+                profile.cachedIcon = circular
+                return circular
+            end
         end
     end
 
-    -- 2. If using Gaia profile picture and it exists on disk
-    local gaiaPic = os.getenv("HOME") .. "/Library/Application Support/Google/Chrome/" .. profile.dir .. "/Google Profile Picture.png"
-    if hs.fs.attributes(gaiaPic) then
-        local img = hs.image.imageFromPath(gaiaPic)
-        if img then
-            local circular = makeCircularImage(img)
-            profile.cachedIcon = circular
-            return circular
-        end
-    end
-
-    -- 3. Fallback: Google Chrome application bundle icon
+    -- Fallback: Google Chrome application bundle icon
     local chromeIcon = hs.image.imageFromAppBundle("com.google.Chrome") or hs.image.iconForFile("/System/Library/CoreServices/Finder.app")
-    profile.cachedIcon = chromeIcon
-    return chromeIcon
+    local circularFallback = makeCircularImage(chromeIcon)
+    profile.cachedIcon = circularFallback
+    return circularFallback
+end
+
+-- Find a discovered profile by directory name
+function ChromeProfiles.findProfileByDir(dir)
+    for idx, p in ipairs(ChromeProfiles.profiles) do
+        if p.dir == dir then
+            return p, idx
+        end
+    end
+    return nil, nil
 end
 
 -- Select a profile through Chrome's native macOS Profiles menu bar
 local function selectProfileFromChrome(chrome, profile)
     if not chrome then return false end
 
-    chrome:activate()
+    local name = profile.name or profile.dir or ""
+    local email = profile.email or ""
 
-    local menuCandidates = profile.menuCandidates or {profile.name}
-    local topMenus = {"Profiles", "People"}
+    local as = string.format([[
+        tell application "Google Chrome" to activate
+        tell application "System Events"
+            tell process "Google Chrome"
+                if exists menu "Profiles" of menu bar 1 then
+                    set pMenu to menu "Profiles" of menu bar 1
+                    set targetName to %q
+                    set targetEmail to %q
 
-    -- Fast path (1-2ms): Directly select without expensive accessibility tree dump
-    for _, menuName in ipairs(topMenus) do
-        for _, candidate in ipairs(menuCandidates) do
-            if chrome:selectMenuItem({menuName, candidate}) then
-                return true
-            end
-        end
-    end
+                    if targetName is not "" and (exists menu item targetName of pMenu) then
+                        click menu item targetName of pMenu
+                        return "OK"
+                    end if
 
-    -- Fallback path: only scan getMenuItems() if fast path failed
-    local menuItems = chrome:getMenuItems()
-    if menuItems then
-        for _, topMenu in ipairs(menuItems) do
-            if topMenu.AXTitle == "Profiles" or topMenu.AXTitle == "People" then
-                local menuName = topMenu.AXTitle
-                if topMenu.AXChildren and topMenu.AXChildren[1] then
-                    local subItems = topMenu.AXChildren[1].AXChildren or {}
-                    for _, item in ipairs(subItems) do
-                        local title = item.AXTitle
-                        if title and title ~= "" and not string.find(title, "^Edit") and not string.find(title, "^Customize") and not string.find(title, "^Manage") then
-                            local lowerTitle = string.lower(title)
-                            for _, candidate in ipairs(menuCandidates) do
-                                if lowerTitle == string.lower(candidate) or string.find(lowerTitle, string.lower(candidate), 1, true) then
-                                    if chrome:selectMenuItem({menuName, title}) then
-                                        return true
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-                break
-            end
-        end
+                    repeat with mi in (every menu item of pMenu)
+                        set miName to name of mi
+                        if miName is not missing value then
+                            if (targetName is not "" and miName contains targetName) or (targetEmail is not "" and miName contains targetEmail) then
+                                click mi
+                                return "OK"
+                            end if
+                        end if
+                    end repeat
+                end if
+            end tell
+        end tell
+        return "FALLBACK"
+    ]], name, email)
+
+    local success, result = hs.osascript.applescript(as)
+    if success and result == "OK" then
+        return true
     end
 
     return false
@@ -228,7 +236,7 @@ function ChromeProfiles.focusProfile(profile)
     local cmd = string.format("open -b com.google.Chrome --args --profile-directory='%s'", profile.dir)
     hs.execute(cmd)
 
-    hs.timer.doAfter(0.05, function()
+    hs.timer.doAfter(0.15, function()
         local c = hs.application.find("Google Chrome", true)
         if c then c:activate() end
     end)

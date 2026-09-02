@@ -96,44 +96,70 @@ public final class AppSwitcherEngine: ObservableObject {
         guard let apps = config.bindings[key.lowercased()], !apps.isEmpty else { return }
         
         var items: [AppSwitcherItem] = []
-        for target in apps {
-            if target.hasPrefix("chrome-profile:") {
-                let dir = String(target.dropFirst("chrome-profile:".count))
-                if let profile = ChromeProfileHelper.shared.profiles.first(where: { $0.dir == dir }) {
-                    let icon = profile.avatarImage ?? AppDiscoveryService.shared.iconForApp(nameOrBundle: "Google Chrome")
-                    items.append(AppSwitcherItem(
-                        name: target,
-                        displayName: profile.name,
-                        icon: icon,
-                        isChromeProfile: true,
-                        profileDir: profile.dir,
-                        badge: "Chrome"
-                    ))
-                } else {
-                    let icon = AppDiscoveryService.shared.iconForApp(nameOrBundle: "Google Chrome")
-                    items.append(AppSwitcherItem(
-                        name: target,
-                        displayName: "Chrome (\(dir))",
-                        icon: icon,
-                        isChromeProfile: true,
-                        profileDir: dir,
-                        badge: "Chrome"
-                    ))
+        let isSoleChrome = (apps.count == 1 && (apps[0] == "Google Chrome" || apps[0] == "Chrome"))
+        
+        if isSoleChrome && !ChromeProfileHelper.shared.profiles.isEmpty {
+            // Expand Chrome into its individual profiles
+            for (idx, profile) in ChromeProfileHelper.shared.profiles.enumerated() {
+                let icon = profile.avatarImage ?? AppDiscoveryService.shared.iconForApp(nameOrBundle: "Google Chrome")
+                items.append(AppSwitcherItem(
+                    name: "chrome-profile:\(profile.dir)",
+                    displayName: profile.name,
+                    icon: icon,
+                    isChromeProfile: true,
+                    profileDir: profile.dir,
+                    profileIndex: idx + 1,
+                    badge: "Chrome"
+                ))
+            }
+        } else {
+            let hasExplicitProfiles = apps.contains(where: { $0.hasPrefix("chrome-profile:") })
+            
+            for target in apps {
+                if (target == "Google Chrome" || target == "Chrome") && hasExplicitProfiles {
+                    // Skip redundant generic Chrome card when explicit profiles are present
+                    continue
                 }
-            } else {
-                let icon = AppDiscoveryService.shared.iconForApp(nameOrBundle: target)
-                items.append(AppSwitcherItem(name: target, displayName: target, icon: icon))
+                
+                if target.hasPrefix("chrome-profile:") {
+                    let dir = String(target.dropFirst("chrome-profile:".count))
+                    if let profile = ChromeProfileHelper.shared.profiles.first(where: { $0.dir == dir }) {
+                        let icon = profile.avatarImage ?? AppDiscoveryService.shared.iconForApp(nameOrBundle: "Google Chrome")
+                        items.append(AppSwitcherItem(
+                            name: target,
+                            displayName: profile.name,
+                            icon: icon,
+                            isChromeProfile: true,
+                            profileDir: profile.dir,
+                            profileIndex: profile.index,
+                            badge: "Chrome"
+                        ))
+                    } else {
+                        let icon = AppDiscoveryService.shared.iconForApp(nameOrBundle: "Google Chrome")
+                        items.append(AppSwitcherItem(
+                            name: target,
+                            displayName: "Profile (\(dir))",
+                            icon: icon,
+                            isChromeProfile: true,
+                            profileDir: dir,
+                            badge: "Chrome"
+                        ))
+                    }
+                } else {
+                    let icon = AppDiscoveryService.shared.iconForApp(nameOrBundle: target)
+                    items.append(AppSwitcherItem(name: target, displayName: target, icon: icon))
+                }
             }
         }
         
         if items.isEmpty { return }
         
-        if apps.count == 1 {
-            // Single app shortcut: switch immediately AND present HUD visual feedback briefly
+        if items.count == 1 {
+            // Single target shortcut: switch immediately AND present HUD visual feedback briefly
             activeKey = key
             currentItems = items
             selectedIndex = 0
-            launchOrFocusTarget(apps[0])
+            launchOrFocusTarget(items[0].name)
             showHUD()
             resetSingleDismissTimer()
             return

@@ -172,7 +172,7 @@ struct AppRowView: View {
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 28, height: 28)
-                .clipShape(item.isChromeProfile ? AnyShape(Circle()) : AnyShape(Rectangle()))
+                .clipShape(item.isChromeProfile ? AnyShape(Circle()) : AnyShape(RoundedRectangle(cornerRadius: 6)))
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.name)

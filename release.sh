@@ -64,10 +64,10 @@ new_item = f'''    <item>
       <sparkle:shortVersionString>{version}</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <description><![CDATA[<ul>
-        <li>Visual HUD overlay feedback on application selection and candidate cycling</li>
-        <li>Standard preset keybindings: F (Finder/Freeform), T (Telegram/Terminal), P (Photos/Passwords/Preview), N (Notes), C (Chrome/Profiles), S (Settings)</li>
-        <li>Interactive Onboarding Setup Wizard with Chrome profile discovery &amp; favorite selection</li>
-        <li>Smart Terminal detection prioritizing iTerm2 over native macOS Terminal</li>
+        <li>Fix Chrome profile expansion, authentic profile avatars, and HUD overlay rendering</li>
+        <li>Instant profile window switching using Chrome native Profiles menu automation</li>
+        <li>High-DPI circular profile avatars with lettered monogram fallback support</li>
+        <li>Eliminated redundant generic app cards when binding specific browser profiles</li>
       </ul>]]></description>
       <enclosure url="https://github.com/{repo}/releases/download/v{version}/MacProductivitySuite.dmg"
                  type="application/octet-stream"
@@ -104,17 +104,17 @@ echo "✅ $APPCAST_FILE updated successfully."
 # 4. Git Push & GitHub Release
 echo "[4/4] Publishing to GitHub..."
 git add -A
-git commit -m "feat(release): release v$VERSION with visual HUD, standard preset, and profile onboarding" || true
+git commit -m "fix(chrome-profiles): release v$VERSION with profile avatars, HUD fixes, and instant window switching" || true
 git tag -a "v$VERSION" -m "Release v$VERSION" || true
 git push -u origin main || echo "⚠️  Git push failed. Ensure you have push access to the repository."
 git push origin "v$VERSION" || echo "⚠️  Git push tag failed."
 
 if command -v gh >/dev/null 2>&1; then
     gh release create "v$VERSION" "$DMG_FILE" "$PKG_FILE" --title "v$VERSION" --notes "### Release v$VERSION
-- **Visual HUD Feedback**: Instant visual HUD overlay feedback upon application selection and candidate cycling.
-- **Standard Preset**: Configured F (Finder/Freeform), T (Telegram/Terminal), P (Photos/Passwords/Preview), N (Notes), C (Chrome/Profiles), S (Settings).
-- **Profile Onboarding Wizard**: 4-step native setup flow to discover and link favorite Chrome profiles.
-- **Smart Terminal Detection**: Automatically detects and binds iTerm2 if installed, or native macOS Terminal." || echo "Release v$VERSION might already exist."
+- **Chrome Profiles & HUD Fix**: Resolved profile card expansion, authentic avatar display, and eliminated blank document icons.
+- **Instant Profile Window Focusing**: Native Profiles menu automation brings the exact profile window to the front in milliseconds.
+- **Monogram Avatar Fallbacks**: High-DPI circular monogram avatars generated for profiles without local photo files.
+- **Clean Binding Lists**: Removed redundant generic Chrome cards when specific profiles are selected." || echo "Release v$VERSION might already exist."
 else
     echo "⚠️  GitHub CLI (gh) not installed. Skip creating GitHub Release."
 fi

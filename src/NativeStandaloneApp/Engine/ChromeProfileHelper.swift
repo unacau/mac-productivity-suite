@@ -139,11 +139,21 @@ public final class ChromeProfileHelper: ObservableObject {
         }
         
         let profileDir = (baseDir as NSString).appendingPathComponent(dirKey)
-        let candidatePics = [
-            (profileDir as NSString).appendingPathComponent("Google Profile Picture.png"),
-            (profileDir as NSString).appendingPathComponent("Google Profile Picture.jpg"),
-            (profileDir as NSString).appendingPathComponent("Google Profile Picture")
-        ]
+        var candidatePics: [String] = []
+        
+        if let gaiaName = info["gaia_picture_file_name"] as? String, !gaiaName.isEmpty {
+            candidatePics.append((profileDir as NSString).appendingPathComponent(gaiaName))
+        }
+        candidatePics.append((profileDir as NSString).appendingPathComponent("Google Profile Picture.png"))
+        candidatePics.append((profileDir as NSString).appendingPathComponent("Google Profile Picture.jpg"))
+        candidatePics.append((profileDir as NSString).appendingPathComponent("Google Profile Picture"))
+        candidatePics.append((profileDir as NSString).appendingPathComponent("Edge Profile Picture.png"))
+        candidatePics.append((profileDir as NSString).appendingPathComponent("Brave Profile Picture.png"))
+        
+        // Also check app assets directory if customized
+        let home = NSHomeDirectory()
+        candidatePics.append("\(home)/.config/mac-productivity-suite/assets/profiles/\(dirKey).png")
+        candidatePics.append("\(home)/.hammerspoon/assets/profiles/\(dirKey).png")
         
         for picPath in candidatePics {
             if FileManager.default.fileExists(atPath: picPath),
@@ -154,20 +164,68 @@ public final class ChromeProfileHelper: ObservableObject {
             }
         }
         
-        // Fallback: use Chrome app icon
-        let fallback = AppDiscoveryService.shared.iconForApp(nameOrBundle: "Google Chrome")
-        cachedIcons[dirKey] = fallback
-        return fallback
+        // Fallback: Generate an aesthetic monogram avatar from profile name
+        let name = (info["name"] as? String) ?? (info["gaia_name"] as? String) ?? dirKey
+        let monogram = makeMonogramImage(name: name)
+        cachedIcons[dirKey] = monogram
+        return monogram
     }
     
     private func makeCircularImage(image: NSImage) -> NSImage {
-        let size = NSSize(width: 64, height: 64)
+        let size = NSSize(width: 128, height: 128)
         let output = NSImage(size: size)
         output.lockFocus()
         
-        let path = NSBezierPath(ovalIn: NSRect(origin: .zero, size: size))
+        let rect = NSRect(origin: .zero, size: size)
+        let path = NSBezierPath(ovalIn: rect)
         path.addClip()
-        image.draw(in: NSRect(origin: .zero, size: size), from: .zero, operation: .sourceOver, fraction: 1.0)
+        image.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1.0)
+        
+        // Subtle outer ring
+        let ring = NSBezierPath(ovalIn: rect.insetBy(dx: 1, dy: 1))
+        NSColor.white.withAlphaComponent(0.25).setStroke()
+        ring.lineWidth = 2
+        ring.stroke()
+        
+        output.unlockFocus()
+        return output
+    }
+    
+    private func makeMonogramImage(name: String) -> NSImage {
+        let size = NSSize(width: 128, height: 128)
+        let output = NSImage(size: size)
+        output.lockFocus()
+        
+        let colors: [NSColor] = [
+            NSColor(red: 0.22, green: 0.50, blue: 0.95, alpha: 1.0), // Blue
+            NSColor(red: 0.58, green: 0.30, blue: 0.88, alpha: 1.0), // Purple
+            NSColor(red: 0.95, green: 0.42, blue: 0.25, alpha: 1.0), // Coral
+            NSColor(red: 0.18, green: 0.70, blue: 0.45, alpha: 1.0), // Green
+            NSColor(red: 0.92, green: 0.65, blue: 0.15, alpha: 1.0), // Amber
+            NSColor(red: 0.85, green: 0.25, blue: 0.55, alpha: 1.0)  // Rose
+        ]
+        let colorIndex = abs(name.hashValue) % colors.count
+        let bgColor = colors[colorIndex]
+        
+        let rect = NSRect(origin: .zero, size: size)
+        let path = NSBezierPath(ovalIn: rect)
+        bgColor.setFill()
+        path.fill()
+        
+        let letter = String(name.prefix(1)).uppercased()
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 58, weight: .heavy),
+            .foregroundColor: NSColor.white
+        ]
+        let str = NSAttributedString(string: letter.isEmpty ? "C" : letter, attributes: attrs)
+        let strSize = str.size()
+        let strRect = NSRect(
+            x: (size.width - strSize.width) / 2,
+            y: (size.height - strSize.height) / 2 - 2,
+            width: strSize.width,
+            height: strSize.height
+        )
+        str.draw(in: strRect)
         
         output.unlockFocus()
         return output
@@ -180,12 +238,60 @@ public final class ChromeProfileHelper: ObservableObject {
     
     public func focusProfile(dir: String) {
         let bundleID = self.browserBundleID
+        let profile = profiles.first(where: { $0.dir == dir })
+        let profileName = profile?.name ?? dir
+        let profileEmail = profile?.email ?? ""
         
-        // Launch via command line argument --profile-directory
+        // 1. If Chrome is already running, switch profile via AppleScript Profiles menu (fast & reliable)
+        let isRunning = workspace.runningApps.contains(where: { $0.bundleIdentifier == bundleID })
+        if isRunning {
+            let escapedName = profileName.replacingOccurrences(of: "\"", with: "\\\"")
+            let escapedEmail = profileEmail.replacingOccurrences(of: "\"", with: "\\\"")
+            let scriptSource = """
+            tell application "Google Chrome" to activate
+            tell application "System Events"
+                tell process "Google Chrome"
+                    if exists menu "Profiles" of menu bar 1 then
+                        set pMenu to menu "Profiles" of menu bar 1
+                        set targetName to "\(escapedName)"
+                        set targetEmail to "\(escapedEmail)"
+                        
+                        -- Pass 1: exact match
+                        if targetName is not "" and (exists menu item targetName of pMenu) then
+                            click menu item targetName of pMenu
+                            return "OK"
+                        end if
+                        
+                        -- Pass 2: candidate scan (menu items matching profile name or email)
+                        repeat with mi in (every menu item of pMenu)
+                            set miName to name of mi
+                            if miName is not missing value then
+                                if (targetName is not "" and miName contains targetName) or (targetEmail is not "" and miName contains targetEmail) then
+                                    click mi
+                                    return "OK"
+                                end if
+                            end if
+                        end repeat
+                    end if
+                end tell
+            end tell
+            return "FALLBACK"
+            """
+            
+            if let appleScript = NSAppleScript(source: scriptSource) {
+                var errorDict: NSDictionary?
+                let result = appleScript.executeAndReturnError(&errorDict)
+                if result.stringValue == "OK" {
+                    return
+                }
+            }
+        }
+        
+        // 2. Fallback / Cold start: Launch via command line argument --profile-directory
         try? process.runCommand(launchPath: "/usr/bin/open", arguments: ["-b", bundleID, "--args", "--profile-directory=\(dir)"])
         
         Task { @MainActor in
-            try? await Task.sleep(for: .seconds(0.1))
+            try? await Task.sleep(for: .seconds(0.15))
             let apps = workspace.runningApps
             if let chrome = apps.first(where: { $0.bundleIdentifier == bundleID }) {
                 chrome.activateApp()

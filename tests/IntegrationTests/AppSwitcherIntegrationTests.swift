@@ -105,4 +105,66 @@ struct AppSwitcherIntegrationTests {
         engine.hideHUDOnly()
         #expect(engine.isVisible == false)
     }
+    
+    @Test @MainActor
+    func testChromeProfileExpansion() async throws {
+        try await Task.sleep(nanoseconds: 500_000_000)
+        
+        let workspace = MockWorkspaceProvider()
+        let hotkeys = MockHotkeyProvider()
+        let engine = AppSwitcherEngine(workspace: workspace, hotkeys: hotkeys)
+        
+        // Sole Chrome binding
+        AppConfigManager.shared.config.bindings = [
+            "c": ["Google Chrome"]
+        ]
+        engine.setupBindings()
+        
+        guard let cKeyCode = KeyCodes.keyCode(for: "c") else {
+            Issue.record("Could not find keycode for c")
+            return
+        }
+        
+        hotkeys.simulateKeyPress(keyCode: cKeyCode)
+        try await Task.sleep(nanoseconds: 100_000_000)
+        
+        #expect(engine.isVisible == true)
+        #expect(engine.currentItems.count >= 1)
+        if ChromeProfileHelper.shared.profiles.count > 1 {
+            #expect(engine.currentItems.count == ChromeProfileHelper.shared.profiles.count)
+            #expect(engine.currentItems.allSatisfy { $0.isChromeProfile })
+        }
+        
+        engine.hideHUDOnly()
+    }
+    
+    @Test @MainActor
+    func testExplicitChromeProfileBindings() async throws {
+        try await Task.sleep(nanoseconds: 500_000_000)
+        
+        let workspace = MockWorkspaceProvider()
+        let hotkeys = MockHotkeyProvider()
+        let engine = AppSwitcherEngine(workspace: workspace, hotkeys: hotkeys)
+        
+        // Explicit profile targets with redundant Google Chrome
+        AppConfigManager.shared.config.bindings = [
+            "c": ["Google Chrome", "chrome-profile:Default", "chrome-profile:Profile 1"]
+        ]
+        engine.setupBindings()
+        
+        guard let cKeyCode = KeyCodes.keyCode(for: "c") else {
+            Issue.record("Could not find keycode for c")
+            return
+        }
+        
+        hotkeys.simulateKeyPress(keyCode: cKeyCode)
+        try await Task.sleep(nanoseconds: 100_000_000)
+        
+        #expect(engine.isVisible == true)
+        #expect(engine.currentItems.count == 2, "Redundant Google Chrome should be stripped when explicit profiles are present")
+        #expect(engine.currentItems.allSatisfy { $0.isChromeProfile })
+        #expect(engine.currentItems.allSatisfy { !$0.displayName.contains("chrome-profile:") })
+        
+        engine.hideHUDOnly()
+    }
 }

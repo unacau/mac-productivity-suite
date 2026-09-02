@@ -351,18 +351,22 @@ local function commitSession()
     updateHUD()
 
     if selectedItem then
-        if selectedItem.isChromeProfile and selectedItem.profileIndex then
+        if selectedItem.isChromeProfile then
             local ok, chromeProfiles = pcall(require, "chrome_profiles")
             if ok and chromeProfiles then
-                chromeProfiles.lastActiveProfileIndex = selectedItem.profileIndex
-                if chromeProfiles.focusProfileByIndex then
-                    chromeProfiles.focusProfileByIndex(selectedItem.profileIndex)
-                else
-                    hs.application.launchOrFocus("Google Chrome")
+                if selectedItem.profileDir and chromeProfiles.findProfileByDir then
+                    local p = chromeProfiles.findProfileByDir(selectedItem.profileDir)
+                    if p then
+                        chromeProfiles.focusProfile(p)
+                        return
+                    end
                 end
-            else
-                hs.application.launchOrFocus("Google Chrome")
+                if selectedItem.profileIndex and chromeProfiles.focusProfileByIndex then
+                    chromeProfiles.focusProfileByIndex(selectedItem.profileIndex)
+                    return
+                end
             end
+            hs.application.launchOrFocus("Google Chrome")
         elseif selectedItem.isChrome then
             local profileIdx = selectedItem.selectedChromeProfileIndex or 1
             local ok, chromeProfiles = pcall(require, "chrome_profiles")
@@ -421,7 +425,7 @@ local function setupTempNumberHotkeys(hasChrome, chromeIndex)
             if not activeSession then return end
 
             if activeSession.isChromeOnly then
-                -- Session items ARE the 4 profiles directly
+                -- Session items ARE the profiles directly
                 if profileNum <= #activeSession.items then
                     activeSession.selectedIndex = profileNum
                     updateHUD()
@@ -452,24 +456,29 @@ local function handleKey(key)
 
     initFlagsTap()
 
-    -- Check if Chrome is in the bound applications list
+    -- Check if Chrome is in the bound applications list or explicit chrome-profile targets exist
     local hasChrome = false
+    local hasExplicitProfiles = false
+    local hasOtherApps = false
     local chromeIndex = nil
     for idx, appName in ipairs(rawApps) do
         if appName == "Google Chrome" then
             hasChrome = true
             chromeIndex = idx
-            break
+        elseif string.sub(appName, 1, 15) == "chrome-profile:" then
+            hasExplicitProfiles = true
+        else
+            hasOtherApps = true
         end
     end
 
-    local isChromeOnly = (hasChrome and #rawApps == 1)
+    local isChromeOnly = (hasChrome and #rawApps == 1) or (hasExplicitProfiles and not hasOtherApps)
 
+    local ok, chromeProfiles = pcall(require, "chrome_profiles")
     local items = {}
-    if isChromeOnly then
-        -- Single app is Google Chrome: directly expand 4 profiles with their real avatars into HUD
-        local ok, chromeProfiles = pcall(require, "chrome_profiles")
-        if ok and chromeProfiles and chromeProfiles.profiles then
+    if isChromeOnly and not hasExplicitProfiles then
+        -- Single app is Google Chrome: directly expand profiles with their real avatars into HUD
+        if ok and chromeProfiles and chromeProfiles.profiles and #chromeProfiles.profiles > 0 then
             for idx, p in ipairs(chromeProfiles.profiles) do
                 local avatar = chromeProfiles.getProfileIcon(p)
                 table.insert(items, {
@@ -478,15 +487,15 @@ local function handleKey(key)
                     number = p.number,
                     isChromeProfile = true,
                     profileIndex = idx,
+                    profileDir = p.dir,
                     icon = avatar
                 })
             end
         else
-            table.insert(items, { name = "Google Chrome", appName = "Google Chrome" })
+            table.insert(items, { name = "Google Chrome", appName = "Google Chrome", displayName = "Google Chrome" })
         end
     else
-        -- Multi-app binding: create item for each app
-        local ok, chromeProfiles = pcall(require, "chrome_profiles")
+        -- Multi-app or explicit profile list
         local lastProfileIdx = (ok and chromeProfiles and chromeProfiles.lastActiveProfileIndex) or 1
         local chromeThumbs = {}
         if hasChrome and ok and chromeProfiles and chromeProfiles.profiles then
@@ -496,16 +505,46 @@ local function handleKey(key)
         end
 
         for _, appName in ipairs(rawApps) do
-            local isChrome = (appName == "Google Chrome")
-            table.insert(items, {
-                name = appName,
-                displayName = (isChrome and "Google Chrome" or appName),
-                appName = appName,
-                isChrome = isChrome,
-                badge = (isChrome and tostring(lastProfileIdx) or nil),
-                selectedChromeProfileIndex = (isChrome and lastProfileIdx or nil),
-                chromeThumbnails = (isChrome and chromeThumbs or nil)
-            })
+            if appName == "Google Chrome" and hasExplicitProfiles then
+                -- Skip redundant generic Chrome card when explicit profiles are present
+            elseif string.sub(appName, 1, 15) == "chrome-profile:" then
+                local dir = string.sub(appName, 16)
+                local p, pIdx = nil, nil
+                if ok and chromeProfiles and chromeProfiles.findProfileByDir then
+                    p, pIdx = chromeProfiles.findProfileByDir(dir)
+                end
+                if p then
+                    local avatar = chromeProfiles.getProfileIcon(p)
+                    table.insert(items, {
+                        name = appName,
+                        displayName = p.name,
+                        number = p.number,
+                        isChromeProfile = true,
+                        profileIndex = pIdx or tonumber(p.number) or 1,
+                        profileDir = p.dir,
+                        icon = avatar
+                    })
+                else
+                    table.insert(items, {
+                        name = appName,
+                        displayName = "Profile (" .. dir .. ")",
+                        isChromeProfile = true,
+                        profileDir = dir,
+                        icon = (ok and chromeProfiles and chromeProfiles.getProfileIcon(nil))
+                    })
+                end
+            else
+                local isChrome = (appName == "Google Chrome")
+                table.insert(items, {
+                    name = appName,
+                    displayName = (isChrome and "Google Chrome" or appName),
+                    appName = appName,
+                    isChrome = isChrome,
+                    badge = (isChrome and tostring(lastProfileIdx) or nil),
+                    selectedChromeProfileIndex = (isChrome and lastProfileIdx or nil),
+                    chromeThumbnails = (isChrome and chromeThumbs or nil)
+                })
+            end
         end
     end
 

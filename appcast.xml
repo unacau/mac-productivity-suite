@@ -5,7 +5,24 @@
     <link>https://raw.githubusercontent.com/unacau/mac-productivity-suite/main/appcast.xml</link>
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
-                    <item>
+                        <item>
+      <title>Version 2.4.1 (Build 6)</title>
+      <pubDate>Wed, 02 Sep 2026 12:29:01 +0200</pubDate>
+      <sparkle:version>6</sparkle:version>
+      <sparkle:shortVersionString>2.4.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<ul>
+        <li>Fix Chrome profile expansion, authentic profile avatars, and HUD overlay rendering</li>
+        <li>Instant profile window switching using Chrome native Profiles menu automation</li>
+        <li>High-DPI circular profile avatars with lettered monogram fallback support</li>
+        <li>Eliminated redundant generic app cards when binding specific browser profiles</li>
+      </ul>]]></description>
+      <enclosure url="https://github.com/unacau/mac-productivity-suite/releases/download/v2.4.1/MacProductivitySuite.dmg"
+                 type="application/octet-stream"
+                 sparkle:edSignature="bzwYYKgFVQMguiEk8w5Zt4tp5xuymhiTRATuIKH7c/F07ue4HYc+xn4vGwrMTU0X0IZmheXTQtrEbnwYW4uOCQ=="
+                 length="1954449" />
+    </item>
+    <item>
       <title>Version 2.4.0 (Build 5)</title>
       <pubDate>Tue, 01 Sep 2026 23:48:29 +0200</pubDate>
       <sparkle:version>5</sparkle:version>

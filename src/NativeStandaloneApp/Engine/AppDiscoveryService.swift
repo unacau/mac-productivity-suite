@@ -223,13 +223,17 @@ public final class AppDiscoveryService: ObservableObject {
         if !notes.isEmpty { bindings["n"] = notes }
         
         // 5. Browser & Profiles (c) - Google Chrome & favorite profiles
-        var chromeList = resolveCandidates(["Google Chrome"])
         let config = AppConfigManager.shared.config
-        for profId in config.favoriteChromeProfiles {
-            let targetId = profId.hasPrefix("chrome-profile:") ? profId : "chrome-profile:\(profId)"
-            if !chromeList.contains(targetId) {
-                chromeList.append(targetId)
+        var chromeList: [String] = []
+        if !config.favoriteChromeProfiles.isEmpty {
+            for profId in config.favoriteChromeProfiles {
+                let targetId = profId.hasPrefix("chrome-profile:") ? profId : "chrome-profile:\(profId)"
+                if !chromeList.contains(targetId) {
+                    chromeList.append(targetId)
+                }
             }
+        } else {
+            chromeList = resolveCandidates(["Google Chrome"])
         }
         if !chromeList.isEmpty { bindings["c"] = chromeList }
         

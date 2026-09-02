@@ -415,14 +415,12 @@ public struct OnboardingView: View {
         if tList.count == 1 { tList.append("Terminal") }
         standard["t"] = tList
         
-        // Combine Google Chrome with selected favorite profiles
-        var chromeList = ["Google Chrome"]
-        for fav in favoriteList {
-            if !chromeList.contains(fav) {
-                chromeList.append(fav)
-            }
+        // Configure Chrome shortcut
+        if !favoriteList.isEmpty {
+            standard["c"] = favoriteList
+        } else {
+            standard["c"] = ["Google Chrome"]
         }
-        standard["c"] = chromeList
         
         configManager.config.bindings = standard
         configManager.config.hasCompletedOnboarding = true
