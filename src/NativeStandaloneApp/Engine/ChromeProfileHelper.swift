@@ -143,24 +143,23 @@ public final class ChromeProfileHelper: ObservableObject {
         
         let name = (info["name"] as? String) ?? (info["gaia_name"] as? String) ?? dirKey
         let profileDir = (baseDir as NSString).appendingPathComponent(dirKey)
+        let useGaiaPicture = (info["use_gaia_picture"] as? Bool) ?? true
         
         var candidatePics: [String] = []
         
-        // 1. Explicit GAIA or custom profile picture filename from Local State
-        if let gaiaName = info["gaia_picture_file_name"] as? String, !gaiaName.isEmpty {
-            candidatePics.append((profileDir as NSString).appendingPathComponent(gaiaName))
+        // 1. Explicit GAIA or account picture filename (only if use_gaia_picture is enabled)
+        if useGaiaPicture {
+            if let gaiaName = info["gaia_picture_file_name"] as? String, !gaiaName.isEmpty {
+                candidatePics.append((profileDir as NSString).appendingPathComponent(gaiaName))
+            }
+            candidatePics.append((profileDir as NSString).appendingPathComponent("Google Profile Picture.png"))
+            candidatePics.append((profileDir as NSString).appendingPathComponent("Google Profile Picture.jpg"))
+            candidatePics.append((profileDir as NSString).appendingPathComponent("Google Profile Picture"))
+            candidatePics.append((profileDir as NSString).appendingPathComponent("Edge Profile Picture.png"))
+            candidatePics.append((profileDir as NSString).appendingPathComponent("Brave Profile Picture.png"))
         }
         
-        // 2. Standard Google / Chromium profile picture filenames
-        candidatePics.append((profileDir as NSString).appendingPathComponent("Google Profile Picture.png"))
-        candidatePics.append((profileDir as NSString).appendingPathComponent("Google Profile Picture.jpg"))
-        candidatePics.append((profileDir as NSString).appendingPathComponent("Google Profile Picture"))
-        candidatePics.append((profileDir as NSString).appendingPathComponent("Edge Profile Picture.png"))
-        candidatePics.append((profileDir as NSString).appendingPathComponent("Brave Profile Picture.png"))
-        candidatePics.append((profileDir as NSString).appendingPathComponent("Custom Profile Picture.png"))
-        candidatePics.append((profileDir as NSString).appendingPathComponent("Custom Profile Picture.jpg"))
-        
-        // 3. Avatar illustration files in Chrome Avatars directory or profile dir
+        // 2. Avatar illustration files in Chrome Avatars directory or profile dir
         if let avatarIcon = info["avatar_icon"] as? String, !avatarIcon.isEmpty {
             let iconName = (avatarIcon as NSString).lastPathComponent
             candidatePics.append((profileDir as NSString).appendingPathComponent(iconName))
@@ -168,7 +167,9 @@ public final class ChromeProfileHelper: ObservableObject {
             candidatePics.append(((baseDir as NSString).appendingPathComponent("Avatars") as NSString).appendingPathComponent("\(iconName).png"))
         }
         
-        // 4. Custom overrides in mac-productivity-suite config assets
+        // 3. Custom profile overrides in profile dir or config assets
+        candidatePics.append((profileDir as NSString).appendingPathComponent("Custom Profile Picture.png"))
+        candidatePics.append((profileDir as NSString).appendingPathComponent("Custom Profile Picture.jpg"))
         let home = NSHomeDirectory()
         candidatePics.append("\(home)/.config/mac-productivity-suite/assets/profiles/\(dirKey).png")
         candidatePics.append("\(home)/.config/mac-productivity-suite/assets/profiles/\(dirKey).jpg")
@@ -182,8 +183,9 @@ public final class ChromeProfileHelper: ObservableObject {
             }
         }
         
-        // Fallback: Generate an aesthetic monogram avatar from profile name
-        let monogram = makeMonogramImage(name: name)
+        // Fallback: Generate an aesthetic monogram avatar from profile name and color seed
+        let colorSeed = info["profile_color_seed"] as? Int
+        let monogram = makeMonogramImage(name: name, colorSeed: colorSeed)
         cachedIcons[dirKey] = monogram
         return monogram
     }
@@ -218,7 +220,7 @@ public final class ChromeProfileHelper: ObservableObject {
         return output
     }
     
-    private func makeMonogramImage(name: String) -> NSImage {
+    private func makeMonogramImage(name: String, colorSeed: Int? = nil) -> NSImage {
         let size = NSSize(width: 128, height: 128)
         let output = NSImage(size: size)
         output.lockFocus()
@@ -231,8 +233,22 @@ public final class ChromeProfileHelper: ObservableObject {
             NSColor(red: 0.92, green: 0.65, blue: 0.15, alpha: 1.0), // Amber
             NSColor(red: 0.85, green: 0.25, blue: 0.55, alpha: 1.0)  // Rose
         ]
-        let colorIndex = abs(name.hashValue) % colors.count
-        let bgColor = colors[colorIndex]
+        
+        let bgColor: NSColor
+        if let seed = colorSeed {
+            let r = CGFloat((seed >> 16) & 0xFF) / 255.0
+            let g = CGFloat((seed >> 8) & 0xFF) / 255.0
+            let b = CGFloat(seed & 0xFF) / 255.0
+            if r > 0.1 || g > 0.1 || b > 0.1 {
+                bgColor = NSColor(red: r, green: g, blue: b, alpha: 1.0)
+            } else {
+                let colorIndex = abs(seed) % colors.count
+                bgColor = colors[colorIndex]
+            }
+        } else {
+            let colorIndex = abs(name.hashValue) % colors.count
+            bgColor = colors[colorIndex]
+        }
         
         let rect = NSRect(origin: .zero, size: size)
         let path = NSBezierPath(ovalIn: rect)
