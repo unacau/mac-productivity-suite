@@ -35,10 +35,11 @@ jobs:
         env:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
-          # Write the secret to a temporary file for the release script
-          echo "$SPARKLE_PRIVATE_KEY" > sparkle_private.key
+          if [ -n "$SPARKLE_PRIVATE_KEY" ]; then
+            echo "$SPARKLE_PRIVATE_KEY" > sparkle_private.key
+          fi
           ./release.sh
-          rm sparkle_private.key
+          rm -f sparkle_private.key
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
