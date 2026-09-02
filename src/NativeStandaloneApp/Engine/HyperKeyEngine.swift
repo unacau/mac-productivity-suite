@@ -200,28 +200,89 @@ public final class HyperKeyEngine: @unchecked Sendable {
                 hyperUsedAsModifier = false
                 if !wasUsed && escapeOnTapEnabled {
                     postSyntheticEscape()
+                } else if wasUsed {
+                    AppSwitcherEngine.shared.commitAndHide()
                 }
             }
             return nil
         }
         
         // 6. Any other key while Hyper is held down
-        if isHyperActive && (type == .keyDown || type == .keyUp) {
-            hyperUsedAsModifier = true
-            
-            // If the key is mapped to an internal shortcut, trigger it and swallow
-            if let char = KeyCodes.character(for: UInt32(keyCode)) {
-                if let handler = keyBindingHandler, handler(char) {
-                    return nil // Swallowed: application handled this shortcut
+        if isHyperActive {
+            if type == .keyDown {
+                // Ignore key autorepeat to prevent uncontrollable spinning through apps
+                if event.getIntegerValueField(.keyboardEventAutorepeat) != 0 {
+                    return nil
                 }
+                
+                hyperUsedAsModifier = true
+                
+                // If HUD is visible, allow direct keyboard navigation (Arrows, Tab, Space, Return, Escape)
+                if AppSwitcherEngine.shared.isVisible {
+                    switch keyCode {
+                    case 0x7B, 0x7E: // Left Arrow, Up Arrow
+                        AppSwitcherEngine.shared.selectPrevious()
+                        return nil
+                    case 0x7C, 0x7D: // Right Arrow, Down Arrow
+                        AppSwitcherEngine.shared.selectNext()
+                        return nil
+                    case 0x30: // Tab
+                        if event.flags.contains(.maskShift) {
+                            AppSwitcherEngine.shared.selectPrevious()
+                        } else {
+                            AppSwitcherEngine.shared.selectNext()
+                        }
+                        return nil
+                    case 0x24, 0x4C, 0x31: // Return, Enter, Space
+                        AppSwitcherEngine.shared.commitAndHide()
+                        return nil
+                    case 0x35: // Escape
+                        AppSwitcherEngine.shared.hideHUDOnly()
+                        return nil
+                    default:
+                        break
+                    }
+                }
+                
+                // If the key is mapped to an internal shortcut, trigger it on keyDown and swallow
+                if let char = KeyCodes.character(for: UInt32(keyCode)) {
+                    if let handler = keyBindingHandler, handler(char) {
+                        return nil // Swallowed: application handled this shortcut
+                    }
+                }
+                
+                // Unmapped key: inject Hyper modifier flags (Cmd + Opt + Ctrl + Shift) for third-party hotkeys
+                let hyperFlags: CGEventFlags = [
+                    .maskCommand, .maskAlternate, .maskControl, .maskShift
+                ]
+                event.flags = CGEventFlags(rawValue: event.flags.rawValue | hyperFlags.rawValue)
+                return Unmanaged.passUnretained(event)
+            } else if type == .keyUp {
+                // On keyUp: swallow keyUp for bound shortcuts and navigation keys so apps don't get stray events
+                if let char = KeyCodes.character(for: UInt32(keyCode)) {
+                    let config = AppConfigManager.shared.config
+                    let isBound = config.bindings.keys.contains(char.lowercased())
+                    let isNumber = (Int(char) != nil && Int(char)! >= 1 && Int(char)! <= 9)
+                    if isBound || (AppSwitcherEngine.shared.isVisible && isNumber) {
+                        return nil // Swallowed: DO NOT re-trigger shortcut on keyUp!
+                    }
+                }
+                
+                if AppSwitcherEngine.shared.isVisible {
+                    switch keyCode {
+                    case 0x7B, 0x7C, 0x7D, 0x7E, 0x30, 0x24, 0x4C, 0x31, 0x35:
+                        return nil // Swallowed
+                    default:
+                        break
+                    }
+                }
+                
+                let hyperFlags: CGEventFlags = [
+                    .maskCommand, .maskAlternate, .maskControl, .maskShift
+                ]
+                event.flags = CGEventFlags(rawValue: event.flags.rawValue | hyperFlags.rawValue)
+                return Unmanaged.passUnretained(event)
             }
-            
-            // Unmapped key: inject Hyper modifier flags (Cmd + Opt + Ctrl + Shift) for third-party hotkeys
-            let hyperFlags: CGEventFlags = [
-                .maskCommand, .maskAlternate, .maskControl, .maskShift
-            ]
-            event.flags = CGEventFlags(rawValue: event.flags.rawValue | hyperFlags.rawValue)
-            return Unmanaged.passUnretained(event)
         }
         
         return Unmanaged.passUnretained(event)

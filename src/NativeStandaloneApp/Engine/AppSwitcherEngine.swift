@@ -291,9 +291,27 @@ public final class AppSwitcherEngine: ObservableObject {
         HUDOverlayWindow.shared.hide()
     }
     
+    public func selectNext() {
+        guard isVisible, !currentItems.isEmpty else { return }
+        selectedIndex = (selectedIndex + 1) % currentItems.count
+        resetDismissTimer()
+    }
+    
+    public func selectPrevious() {
+        guard isVisible, !currentItems.isEmpty else { return }
+        selectedIndex = (selectedIndex - 1 + currentItems.count) % currentItems.count
+        resetDismissTimer()
+    }
+    
     private func resetDismissTimer() {
         dismissTimer?.invalidate()
-        dismissTimer = Timer.scheduledTimer(withTimeInterval: 0.75, repeats: false) { [weak self] _ in
+        // If Hyper key is held down, DO NOT auto-dismiss! Keep HUD open until user releases Caps Lock.
+        if HyperKeyEngine.shared.isHyperActive {
+            dismissTimer = nil
+            return
+        }
+        // Fallback safety timeout if triggered without holding Hyper key
+        dismissTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { [weak self] _ in
             guard let engine = self else { return }
             Task { @MainActor in
                 engine.commitAndHide()

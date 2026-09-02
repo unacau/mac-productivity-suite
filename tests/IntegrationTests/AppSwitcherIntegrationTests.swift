@@ -269,4 +269,47 @@ extension SerializedTests {
         
         engine.hideHUDOnly()
     }
+    
+    @Test @MainActor
+    func testHUDNavigationAndCycling() async throws {
+        let workspace = MockWorkspaceProvider()
+        let hotkeys = MockHotkeyProvider()
+        let process = MockProcessProvider()
+        let chromeHelper = ChromeProfileHelper(workspace: workspace, process: process)
+        let engine = AppSwitcherEngine(workspace: workspace, hotkeys: hotkeys, chromeHelper: chromeHelper)
+        
+        AppConfigManager.shared.config.bindings = [
+            "t": ["App1", "App2", "App3"]
+        ]
+        engine.setupBindings()
+        
+        // 1. Initial press
+        engine.handleKeyPress(key: "t")
+        #expect(engine.isVisible == true)
+        #expect(engine.selectedIndex == 0)
+        
+        // 2. Cycling forward with selectNext
+        engine.selectNext()
+        #expect(engine.selectedIndex == 1)
+        
+        engine.selectNext()
+        #expect(engine.selectedIndex == 2)
+        
+        engine.selectNext()
+        #expect(engine.selectedIndex == 0, "Should wrap around to 0")
+        
+        // 3. Cycling backward with selectPrevious
+        engine.selectPrevious()
+        #expect(engine.selectedIndex == 2, "Should wrap around backwards to 2")
+        
+        engine.selectPrevious()
+        #expect(engine.selectedIndex == 1)
+        
+        // 4. Repeated handleKeyPress should also cycle cleanly
+        engine.handleKeyPress(key: "t")
+        #expect(engine.selectedIndex == 2)
+        
+        engine.hideHUDOnly()
+        #expect(engine.isVisible == false)
+    }
 }
