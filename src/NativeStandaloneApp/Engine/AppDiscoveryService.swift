@@ -1,5 +1,6 @@
 import Foundation
 import Cocoa
+import AppKit
 
 public struct DiscoveredApp: Identifiable, Hashable, Sendable {
     public let id: String // bundleID or path

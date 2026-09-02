@@ -1,4 +1,5 @@
 import Cocoa
+import AppKit
 import SwiftUI
 import Combine
 
@@ -67,8 +68,9 @@ public final class AppSwitcherEngine: ObservableObject {
             
             let keyStr = key.lowercased()
             _ = hotkeys.register(keyCode: keyCode, modifiers: modifiers) { [weak self] in
+                guard let engine = self else { return }
                 Task { @MainActor in
-                    self?.handleKeyPress(key: keyStr)
+                    engine.handleKeyPress(key: keyStr)
                 }
             }
         }
@@ -184,8 +186,9 @@ public final class AppSwitcherEngine: ObservableObject {
     private func resetSingleDismissTimer() {
         dismissTimer?.invalidate()
         dismissTimer = Timer.scheduledTimer(withTimeInterval: 0.45, repeats: false) { [weak self] _ in
+            guard let engine = self else { return }
             Task { @MainActor in
-                self?.hideHUDOnly()
+                engine.hideHUDOnly()
             }
         }
     }
@@ -201,8 +204,9 @@ public final class AppSwitcherEngine: ObservableObject {
     private func resetDismissTimer() {
         dismissTimer?.invalidate()
         dismissTimer = Timer.scheduledTimer(withTimeInterval: 0.75, repeats: false) { [weak self] _ in
+            guard let engine = self else { return }
             Task { @MainActor in
-                self?.commitAndHide()
+                engine.commitAndHide()
             }
         }
     }

@@ -1,4 +1,5 @@
 import Cocoa
+import AppKit
 
 public struct DiscoveredChromeProfile: Identifiable, Equatable {
     public var id: String { dir }

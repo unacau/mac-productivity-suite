@@ -66,7 +66,8 @@ new_item = f'''    <item>
       <description><![CDATA[<ul>
         <li>Fixed in-app auto-updater (Sparkle) silently failing to install updates due to ad-hoc code signature Designated Requirement mismatch.</li>
         <li>Implemented stable Designated Requirements for all future updates to ensure smooth in-place upgrades.</li>
-        <li>Note: You must manually download and install this specific version (v2.4.4) one last time. All future updates will install automatically.</li>
+        <li>Fixed Swift 6 strict concurrency checks and added explicit AppKit imports across engine classes to ensure clean CI builds.</li>
+        <li>Note: You must manually download and install this version (v2.4.5) one last time. All future updates will install automatically.</li>
       </ul>]]></description>
       <enclosure url="https://github.com/{repo}/releases/download/v{version}/MacProductivitySuite.dmg"
                  type="application/octet-stream"
@@ -103,15 +104,16 @@ echo "✅ $APPCAST_FILE updated successfully."
 # 4. Git Push & GitHub Release
 echo "[4/4] Publishing to GitHub..."
 git add -A
-git commit -m "fix(sparkle): resolve auto-updater failing by using stable designated requirement for ad-hoc signatures" || true
+git commit -m "fix(ci-sparkle): release v$VERSION with Swift 6 concurrency fixes and stable DR signature" || true
 git tag -a "v$VERSION" -m "Release v$VERSION" || true
 git push -u origin main || echo "⚠️  Git push failed. Ensure you have push access to the repository."
 git push origin "v$VERSION" || echo "⚠️  Git push tag failed."
 
 if command -v gh >/dev/null 2>&1; then
     gh release create "v$VERSION" "$DMG_FILE" "$PKG_FILE" --title "v$VERSION" --notes "### Release v$VERSION
-- **Auto-Update Fix**: Fixed an issue where the in-app Sparkle updater would download the update but silently fail to install it.
+- **Auto-Update Fix**: Fixed an issue where the in-app Sparkle updater would download the update but silently fail to install it due to changing ad-hoc signature hashes.
 - **Stable Code Signatures**: Applied stable Designated Requirements to the ad-hoc signatures so future versions verify correctly.
+- **Swift 6 Concurrency & CI**: Fixed strict concurrency captures in timers and added explicit AppKit imports for clean automated CI/CD builds.
 - **Action Required**: Because the previous signature validation was strict, you will need to **manually install this update one last time**. All future updates will apply automatically from within the app!" || echo "Release v$VERSION might already exist."
 else
     echo "⚠️  GitHub CLI (gh) not installed. Skip creating GitHub Release."
