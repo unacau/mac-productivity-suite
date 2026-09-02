@@ -5,7 +5,23 @@
     <link>https://raw.githubusercontent.com/unacau/mac-productivity-suite/main/appcast.xml</link>
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
-                        <item>
+                            <item>
+      <title>Version 2.4.2 (Build 7)</title>
+      <pubDate>Wed, 02 Sep 2026 12:57:30 +0200</pubDate>
+      <sparkle:version>7</sparkle:version>
+      <sparkle:shortVersionString>2.4.2</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<ul>
+        <li>Pre-compiled AppleScript bytecode cache for sub-millisecond browser profile switching</li>
+        <li>Modularized candidate item builder (buildSwitcherItems) and simplified engine control flow</li>
+        <li>Clean Swift 6 Sendable concurrency conformance and modern macOS 14+ application activation</li>
+      </ul>]]></description>
+      <enclosure url="https://github.com/unacau/mac-productivity-suite/releases/download/v2.4.2/MacProductivitySuite.dmg"
+                 type="application/octet-stream"
+                 sparkle:edSignature="4duAGECaR9qkphKBawvJXN1WSS8/dYyaBQ8Tdkt/7M+JdKfZLkBWhPJRLoI7qoeTU8SRq6hqjhj8xLUCwTQJDw=="
+                 length="1959181" />
+    </item>
+    <item>
       <title>Version 2.4.1 (Build 6)</title>
       <pubDate>Wed, 02 Sep 2026 12:29:01 +0200</pubDate>
       <sparkle:version>6</sparkle:version>

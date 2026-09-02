@@ -66,7 +66,7 @@ public final class AppSwitcherEngine: ObservableObject {
             guard let keyCode = KeyCodes.keyCode(for: key), !apps.isEmpty else { continue }
             
             let keyStr = key.lowercased()
-            hotkeys.register(keyCode: keyCode, modifiers: modifiers) { [weak self] in
+            _ = hotkeys.register(keyCode: keyCode, modifiers: modifiers) { [weak self] in
                 Task { @MainActor in
                     self?.handleKeyPress(key: keyStr)
                 }
@@ -80,7 +80,7 @@ public final class AppSwitcherEngine: ObservableObject {
                 guard let keyCode = KeyCodes.keyCode(for: numStr) else { continue }
                 let profileIndex = idx + 1
                 
-                hotkeys.register(keyCode: keyCode, modifiers: modifiers) {
+                _ = hotkeys.register(keyCode: keyCode, modifiers: modifiers) {
                     Task { @MainActor in
                         ChromeProfileHelper.shared.focusProfile(index: profileIndex)
                     }
@@ -91,15 +91,11 @@ public final class AppSwitcherEngine: ObservableObject {
         AppLogger.getLogger(category: .engine).info("Registered \(config.bindings.count) app shortcut bindings using Hyper Key.")
     }
     
-    public func handleKeyPress(key: String) {
-        let config = AppConfigManager.shared.config
-        guard let apps = config.bindings[key.lowercased()], !apps.isEmpty else { return }
-        
+    public func buildSwitcherItems(for apps: [String]) -> [AppSwitcherItem] {
         var items: [AppSwitcherItem] = []
         let isSoleChrome = (apps.count == 1 && (apps[0] == "Google Chrome" || apps[0] == "Chrome"))
         
         if isSoleChrome && !ChromeProfileHelper.shared.profiles.isEmpty {
-            // Expand Chrome into its individual profiles
             for (idx, profile) in ChromeProfileHelper.shared.profiles.enumerated() {
                 let icon = profile.avatarImage ?? AppDiscoveryService.shared.iconForApp(nameOrBundle: "Google Chrome")
                 items.append(AppSwitcherItem(
@@ -112,46 +108,46 @@ public final class AppSwitcherEngine: ObservableObject {
                     badge: "Chrome"
                 ))
             }
-        } else {
-            let hasExplicitProfiles = apps.contains(where: { $0.hasPrefix("chrome-profile:") })
+            return items
+        }
+        
+        let hasExplicitProfiles = apps.contains(where: { $0.hasPrefix("chrome-profile:") })
+        
+        for target in apps {
+            if (target == "Google Chrome" || target == "Chrome") && hasExplicitProfiles {
+                // Skip redundant generic Chrome card when explicit profiles are present
+                continue
+            }
             
-            for target in apps {
-                if (target == "Google Chrome" || target == "Chrome") && hasExplicitProfiles {
-                    // Skip redundant generic Chrome card when explicit profiles are present
-                    continue
-                }
+            if target.hasPrefix("chrome-profile:") {
+                let dir = String(target.dropFirst("chrome-profile:".count))
+                let profile = ChromeProfileHelper.shared.profiles.first(where: { $0.dir == dir })
+                let displayName = profile?.name ?? "Profile (\(dir))"
+                let icon = profile?.avatarImage ?? AppDiscoveryService.shared.iconForApp(nameOrBundle: "Google Chrome")
                 
-                if target.hasPrefix("chrome-profile:") {
-                    let dir = String(target.dropFirst("chrome-profile:".count))
-                    if let profile = ChromeProfileHelper.shared.profiles.first(where: { $0.dir == dir }) {
-                        let icon = profile.avatarImage ?? AppDiscoveryService.shared.iconForApp(nameOrBundle: "Google Chrome")
-                        items.append(AppSwitcherItem(
-                            name: target,
-                            displayName: profile.name,
-                            icon: icon,
-                            isChromeProfile: true,
-                            profileDir: profile.dir,
-                            profileIndex: profile.index,
-                            badge: "Chrome"
-                        ))
-                    } else {
-                        let icon = AppDiscoveryService.shared.iconForApp(nameOrBundle: "Google Chrome")
-                        items.append(AppSwitcherItem(
-                            name: target,
-                            displayName: "Profile (\(dir))",
-                            icon: icon,
-                            isChromeProfile: true,
-                            profileDir: dir,
-                            badge: "Chrome"
-                        ))
-                    }
-                } else {
-                    let icon = AppDiscoveryService.shared.iconForApp(nameOrBundle: target)
-                    items.append(AppSwitcherItem(name: target, displayName: target, icon: icon))
-                }
+                items.append(AppSwitcherItem(
+                    name: target,
+                    displayName: displayName,
+                    icon: icon,
+                    isChromeProfile: true,
+                    profileDir: dir,
+                    profileIndex: profile?.index,
+                    badge: "Chrome"
+                ))
+            } else {
+                let icon = AppDiscoveryService.shared.iconForApp(nameOrBundle: target)
+                items.append(AppSwitcherItem(name: target, displayName: target, icon: icon))
             }
         }
         
+        return items
+    }
+    
+    public func handleKeyPress(key: String) {
+        let config = AppConfigManager.shared.config
+        guard let apps = config.bindings[key.lowercased()], !apps.isEmpty else { return }
+        
+        let items = buildSwitcherItems(for: apps)
         if items.isEmpty { return }
         
         if items.count == 1 {

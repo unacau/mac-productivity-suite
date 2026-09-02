@@ -13,7 +13,11 @@ extension NSRunningApplication: @retroactive @unchecked Sendable {}
 
 extension NSRunningApplication: RunningAppProvider {
     public func activateApp() {
-        self.activate(options: .activateIgnoringOtherApps)
+        if #available(macOS 14.0, *) {
+            self.activate()
+        } else {
+            self.activate(options: .activateIgnoringOtherApps)
+        }
     }
 }
 

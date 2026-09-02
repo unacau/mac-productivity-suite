@@ -2,7 +2,7 @@ import Foundation
 import Cocoa
 import Carbon
 
-public final class HotkeyManager {
+public final class HotkeyManager: @unchecked Sendable {
     public static let shared = HotkeyManager()
     
     private var hotkeyRefs: [UInt32: EventHotKeyRef] = [:]
