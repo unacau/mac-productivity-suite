@@ -42,6 +42,22 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         _ = ChromeProfileHelper.shared
         _ = AppSwitcherEngine.shared
         
+        // 4. Check and watch accessibility permissions
+        setupAccessibilityWatcher()
+        
+        // 5. Open onboarding wizard only for fresh unconfigured installs
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(0.4))
+            let currentConfig = AppConfigManager.shared.config
+            if !currentConfig.hasCompletedOnboarding {
+                OnboardingWindowController.shared.show()
+            }
+        }
+    }
+    
+    private var accessibilityWatcherTimer: Timer?
+    
+    public func startProductivityEngines() {
         let config = AppConfigManager.shared.config
         if config.remapCapsLockToHyper {
             HyperKeyEngine.shared.escapeOnTapEnabled = config.escapeOnTap
@@ -52,17 +68,31 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             CopyOnSelectEngine.shared.isEnabled = true
             CopyOnSelectEngine.shared.start()
         }
-        
-        // 4. Log accessibility permission status
+    }
+    
+    private func setupAccessibilityWatcher() {
         let isTrusted = AXIsProcessTrusted()
-        AppLogger.getLogger(category: .engine).info("Accessibility status: \(isTrusted)")
+        AppLogger.getLogger(category: .engine).info("Initial accessibility status: \(isTrusted)")
         
-        // 5. Open onboarding wizard only for fresh unconfigured installs
-        Task { @MainActor in
-            try? await Task.sleep(for: .seconds(0.4))
-            let currentConfig = AppConfigManager.shared.config
-            if !currentConfig.hasCompletedOnboarding {
-                OnboardingWindowController.shared.show()
+        if isTrusted {
+            startProductivityEngines()
+        } else {
+            // Prompt user for accessibility permissions
+            let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
+            AXIsProcessTrustedWithOptions(options)
+            
+            // Watch for user granting permission in System Settings
+            accessibilityWatcherTimer?.invalidate()
+            accessibilityWatcherTimer = Timer.scheduledTimer(withTimeInterval: 0.8, repeats: true) { [weak self] timer in
+                guard let self = self else { return }
+                Task { @MainActor in
+                    if AXIsProcessTrusted() {
+                        AppLogger.getLogger(category: .engine).info("Accessibility granted! Initializing HyperKey and CopyOnSelect engines.")
+                        timer.invalidate()
+                        self.accessibilityWatcherTimer = nil
+                        self.startProductivityEngines()
+                    }
+                }
             }
         }
     }

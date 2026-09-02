@@ -64,14 +64,14 @@ public final class HyperKeyEngine: @unchecked Sendable {
     public func start() {
         guard !isStarted else { return }
         
-        // 1. Apply driver-level Caps Lock -> F18 remapping
-        HIDMappingService.applyCapsLockToF18(processProvider: processProvider)
-        
-        // 2. Accessibility check
+        // 1. Accessibility check
         guard AXIsProcessTrusted() else {
             AppLogger.getLogger(category: .engine).warning("Accessibility permission missing. Global event tap cannot be registered.")
             return
         }
+        
+        // 2. Apply driver-level Caps Lock -> F18 remapping
+        HIDMappingService.applyCapsLockToF18(processProvider: processProvider)
         
         // 3. Register CoreGraphics Head-Insert Event Tap
         let eventMask: CGEventMask = (
@@ -174,6 +174,8 @@ public final class HyperKeyEngine: @unchecked Sendable {
             // Dual-role check: If released without any modifier use, emit Escape!
             if !wasUsed && escapeOnTapEnabled {
                 postSyntheticEscape()
+            } else if wasUsed {
+                AppSwitcherEngine.shared.commitAndHide()
             }
             return nil // Swallow F18 up
         }

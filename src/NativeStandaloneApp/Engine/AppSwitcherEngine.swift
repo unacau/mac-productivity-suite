@@ -253,9 +253,18 @@ public final class AppSwitcherEngine: ObservableObject {
             let frontAppName = workspace.frontmostApplicationName?.lowercased()
             if let front = frontAppName, let idx = items.firstIndex(where: { $0.displayName.lowercased() == front }) {
                 selectedIndex = (idx + 1) % items.count
+            } else if let lastIdx = lastActiveIndices[keyLower], lastIdx < items.count {
+                selectedIndex = lastIdx
             } else {
-                selectedIndex = lastActiveIndices[keyLower] ?? 0
-                if selectedIndex >= items.count { selectedIndex = 0 }
+                // Find first candidate that is running or discovered on disk
+                let firstAvailable = items.firstIndex(where: { it in
+                    if it.isChromeProfile { return true }
+                    if workspace.runningApps.contains(where: { $0.localizedName?.lowercased() == it.displayName.lowercased() }) {
+                        return true
+                    }
+                    return AppDiscoveryService.shared.findApp(nameOrBundle: it.name) != nil
+                })
+                selectedIndex = firstAvailable ?? 0
             }
             
             showHUD()

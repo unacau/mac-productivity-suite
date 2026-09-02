@@ -65,6 +65,7 @@ public final class SystemProcessProvider: ProcessProvider {
         task.launchPath = launchPath
         task.arguments = arguments
         try task.run()
+        task.waitUntilExit()
     }
 }
 
