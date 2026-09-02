@@ -22,6 +22,7 @@ let package = Package(
                     "-Xlinker", "-rpath", "-Xlinker", "Frameworks"
                 ]),
                 .linkedFramework("Cocoa"),
+                .linkedFramework("AppKit"),
                 .linkedFramework("SwiftUI"),
                 .linkedFramework("Carbon"),
                 .linkedFramework("Sparkle")

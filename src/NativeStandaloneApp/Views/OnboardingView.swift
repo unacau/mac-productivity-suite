@@ -154,7 +154,7 @@ public struct OnboardingView: View {
                     if !isAccessibilityTrusted {
                         Spacer()
                         Button("Grant Access") {
-                            let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
+                            let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
                             AXIsProcessTrustedWithOptions(options)
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                                 isAccessibilityTrusted = AXIsProcessTrusted()
@@ -436,6 +436,7 @@ public struct OnboardingView: View {
     }
 }
 
+@MainActor
 public final class OnboardingWindowController {
     public static let shared = OnboardingWindowController()
     private var window: NSWindow?

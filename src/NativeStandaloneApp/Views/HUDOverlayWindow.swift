@@ -73,6 +73,7 @@ public struct HUDOverlayView: View {
     }
 }
 
+@MainActor
 public final class HUDOverlayWindow: NSWindow {
     public static let shared = HUDOverlayWindow()
     

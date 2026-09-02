@@ -162,7 +162,7 @@ public struct SettingsView: View {
                     }
                 } else {
                     Button(action: {
-                        let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
+                        let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
                         AXIsProcessTrustedWithOptions(options)
                     }) {
                         HStack(spacing: 4) {
@@ -213,6 +213,7 @@ public struct ActiveKeySheetTarget: Identifiable {
     public let id: String
 }
 
+@MainActor
 struct KeyBindingRow: View {
     let key: String
     let apps: [String]
@@ -447,6 +448,7 @@ struct AddKeySheet: View {
     }
 }
 
+@MainActor
 public final class SettingsWindowController {
     public static let shared = SettingsWindowController()
     private var window: NSWindow?
