@@ -6,7 +6,7 @@ public struct SettingsView: View {
     @ObservedObject var profileHelper = ChromeProfileHelper.shared
     
     @State private var showingAddKeySheet: Bool = false
-    @State private var showingAppPickerForKey: String? = nil
+    @State private var showingAppPickerForKey: ActiveKeySheetTarget? = nil
     
     public var body: some View {
         VStack(spacing: 0) {
@@ -110,7 +110,7 @@ public struct SettingsView: View {
                                 key: key,
                                 apps: configManager.config.bindings[key] ?? [],
                                 onAddApp: {
-                                    showingAppPickerForKey = key
+                                    showingAppPickerForKey = ActiveKeySheetTarget(id: key)
                                 },
                                 onRemoveApp: { index in
                                     var list = configManager.config.bindings[key] ?? []
@@ -190,14 +190,15 @@ public struct SettingsView: View {
         .sheet(isPresented: $showingAddKeySheet) {
             AddKeySheet(isPresented: $showingAddKeySheet) { newKey in
                 configManager.updateBinding(key: newKey, apps: [])
-                showingAppPickerForKey = newKey
+                showingAppPickerForKey = ActiveKeySheetTarget(id: newKey)
             }
         }
-        .sheet(item: $showingAppPickerForKey) { key in
+        .sheet(item: $showingAppPickerForKey) { target in
             AppPickerSheet(isPresented: Binding(
                 get: { showingAppPickerForKey != nil },
                 set: { if !$0 { showingAppPickerForKey = nil } }
             )) { selectedAppName in
+                let key = target.id
                 var current = configManager.config.bindings[key] ?? []
                 if !current.contains(selectedAppName) {
                     current.append(selectedAppName)
@@ -208,8 +209,8 @@ public struct SettingsView: View {
     }
 }
 
-extension String: @retroactive Identifiable {
-    public var id: String { self }
+public struct ActiveKeySheetTarget: Identifiable {
+    public let id: String
 }
 
 struct KeyBindingRow: View {

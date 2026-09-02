@@ -395,8 +395,14 @@ public struct OnboardingView: View {
     }
     
     private func finishOnboarding() {
-        // 1. Build profile target IDs
-        let favoriteList = Array(selectedProfileDirs).map { "chrome-profile:\($0)" }
+        // 1. Build profile target IDs in canonical profile order (Default, Profile 1, Profile 2, etc.)
+        let sortedProfiles = profileHelper.profiles.filter { selectedProfileDirs.contains($0.dir) }
+        let favoriteList: [String]
+        if !sortedProfiles.isEmpty {
+            favoriteList = sortedProfiles.map { "chrome-profile:\($0.dir)" }
+        } else {
+            favoriteList = selectedProfileDirs.sorted().map { "chrome-profile:\($0)" }
+        }
         configManager.config.favoriteChromeProfiles = favoriteList
         
         // 2. Configure Standard preset

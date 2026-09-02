@@ -82,15 +82,60 @@ public final class AppSwitcherEngine: ObservableObject {
                 guard let keyCode = KeyCodes.keyCode(for: numStr) else { continue }
                 let profileIndex = idx + 1
                 
-                _ = hotkeys.register(keyCode: keyCode, modifiers: modifiers) {
+                // If user explicitly bound this number in config.bindings, let that take precedence unless HUD is open
+                if config.bindings[numStr] != nil {
+                    continue
+                }
+                
+                _ = hotkeys.register(keyCode: keyCode, modifiers: modifiers) { [weak self] in
+                    guard let engine = self else { return }
                     Task { @MainActor in
-                        ChromeProfileHelper.shared.focusProfile(index: profileIndex)
+                        engine.handleNumberPress(profileIndex: profileIndex)
                     }
                 }
             }
         }
         
         AppLogger.getLogger(category: .engine).info("Registered \(config.bindings.count) app shortcut bindings using Hyper Key.")
+    }
+    
+    public func handleNumberPress(profileIndex: Int) {
+        if isVisible && !currentItems.isEmpty {
+            // Priority 1: Match by explicit profileIndex
+            if let matchIdx = currentItems.firstIndex(where: { $0.profileIndex == profileIndex }) {
+                selectedIndex = matchIdx
+                resetDismissTimer()
+                return
+            }
+            // Priority 2: Match by 0-based array position (1-based number) if within bounds
+            let targetIdx = profileIndex - 1
+            if targetIdx >= 0 && targetIdx < currentItems.count {
+                selectedIndex = targetIdx
+                resetDismissTimer()
+                return
+            }
+        }
+        
+        // If HUD is not currently visible, handle direct Hyper + [1..9] shortcut
+        if let p = ChromeProfileHelper.shared.profiles.first(where: { $0.index == profileIndex }) {
+            let item = AppSwitcherItem(
+                name: "chrome-profile:\(p.dir)",
+                displayName: p.name,
+                icon: p.avatarImage ?? AppDiscoveryService.shared.iconForApp(nameOrBundle: "Google Chrome"),
+                isChromeProfile: true,
+                profileDir: p.dir,
+                profileIndex: p.index,
+                badge: "Chrome"
+            )
+            activeKey = String(profileIndex)
+            currentItems = [item]
+            selectedIndex = 0
+            launchOrFocusTarget(item.name)
+            showHUD()
+            resetSingleDismissTimer()
+        } else {
+            ChromeProfileHelper.shared.focusProfile(index: profileIndex)
+        }
     }
     
     public func buildSwitcherItems(for apps: [String]) -> [AppSwitcherItem] {
@@ -146,15 +191,23 @@ public final class AppSwitcherEngine: ObservableObject {
     }
     
     public func handleKeyPress(key: String) {
+        let keyLower = key.lowercased()
+        
+        // If HUD is already open and key is a number 1..9, navigate directly to that item/profile
+        if isVisible && !currentItems.isEmpty, let num = Int(keyLower), num >= 1, num <= 9 {
+            handleNumberPress(profileIndex: num)
+            return
+        }
+        
         let config = AppConfigManager.shared.config
-        guard let apps = config.bindings[key.lowercased()], !apps.isEmpty else { return }
+        guard let apps = config.bindings[keyLower], !apps.isEmpty else { return }
         
         let items = buildSwitcherItems(for: apps)
         if items.isEmpty { return }
         
         if items.count == 1 {
             // Single target shortcut: switch immediately AND present HUD visual feedback briefly
-            activeKey = key
+            activeKey = keyLower
             currentItems = items
             selectedIndex = 0
             launchOrFocusTarget(items[0].name)
@@ -163,18 +216,18 @@ public final class AppSwitcherEngine: ObservableObject {
             return
         }
         
-        if isVisible && activeKey == key && currentItems.count == items.count {
+        if isVisible && activeKey == keyLower && currentItems.count == items.count {
             selectedIndex = (selectedIndex + 1) % items.count
             resetDismissTimer()
         } else {
-            activeKey = key
+            activeKey = keyLower
             currentItems = items
             
             let frontAppName = workspace.frontmostApplicationName?.lowercased()
             if let front = frontAppName, let idx = items.firstIndex(where: { $0.displayName.lowercased() == front }) {
                 selectedIndex = (idx + 1) % items.count
             } else {
-                selectedIndex = lastActiveIndices[key] ?? 0
+                selectedIndex = lastActiveIndices[keyLower] ?? 0
                 if selectedIndex >= items.count { selectedIndex = 0 }
             }
             

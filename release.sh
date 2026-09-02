@@ -64,10 +64,9 @@ new_item = f'''    <item>
       <sparkle:shortVersionString>{version}</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <description><![CDATA[<ul>
-        <li>Fixed in-app auto-updater (Sparkle) silently failing to install updates due to ad-hoc code signature Designated Requirement mismatch.</li>
-        <li>Implemented stable Designated Requirements for all future updates to ensure smooth in-place upgrades.</li>
-        <li>Fixed Swift 6 strict concurrency checks and added explicit AppKit imports across engine classes to ensure clean CI builds.</li>
-        <li>Note: You must manually download and install this version (v2.4.5) one last time. All future updates will install automatically.</li>
+        <li>Fixed number keys (1..9) not moving selector in UI when switching Chrome profiles.</li>
+        <li>Fixed avatar resolution for local and non-GAIA Chrome profiles to properly display profile pictures.</li>
+        <li>Fixed GitHub Actions CI/CD pipeline compatibility across Swift 5.10 and Swift 6 environments.</li>
       </ul>]]></description>
       <enclosure url="https://github.com/{repo}/releases/download/v{version}/MacProductivitySuite.dmg"
                  type="application/octet-stream"
@@ -103,20 +102,23 @@ echo "✅ $APPCAST_FILE updated successfully."
 
 # 4. Git Push & GitHub Release
 echo "[4/4] Publishing to GitHub..."
-git add -A
-git commit -m "fix(ci-sparkle): release v$VERSION with Swift 6 concurrency fixes and stable DR signature" || true
-git tag -a "v$VERSION" -m "Release v$VERSION" || true
-git push -u origin main || echo "⚠️  Git push failed. Ensure you have push access to the repository."
-git push origin "v$VERSION" || echo "⚠️  Git push tag failed."
+if [ -z "${CI:-}" ]; then
+    git add -A
+    git commit -m "fix(ui-profiles): release v$VERSION with number key navigation, avatar resolution, and CI pipeline fixes" || true
+    git tag -a "v$VERSION" -m "Release v$VERSION" || true
+    git push -u origin main || echo "⚠️  Git push failed. Ensure you have push access to the repository."
+    git push origin "v$VERSION" || echo "⚠️  Git push tag failed."
 
-if command -v gh >/dev/null 2>&1; then
-    gh release create "v$VERSION" "$DMG_FILE" "$PKG_FILE" --title "v$VERSION" --notes "### Release v$VERSION
-- **Auto-Update Fix**: Fixed an issue where the in-app Sparkle updater would download the update but silently fail to install it due to changing ad-hoc signature hashes.
-- **Stable Code Signatures**: Applied stable Designated Requirements to the ad-hoc signatures so future versions verify correctly.
-- **Swift 6 Concurrency & CI**: Fixed strict concurrency captures in timers and added explicit AppKit imports for clean automated CI/CD builds.
-- **Action Required**: Because the previous signature validation was strict, you will need to **manually install this update one last time**. All future updates will apply automatically from within the app!" || echo "Release v$VERSION might already exist."
+    if command -v gh >/dev/null 2>&1; then
+        gh release create "v$VERSION" "$DMG_FILE" "$PKG_FILE" --title "v$VERSION" --notes "### Release v$VERSION
+- **Chrome Profile Selector Navigation**: Pressing number keys (\`1\`..\`9\`) when selecting Chrome profiles now moves the selection highlight in the HUD overlay and resets the auto-dismiss timer.
+- **Chrome Profile Avatar Resolution**: Fixed an issue where local and unlinked Chromium profiles with disabled GAIA flags displayed letter monograms instead of their real on-disk profile photos.
+- **CI/CD Pipeline Compatibility**: Fixed build errors across Swift 5.10 and Swift 6 GitHub Actions environments by resolving explicit AppKit imports and eliminating deprecated retroactive extensions." || echo "Release v$VERSION might already exist."
+    else
+        echo "⚠️  GitHub CLI (gh) not installed. Skip creating GitHub Release."
+    fi
 else
-    echo "⚠️  GitHub CLI (gh) not installed. Skip creating GitHub Release."
+    echo "Running inside CI environment, skipping local git commit and push."
 fi
 
 echo "=================================================="

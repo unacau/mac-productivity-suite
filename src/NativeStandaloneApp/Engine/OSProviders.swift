@@ -1,5 +1,6 @@
 import Foundation
 import Cocoa
+import AppKit
 import Carbon
 
 // MARK: - Running App Provider
@@ -8,8 +9,6 @@ public protocol RunningAppProvider: Sendable {
     var bundleIdentifier: String? { get }
     func activateApp()
 }
-
-extension NSRunningApplication: @retroactive @unchecked Sendable {}
 
 extension NSRunningApplication: RunningAppProvider {
     public func activateApp() {

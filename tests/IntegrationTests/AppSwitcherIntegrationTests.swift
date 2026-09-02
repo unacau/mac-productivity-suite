@@ -167,4 +167,53 @@ struct AppSwitcherIntegrationTests {
         
         engine.hideHUDOnly()
     }
+    
+    @Test @MainActor
+    func testNumberKeyNavigationInHUD() async throws {
+        try await Task.sleep(nanoseconds: 500_000_000)
+        
+        let workspace = MockWorkspaceProvider()
+        let hotkeys = MockHotkeyProvider()
+        let engine = AppSwitcherEngine(workspace: workspace, hotkeys: hotkeys)
+        
+        // Explicit profile targets
+        AppConfigManager.shared.config.bindings = [
+            "c": ["chrome-profile:Default", "chrome-profile:Profile 1", "chrome-profile:Profile 2"]
+        ]
+        AppConfigManager.shared.config.autoDiscoverChromeProfiles = true
+        engine.setupBindings()
+        
+        guard let cKeyCode = KeyCodes.keyCode(for: "c"),
+              let twoKeyCode = KeyCodes.keyCode(for: "2"),
+              let threeKeyCode = KeyCodes.keyCode(for: "3") else {
+            Issue.record("Could not find keycodes for c, 2, or 3")
+            return
+        }
+        
+        // 1. Open HUD
+        hotkeys.simulateKeyPress(keyCode: cKeyCode)
+        try await Task.sleep(nanoseconds: 100_000_000)
+        
+        #expect(engine.isVisible == true)
+        #expect(engine.currentItems.count == 3)
+        #expect(engine.selectedIndex == 0) // Default selected first
+        
+        // 2. Press number key "2" while HUD is active -> should jump to item index 1
+        hotkeys.simulateKeyPress(keyCode: twoKeyCode)
+        try await Task.sleep(nanoseconds: 50_000_000)
+        
+        #expect(engine.selectedIndex == 1, "Pressing '2' should move selector to second profile")
+        
+        // 3. Press number key "3" while HUD is active -> should jump to item index 2
+        hotkeys.simulateKeyPress(keyCode: threeKeyCode)
+        try await Task.sleep(nanoseconds: 50_000_000)
+        
+        #expect(engine.selectedIndex == 2, "Pressing '3' should move selector to third profile")
+        
+        // 4. Also test pressing '1' via handleKeyPress delegation
+        engine.handleKeyPress(key: "1")
+        #expect(engine.selectedIndex == 0, "Pressing '1' should move selector back to first profile")
+        
+        engine.hideHUDOnly()
+    }
 }

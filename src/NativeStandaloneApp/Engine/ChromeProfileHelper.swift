@@ -42,6 +42,7 @@ public final class ChromeProfileHelper: ObservableObject {
     }
     
     public func refreshProfiles() {
+        cachedIcons.removeAll()
         let fileManager = FileManager.default
         let chromeAppPath = "/Applications/Google Chrome.app"
         self.isChromeInstalled = fileManager.fileExists(atPath: chromeAppPath)
@@ -141,43 +142,47 @@ public final class ChromeProfileHelper: ObservableObject {
         }
         
         let name = (info["name"] as? String) ?? (info["gaia_name"] as? String) ?? dirKey
-        
-        // Check if profile explicitly disabled GAIA profile picture (e.g. use_gaia_picture == false / 0)
-        var useGaia = true
-        if let gaiaFlag = info["use_gaia_picture"] as? Bool {
-            useGaia = gaiaFlag
-        } else if let gaiaNum = info["use_gaia_picture"] as? Int {
-            useGaia = (gaiaNum != 0)
-        }
-        
         let profileDir = (baseDir as NSString).appendingPathComponent(dirKey)
         
-        if useGaia {
-            var candidatePics: [String] = []
-            if let gaiaName = info["gaia_picture_file_name"] as? String, !gaiaName.isEmpty {
-                candidatePics.append((profileDir as NSString).appendingPathComponent(gaiaName))
-            }
-            candidatePics.append((profileDir as NSString).appendingPathComponent("Google Profile Picture.png"))
-            candidatePics.append((profileDir as NSString).appendingPathComponent("Google Profile Picture.jpg"))
-            candidatePics.append((profileDir as NSString).appendingPathComponent("Google Profile Picture"))
-            candidatePics.append((profileDir as NSString).appendingPathComponent("Edge Profile Picture.png"))
-            candidatePics.append((profileDir as NSString).appendingPathComponent("Brave Profile Picture.png"))
-            
-            // Also check app assets directory if customized
-            let home = NSHomeDirectory()
-            candidatePics.append("\(home)/.config/mac-productivity-suite/assets/profiles/\(dirKey).png")
-            
-            for picPath in candidatePics {
-                if FileManager.default.fileExists(atPath: picPath),
-                   let image = NSImage(contentsOfFile: picPath) {
-                    let circular = makeCircularImage(image: image)
-                    cachedIcons[dirKey] = circular
-                    return circular
-                }
+        var candidatePics: [String] = []
+        
+        // 1. Explicit GAIA or custom profile picture filename from Local State
+        if let gaiaName = info["gaia_picture_file_name"] as? String, !gaiaName.isEmpty {
+            candidatePics.append((profileDir as NSString).appendingPathComponent(gaiaName))
+        }
+        
+        // 2. Standard Google / Chromium profile picture filenames
+        candidatePics.append((profileDir as NSString).appendingPathComponent("Google Profile Picture.png"))
+        candidatePics.append((profileDir as NSString).appendingPathComponent("Google Profile Picture.jpg"))
+        candidatePics.append((profileDir as NSString).appendingPathComponent("Google Profile Picture"))
+        candidatePics.append((profileDir as NSString).appendingPathComponent("Edge Profile Picture.png"))
+        candidatePics.append((profileDir as NSString).appendingPathComponent("Brave Profile Picture.png"))
+        candidatePics.append((profileDir as NSString).appendingPathComponent("Custom Profile Picture.png"))
+        candidatePics.append((profileDir as NSString).appendingPathComponent("Custom Profile Picture.jpg"))
+        
+        // 3. Avatar illustration files in Chrome Avatars directory or profile dir
+        if let avatarIcon = info["avatar_icon"] as? String, !avatarIcon.isEmpty {
+            let iconName = (avatarIcon as NSString).lastPathComponent
+            candidatePics.append((profileDir as NSString).appendingPathComponent(iconName))
+            candidatePics.append(((baseDir as NSString).appendingPathComponent("Avatars") as NSString).appendingPathComponent(iconName))
+            candidatePics.append(((baseDir as NSString).appendingPathComponent("Avatars") as NSString).appendingPathComponent("\(iconName).png"))
+        }
+        
+        // 4. Custom overrides in mac-productivity-suite config assets
+        let home = NSHomeDirectory()
+        candidatePics.append("\(home)/.config/mac-productivity-suite/assets/profiles/\(dirKey).png")
+        candidatePics.append("\(home)/.config/mac-productivity-suite/assets/profiles/\(dirKey).jpg")
+        
+        for picPath in candidatePics {
+            if FileManager.default.fileExists(atPath: picPath),
+               let image = NSImage(contentsOfFile: picPath) {
+                let circular = makeCircularImage(image: image)
+                cachedIcons[dirKey] = circular
+                return circular
             }
         }
         
-        // Fallback or Non-GAIA: Generate an aesthetic monogram avatar from profile name
+        // Fallback: Generate an aesthetic monogram avatar from profile name
         let monogram = makeMonogramImage(name: name)
         cachedIcons[dirKey] = monogram
         return monogram
