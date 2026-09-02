@@ -26,7 +26,8 @@ final class MockWorkspaceProvider: @unchecked Sendable, WorkspaceProvider {
     }
 }
 
-struct ChromeProfileIntegrationTests {
+extension SerializedTests {
+    
     
     @Test @MainActor
     func profileDiscoveryAndLaunch() throws {
@@ -34,8 +35,8 @@ struct ChromeProfileIntegrationTests {
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tempDir) }
         
-        setenv("MPS_TEST_CONFIG_DIR", tempDir.path, 1)
-        defer { unsetenv("MPS_TEST_CONFIG_DIR") }
+        AppConfigManager.testOverrideDirectory = tempDir.path
+        defer { AppConfigManager.testOverrideDirectory = nil }
         
         let localStateDict: [String: Any] = [
             "profile": [
@@ -72,8 +73,8 @@ struct ChromeProfileIntegrationTests {
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tempDir) }
         
-        setenv("MPS_TEST_CONFIG_DIR", tempDir.path, 1)
-        defer { unsetenv("MPS_TEST_CONFIG_DIR") }
+        AppConfigManager.testOverrideDirectory = tempDir.path
+        defer { AppConfigManager.testOverrideDirectory = nil }
         
         let profileDir = tempDir.appendingPathComponent("Profile 5")
         try FileManager.default.createDirectory(at: profileDir, withIntermediateDirectories: true)

@@ -23,13 +23,12 @@ final class MockHotkeyProvider: @unchecked Sendable, HotkeyProvider {
     }
 }
 
-@Suite(.serialized)
-struct AppSwitcherIntegrationTests {
+
+extension SerializedTests {
+    
     
     @Test @MainActor
     func testAppCyclingAndLaunch() async throws {
-        // Sleep to avoid race condition with ConfigIntegrationTests modifying the AppConfigManager singleton
-        try await Task.sleep(nanoseconds: 500_000_000)
         
         let workspace = MockWorkspaceProvider()
         let hotkeys = MockHotkeyProvider()
@@ -76,7 +75,6 @@ struct AppSwitcherIntegrationTests {
     
     @Test @MainActor
     func testSingleAppHUDLaunch() async throws {
-        try await Task.sleep(nanoseconds: 500_000_000)
         
         let workspace = MockWorkspaceProvider()
         let hotkeys = MockHotkeyProvider()
@@ -108,7 +106,7 @@ struct AppSwitcherIntegrationTests {
     
     @Test @MainActor
     func testChromeProfileExpansion() async throws {
-        try await Task.sleep(nanoseconds: 500_000_000)
+        
         
         let workspace = MockWorkspaceProvider()
         let hotkeys = MockHotkeyProvider()
@@ -140,7 +138,7 @@ struct AppSwitcherIntegrationTests {
     
     @Test @MainActor
     func testExplicitChromeProfileBindings() async throws {
-        try await Task.sleep(nanoseconds: 500_000_000)
+        
         
         let workspace = MockWorkspaceProvider()
         let hotkeys = MockHotkeyProvider()
@@ -170,7 +168,7 @@ struct AppSwitcherIntegrationTests {
     
     @Test @MainActor
     func testNumberKeyNavigationInHUD() async throws {
-        try await Task.sleep(nanoseconds: 500_000_000)
+        
         
         let workspace = MockWorkspaceProvider()
         let hotkeys = MockHotkeyProvider()

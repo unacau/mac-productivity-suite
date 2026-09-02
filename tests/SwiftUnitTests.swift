@@ -3,7 +3,8 @@ import Cocoa
 import Testing
 @testable import AppEngine
 
-struct ProductivitySuiteTests {
+extension SerializedTests {
+    
     
     @Test @MainActor
     func configSerialization() throws {

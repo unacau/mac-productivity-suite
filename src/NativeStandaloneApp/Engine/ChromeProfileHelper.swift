@@ -48,7 +48,7 @@ public final class ChromeProfileHelper: ObservableObject {
         self.isChromeInstalled = fileManager.fileExists(atPath: chromeAppPath)
         
         let localStatePaths: [String] = {
-            if let testDir = ProcessInfo.processInfo.environment["MPS_TEST_CONFIG_DIR"] {
+            if let testDir = AppConfigManager.testOverrideDirectory {
                 return ["\(testDir)/Local State"]
             }
             return [

@@ -171,8 +171,10 @@ public final class AppConfigManager: ObservableObject {
     
     @Published public var config: AppConfig
     
+    public static var testOverrideDirectory: String?
+    
     public var configURL: URL {
-        if let testDir = ProcessInfo.processInfo.environment["MPS_TEST_CONFIG_DIR"] {
+        if let testDir = AppConfigManager.testOverrideDirectory {
             return URL(fileURLWithPath: testDir).appendingPathComponent("config.json")
         }
         let home = FileManager.default.homeDirectoryForCurrentUser
@@ -180,7 +182,7 @@ public final class AppConfigManager: ObservableObject {
     }
     
     public var hammerspoonConfigURL: URL {
-        if let testDir = ProcessInfo.processInfo.environment["MPS_TEST_CONFIG_DIR"] {
+        if let testDir = AppConfigManager.testOverrideDirectory {
             return URL(fileURLWithPath: testDir).appendingPathComponent("hs_config.json")
         }
         let home = FileManager.default.homeDirectoryForCurrentUser

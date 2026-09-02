@@ -2,7 +2,8 @@ import Foundation
 import Testing
 @testable import AppEngine
 
-struct ConfigIntegrationTests {
+extension SerializedTests {
+    
     
     @Test @MainActor
     func legacyMigration() throws {
@@ -11,8 +12,8 @@ struct ConfigIntegrationTests {
         defer { try? FileManager.default.removeItem(at: tempDir) }
         
         // Set env variable
-        setenv("MPS_TEST_CONFIG_DIR", tempDir.path, 1)
-        defer { unsetenv("MPS_TEST_CONFIG_DIR") }
+        AppConfigManager.testOverrideDirectory = tempDir.path
+        defer { AppConfigManager.testOverrideDirectory = nil }
         
         // Write legacy config
         let legacyJSON = """
