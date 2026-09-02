@@ -36,10 +36,12 @@
 ## Code Conventions & Standards
 - **Swift & SwiftUI**:
   - Strictly adhere to Swift 6 modern concurrency patterns (`async`/`await`, `@MainActor`, `Sendable`). Avoid legacy GCD / `DispatchQueue` where possible.
+  - **Strict Concurrency Captures**: When using `[weak self]` inside a concurrent `@MainActor` `Task`, always safely bind it first (`guard let engine = self else { return }`). Do not pass `self?` directly into the `Task` block, as Swift 6 treats `weak self` as a mutable variable, failing CI builds.
+  - **Explicit Module Imports**: Always include explicit `import AppKit` alongside `import Cocoa` when referencing types like `NSImage`, because strict Swift 6 CI environments (like GitHub Actions) will not implicitly bridge them.
   - Adhere to macOS Human Interface Guidelines (HIG) for all SwiftUI views, menus, and HUD overlays.
   - Keep low-level `CGEvent` monitoring/filtering logic strictly separated in `Engine/` services away from SwiftUI Views.
   - **Always** leverage `OSProviders.swift` abstraction protocols (`WorkspaceProvider`, `HotkeyProvider`, `ProcessProvider`) in core engines to preserve testability and prevent hardcoded system side-effects.
-  - **Always** ensure explicit accessibility permission checks (`AXIsProcessTrusted()`) before registering or activating global event taps.
+  - **Always** ensure explicit accessibility permission checks (`AXIsProcessTrusted()`) before registering or activating global event taps. Only prompt for permissions interactively on user action, never blindly on headless startup.
   - Gracefully handle event tap disablement events (`kCGEventTapDisabledByTimeout`, `kCGEventTapDisabledByUserInput`) by re-enabling the tap via `CGEvent.tapEnable(tap: true)`.
   - Instrument structured logs using `AppLogger.getLogger(category:)` (os.Logger) rather than raw `print()` statements.
 - **Testing**:
@@ -69,6 +71,7 @@
    - Telemetry and diagnostics must ingest native system log streams directly via `./scripts/monitor_telemetry.sh` rather than manual context reconstruction.
 6. **Sparkle Auto-Updates Delivery Boundary**:
    - The `.pkg` installs core applications once. `appcast.xml` and Sparkle exclusively update `Mac Productivity Suite Native.app` via DMG encapsulation. **Never** attempt to deliver the `.pkg` payload via Sparkle.
+   - **Code Signing & Sparkle Requirements**: Because the app is ad-hoc signed (`-`), the default `cdhash` Designated Requirement will change on every build, causing Sparkle updates to fail. Always sign the main application with a stable DR (`-r="designated => identifier \"com.unacau.macproductivitysuite\""`). Furthermore, NEVER use `--deep` when code signing, as it overwrites and corrupts the internal Sparkle framework's pre-existing XPC service signatures.
 7. **Security & Secrets**:
    - Never commit user configuration tokens, private browser profile paths, or the raw Sparkle EdDSA private key (`sparkle_private.key`).
 8. **Dependencies & Frameworks**:

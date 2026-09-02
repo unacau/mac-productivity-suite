@@ -1,4 +1,4 @@
-# Mac Productivity Suite (v2.2 Universal)
+# Mac Productivity Suite (v2.4 Universal)
 
 A high-performance, ultra-minimal macOS productivity tool built in modern Swift 6 and SwiftUI.
 
@@ -13,6 +13,7 @@ Designed to eliminate workflow friction: switch instantly between favorite apps 
 - **🔍 1-Click Smart Detection**: Automatically detects installed IDEs, terminals, browsers, and communicators to map clean default bindings.
 - **✨ Pure Minimalism**: Single-page Settings UI. No complex tabs, no permission locks, no unnecessary import/export bloat.
 - **🛡️ Native & Zero-Permission**: Uses native Carbon hotkey registration and AppKit activation—no macOS Accessibility permission prompts or event tap interference required.
+- **🔄 Auto-Updates**: Native integration with Sparkle 2.x for seamless, secure, in-place app updates outside the Mac App Store.
 - **⚙️ Unified JSON Configuration**: Stored cleanly at `~/.config/mac-productivity-suite/config.json`.
 
 ---

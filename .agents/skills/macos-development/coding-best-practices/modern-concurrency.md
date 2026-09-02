@@ -500,6 +500,27 @@ class SearchViewModel: ObservableObject {
 }
 ```
 
+### Swift 6 Weak Self Capture in Tasks
+
+```swift
+// ❌ BAD (Swift 6): Capturing `weak self` directly in a Task
+// Swift 6 treats `weak self` as a mutable variable, and passing it into 
+// a concurrent context is a strict concurrency violation.
+Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { [weak self] _ in
+    Task { @MainActor in
+        self?.doSomething() // Error: reference to captured var 'self' in concurrently-executing code
+    }
+}
+
+// ✅ GOOD (Swift 6): Safely unwrap `weak self` into an immutable constant first
+Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { [weak self] _ in
+    guard let self = self else { return }
+    Task { @MainActor in
+        self.doSomething()
+    }
+}
+```
+
 ## Concurrency Best Practices
 
 ### Avoid Blocking Main Thread

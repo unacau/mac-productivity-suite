@@ -51,9 +51,11 @@ make verify
 
 ### Step 4: Release Execution
 When cutting an official release:
-1. Ensure `SPARKLE_PRIVATE_KEY` is present or keychain is configured.
-2. Run `./release.sh`.
-3. Push the git tag (`git push origin vX.Y.Z`).
+1. Ensure the ad-hoc signature uses a stable Designated Requirement (`-r="designated => identifier \"com.unacau.macproductivitysuite\""`) to ensure Sparkle doesn't reject updates due to changing `cdhash` values.
+2. Avoid using `--deep` in `codesign` to preserve the original embedded Sparkle XPC service signatures (`Installer.xpc`).
+3. Ensure `sparkle_private.key` is present in the repository root for automated EdDSA signing of the generated `.dmg`.
+4. Run `./release.sh`.
+5. Push the git tag (`git push origin vX.Y.Z`).
 
 ---
 

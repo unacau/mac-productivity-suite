@@ -211,6 +211,7 @@ The CLI is interactive -- it prompts for release notes and asks for confirmation
 | Notarization fails | Check signing identity, entitlements, and hardened runtime settings |
 | DMG is too large | Check for debug symbols or unnecessary frameworks in the export |
 | App won't update | Verify `SUFeedURL` points to the raw appcast URL, not the GitHub page URL |
+| Sparkle silent update failure | If using ad-hoc signing (`codesign -`), ensure the app has a stable Designated Requirement (`-r="designated => identifier \"com.your.app\""`), otherwise changing `cdhash` causes updates to fail. Also, never use `--deep` as it corrupts Sparkle's built-in XPC service signatures. |
 
 ## Appcast Hosting
 
