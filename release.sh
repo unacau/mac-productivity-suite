@@ -106,16 +106,16 @@ echo "✅ $APPCAST_FILE updated successfully."
 echo "[4/4] Publishing to GitHub..."
 if [ -z "${CI:-}" ]; then
     git add -A
-    git commit -m "fix(ui-profiles): release v$VERSION with number key navigation, avatar resolution, and CI pipeline fixes" || true
+    git commit -m "release: v$VERSION with Chrome profile fixes and full CI/CD pipeline automation" || true
     git tag -a "v$VERSION" -m "Release v$VERSION" || true
     git push -u origin main || echo "⚠️  Git push failed. Ensure you have push access to the repository."
     git push origin "v$VERSION" || echo "⚠️  Git push tag failed."
 
     if command -v gh >/dev/null 2>&1; then
         gh release create "v$VERSION" "$DMG_FILE" "$PKG_FILE" --title "v$VERSION" --notes "### Release v$VERSION
-- **Chrome Profile Selector Navigation**: Pressing number keys (\`1\`..\`9\`) when selecting Chrome profiles now moves the selection highlight in the HUD overlay and resets the auto-dismiss timer.
-- **Chrome Profile Avatar Resolution**: Fixed an issue where local and unlinked Chromium profiles with disabled GAIA flags displayed letter monograms instead of their real on-disk profile photos.
-- **CI/CD Pipeline Compatibility**: Fixed build errors across Swift 5.10 and Swift 6 GitHub Actions environments by resolving explicit AppKit imports and eliminating deprecated retroactive extensions." || echo "Release v$VERSION might already exist."
+- **Chrome Profile Selector Navigation**: Pressing number keys (\`1\`..\`9\`) when selecting Chrome profiles immediately animates the selection highlight in the HUD overlay and resets the auto-dismiss timer.
+- **Chrome Profile Avatar Resolution**: Fixed avatar resolution for local and unlinked Chromium profiles with disabled GAIA flags so that on-disk profile photos render properly.
+- **CI/CD Pipeline Automation**: Fully resolved GitHub Actions CI and Release pipelines with automatic payload caching, dynamic Xcode 16 toolchain selection, and strict Swift 6 actor isolation." || echo "Release v$VERSION might already exist."
     else
         echo "⚠️  GitHub CLI (gh) not installed. Skip creating GitHub Release."
     fi

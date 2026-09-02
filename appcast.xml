@@ -5,7 +5,23 @@
     <link>https://raw.githubusercontent.com/unacau/mac-productivity-suite/main/appcast.xml</link>
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
-                                                <item>
+                                                    <item>
+      <title>Version 2.4.7 (Build 12)</title>
+      <pubDate>Wed, 02 Sep 2026 15:52:52 +0200</pubDate>
+      <sparkle:version>12</sparkle:version>
+      <sparkle:shortVersionString>2.4.7</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<ul>
+        <li>Fixed number keys (1..9) not moving selector in UI when switching Chrome profiles.</li>
+        <li>Fixed avatar resolution for local and non-GAIA Chrome profiles to properly display profile pictures.</li>
+        <li>Fixed GitHub Actions CI/CD pipeline compatibility across Swift 5.10 and Swift 6 environments.</li>
+      </ul>]]></description>
+      <enclosure url="https://github.com/unacau/mac-productivity-suite/releases/download/v2.4.7/MacProductivitySuite.dmg"
+                 type="application/octet-stream"
+                 sparkle:edSignature="dOi3Tk4XJEyv/XWrVhRJPgbLFZtcStTjmvK3EgKW38RR5vkbfggVzdy8GB0uLpYkh9dK8eI8pIcrwOlGsum/DA=="
+                 length="1980515" />
+    </item>
+    <item>
       <title>Version 2.4.6 (Build 11)</title>
       <pubDate>Wed, 02 Sep 2026 15:31:12 +0200</pubDate>
       <sparkle:version>11</sparkle:version>
