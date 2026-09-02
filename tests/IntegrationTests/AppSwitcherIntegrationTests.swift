@@ -26,14 +26,13 @@ final class MockHotkeyProvider: @unchecked Sendable, HotkeyProvider {
 
 extension SerializedTests {
     
-    
     @Test @MainActor
     func testAppCyclingAndLaunch() async throws {
-        
         let workspace = MockWorkspaceProvider()
         let hotkeys = MockHotkeyProvider()
-        
-        let engine = AppSwitcherEngine(workspace: workspace, hotkeys: hotkeys)
+        let process = MockProcessProvider()
+        let chromeHelper = ChromeProfileHelper(workspace: workspace, process: process)
+        let engine = AppSwitcherEngine(workspace: workspace, hotkeys: hotkeys, chromeHelper: chromeHelper)
         
         // Setup config
         AppConfigManager.shared.config.bindings = [
@@ -75,11 +74,11 @@ extension SerializedTests {
     
     @Test @MainActor
     func testSingleAppHUDLaunch() async throws {
-        
         let workspace = MockWorkspaceProvider()
         let hotkeys = MockHotkeyProvider()
-        
-        let engine = AppSwitcherEngine(workspace: workspace, hotkeys: hotkeys)
+        let process = MockProcessProvider()
+        let chromeHelper = ChromeProfileHelper(workspace: workspace, process: process)
+        let engine = AppSwitcherEngine(workspace: workspace, hotkeys: hotkeys, chromeHelper: chromeHelper)
         
         // Single app binding
         AppConfigManager.shared.config.bindings = [
@@ -106,11 +105,29 @@ extension SerializedTests {
     
     @Test @MainActor
     func testChromeProfileExpansion() async throws {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
         
+        AppConfigManager.testOverrideDirectory = tempDir.path
+        defer { AppConfigManager.testOverrideDirectory = nil }
+        
+        let localStateDict: [String: Any] = [
+            "profile": [
+                "info_cache": [
+                    "Default": ["name": "Personal"],
+                    "Profile 1": ["name": "Work"]
+                ]
+            ]
+        ]
+        let data = try JSONSerialization.data(withJSONObject: localStateDict)
+        try data.write(to: tempDir.appendingPathComponent("Local State"))
         
         let workspace = MockWorkspaceProvider()
         let hotkeys = MockHotkeyProvider()
-        let engine = AppSwitcherEngine(workspace: workspace, hotkeys: hotkeys)
+        let process = MockProcessProvider()
+        let chromeHelper = ChromeProfileHelper(workspace: workspace, process: process)
+        let engine = AppSwitcherEngine(workspace: workspace, hotkeys: hotkeys, chromeHelper: chromeHelper)
         
         // Sole Chrome binding
         AppConfigManager.shared.config.bindings = [
@@ -127,22 +144,37 @@ extension SerializedTests {
         try await Task.sleep(nanoseconds: 100_000_000)
         
         #expect(engine.isVisible == true)
-        #expect(engine.currentItems.count >= 1)
-        if ChromeProfileHelper.shared.profiles.count > 1 {
-            #expect(engine.currentItems.count == ChromeProfileHelper.shared.profiles.count)
-            #expect(engine.currentItems.allSatisfy { $0.isChromeProfile })
-        }
+        #expect(engine.currentItems.count == 2)
+        #expect(engine.currentItems.allSatisfy { $0.isChromeProfile })
         
         engine.hideHUDOnly()
     }
     
     @Test @MainActor
     func testExplicitChromeProfileBindings() async throws {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
         
+        AppConfigManager.testOverrideDirectory = tempDir.path
+        defer { AppConfigManager.testOverrideDirectory = nil }
+        
+        let localStateDict: [String: Any] = [
+            "profile": [
+                "info_cache": [
+                    "Default": ["name": "Personal"],
+                    "Profile 1": ["name": "Work"]
+                ]
+            ]
+        ]
+        let data = try JSONSerialization.data(withJSONObject: localStateDict)
+        try data.write(to: tempDir.appendingPathComponent("Local State"))
         
         let workspace = MockWorkspaceProvider()
         let hotkeys = MockHotkeyProvider()
-        let engine = AppSwitcherEngine(workspace: workspace, hotkeys: hotkeys)
+        let process = MockProcessProvider()
+        let chromeHelper = ChromeProfileHelper(workspace: workspace, process: process)
+        let engine = AppSwitcherEngine(workspace: workspace, hotkeys: hotkeys, chromeHelper: chromeHelper)
         
         // Explicit profile targets with redundant Google Chrome
         AppConfigManager.shared.config.bindings = [
@@ -168,11 +200,30 @@ extension SerializedTests {
     
     @Test @MainActor
     func testNumberKeyNavigationInHUD() async throws {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
         
+        AppConfigManager.testOverrideDirectory = tempDir.path
+        defer { AppConfigManager.testOverrideDirectory = nil }
+        
+        let localStateDict: [String: Any] = [
+            "profile": [
+                "info_cache": [
+                    "Default": ["name": "Personal"],
+                    "Profile 1": ["name": "Work"],
+                    "Profile 2": ["name": "Research"]
+                ]
+            ]
+        ]
+        let data = try JSONSerialization.data(withJSONObject: localStateDict)
+        try data.write(to: tempDir.appendingPathComponent("Local State"))
         
         let workspace = MockWorkspaceProvider()
         let hotkeys = MockHotkeyProvider()
-        let engine = AppSwitcherEngine(workspace: workspace, hotkeys: hotkeys)
+        let process = MockProcessProvider()
+        let chromeHelper = ChromeProfileHelper(workspace: workspace, process: process)
+        let engine = AppSwitcherEngine(workspace: workspace, hotkeys: hotkeys, chromeHelper: chromeHelper)
         
         // Explicit profile targets
         AppConfigManager.shared.config.bindings = [

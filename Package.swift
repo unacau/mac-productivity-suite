@@ -12,7 +12,7 @@ let package = Package(
             name: "AppEngine",
             dependencies: [],
             path: "src/NativeStandaloneApp",
-            exclude: ["Info.plist"],
+            exclude: ["Info.plist", "main.swift"],
             swiftSettings: [
                 .unsafeFlags(["-F", "Frameworks", "-parse-as-library"])
             ],
@@ -35,7 +35,10 @@ let package = Package(
                 .product(name: "Testing", package: "swift-testing")
             ],
             path: "tests",
-            exclude: ["run_tests.sh"]
+            exclude: ["run_tests.sh"],
+            swiftSettings: [
+                .unsafeFlags(["-F", "Frameworks"])
+            ]
         )
     ]
 )

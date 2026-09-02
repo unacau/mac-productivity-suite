@@ -339,6 +339,12 @@ public final class ChromeProfileHelper: ObservableObject {
         let profileName = profile?.name ?? dir
         let profileEmail = profile?.email ?? ""
         
+        // In headless or test environments without trusted accessibility, skip AppleScript to prevent hanging
+        if AppConfigManager.testOverrideDirectory != nil || !AXIsProcessTrusted() {
+            try? process.runCommand(launchPath: "/usr/bin/open", arguments: ["-b", bundleID, "--args", "--profile-directory=\(dir)"])
+            return
+        }
+        
         // 1. If Chrome is already running, switch profile via compiled AppleScript (sub-millisecond execution)
         let isRunning = workspace.runningApps.contains(where: { $0.bundleIdentifier == bundleID })
         if isRunning {

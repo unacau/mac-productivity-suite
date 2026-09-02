@@ -44,10 +44,12 @@ public final class AppSwitcherEngine: ObservableObject {
     
     public let workspace: WorkspaceProvider
     public let hotkeys: HotkeyProvider
+    public let chromeHelper: ChromeProfileHelper
     
-    public init(workspace: WorkspaceProvider, hotkeys: HotkeyProvider) {
+    public init(workspace: WorkspaceProvider, hotkeys: HotkeyProvider, chromeHelper: ChromeProfileHelper? = nil) {
         self.workspace = workspace
         self.hotkeys = hotkeys
+        self.chromeHelper = chromeHelper ?? ChromeProfileHelper.shared
         
         setupBindings()
         
@@ -119,7 +121,7 @@ public final class AppSwitcherEngine: ObservableObject {
         }
         
         // If HUD is not currently visible, handle direct Hyper + [1..9] shortcut
-        if let p = ChromeProfileHelper.shared.profiles.first(where: { $0.index == profileIndex }) {
+        if let p = chromeHelper.profiles.first(where: { $0.index == profileIndex }) {
             let item = AppSwitcherItem(
                 name: "chrome-profile:\(p.dir)",
                 displayName: p.name,
@@ -136,7 +138,7 @@ public final class AppSwitcherEngine: ObservableObject {
             showHUD()
             resetSingleDismissTimer()
         } else {
-            ChromeProfileHelper.shared.focusProfile(index: profileIndex)
+            chromeHelper.focusProfile(index: profileIndex)
         }
     }
     
@@ -144,8 +146,8 @@ public final class AppSwitcherEngine: ObservableObject {
         var items: [AppSwitcherItem] = []
         let isSoleChrome = (apps.count == 1 && (apps[0] == "Google Chrome" || apps[0] == "Chrome"))
         
-        if isSoleChrome && !ChromeProfileHelper.shared.profiles.isEmpty {
-            for (idx, profile) in ChromeProfileHelper.shared.profiles.enumerated() {
+        if isSoleChrome && !chromeHelper.profiles.isEmpty {
+            for (idx, profile) in chromeHelper.profiles.enumerated() {
                 let icon = profile.avatarImage ?? AppDiscoveryService.shared.iconForApp(nameOrBundle: "Google Chrome")
                 items.append(AppSwitcherItem(
                     name: "chrome-profile:\(profile.dir)",
@@ -170,7 +172,7 @@ public final class AppSwitcherEngine: ObservableObject {
             
             if target.hasPrefix("chrome-profile:") {
                 let dir = String(target.dropFirst("chrome-profile:".count))
-                let profile = ChromeProfileHelper.shared.profiles.first(where: { $0.dir == dir })
+                let profile = chromeHelper.profiles.first(where: { $0.dir == dir })
                 let displayName = profile?.name ?? "Profile (\(dir))"
                 let icon = profile?.avatarImage ?? AppDiscoveryService.shared.iconForApp(nameOrBundle: "Google Chrome")
                 
@@ -363,7 +365,7 @@ public final class AppSwitcherEngine: ObservableObject {
     public func launchOrFocusTarget(_ target: String) {
         if target.hasPrefix("chrome-profile:") {
             let dir = String(target.dropFirst("chrome-profile:".count))
-            ChromeProfileHelper.shared.focusProfile(dir: dir)
+            chromeHelper.focusProfile(dir: dir)
             return
         }
         

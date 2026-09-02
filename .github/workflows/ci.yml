@@ -35,6 +35,7 @@ jobs:
           swift --version
         
       - name: Run Test Suite
+        timeout-minutes: 5
         run: ./tests/run_tests.sh
         
       - name: Build Native Universal Binary & DMG
