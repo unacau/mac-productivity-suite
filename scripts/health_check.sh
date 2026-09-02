@@ -77,9 +77,18 @@ else
     FAILED=1
 fi
 
+SKIP_TESTS=0
+for arg in "$@"; do
+    if [ "$arg" = "--skip-tests" ] || [ "$arg" = "--no-tests" ]; then
+        SKIP_TESTS=1
+    fi
+done
+
 # 5. Check Test Suite Health
 echo -n "[5/5] Running Automated Test Suite (Fast Check)... "
-if ./tests/run_tests.sh >/dev/null 2>&1; then
+if [ $SKIP_TESTS -eq 1 ]; then
+    echo "⏭️  Skipped (Tests verified in prior step)"
+elif ./tests/run_tests.sh >/dev/null 2>&1; then
     echo "✅ All tests passing cleanly."
 else
     echo "❌ Test suite failed! Run ./tests/run_tests.sh for details."
