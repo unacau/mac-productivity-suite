@@ -5,7 +5,23 @@
     <link>https://raw.githubusercontent.com/unacau/mac-productivity-suite/main/appcast.xml</link>
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
-                                <item>
+                                    <item>
+      <title>Version 2.4.4 (Build 9)</title>
+      <pubDate>Wed, 02 Sep 2026 14:47:32 +0200</pubDate>
+      <sparkle:version>9</sparkle:version>
+      <sparkle:shortVersionString>2.4.4</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<ul>
+        <li>Fixed in-app auto-updater (Sparkle) silently failing to install updates due to ad-hoc code signature Designated Requirement mismatch.</li>
+        <li>Implemented stable Designated Requirements for all future updates to ensure smooth in-place upgrades.</li>
+        <li>Note: You must manually download and install this specific version (v2.4.4) one last time. All future updates will install automatically.</li>
+      </ul>]]></description>
+      <enclosure url="https://github.com/unacau/mac-productivity-suite/releases/download/v2.4.4/MacProductivitySuite.dmg"
+                 type="application/octet-stream"
+                 sparkle:edSignature="zczdYqrbs9Woof/xOc4l2onvY5pHf4f7jY54xG8gW7/BygEqXv8DvoxK3vpqP5GD9oagd94XfsGVC7rfrfgxBw=="
+                 length="1971368" />
+    </item>
+    <item>
       <title>Version 2.4.3 (Build 8)</title>
       <pubDate>Wed, 02 Sep 2026 13:18:24 +0200</pubDate>
       <sparkle:version>8</sparkle:version>

@@ -71,7 +71,7 @@ cp src/NativeStandaloneApp/Info.plist "${CONTENTS_DIR}/Info.plist"
 
 install_name_tool -add_rpath @executable_path/../Frameworks "${MACOS_DIR}/MacProductivitySuite" || true
 
-codesign --force --deep --sign - "${APP_BUNDLE}"
+codesign --force --sign - --identifier "com.unacau.macproductivitysuite" -r="designated => identifier \"com.unacau.macproductivitysuite\"" "${APP_BUNDLE}"
 
 echo "[5/5] Generating DMG Installer..."
 DMG_PATH="${DIST_DIR}/MacProductivitySuite.dmg"

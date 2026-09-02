@@ -64,10 +64,9 @@ new_item = f'''    <item>
       <sparkle:shortVersionString>{version}</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <description><![CDATA[<ul>
-        <li>Dynamic UI version display reading live bundle version metadata and syncing config</li>
-        <li>Eliminated repetitive accessibility prompts and onboarding loop for existing configurations</li>
-        <li>Fixed Chrome profile avatars with use_gaia_picture awareness and square center-cropping</li>
-        <li>Enhanced Settings Preferences view with live accessibility status indicator and version footer</li>
+        <li>Fixed in-app auto-updater (Sparkle) silently failing to install updates due to ad-hoc code signature Designated Requirement mismatch.</li>
+        <li>Implemented stable Designated Requirements for all future updates to ensure smooth in-place upgrades.</li>
+        <li>Note: You must manually download and install this specific version (v2.4.4) one last time. All future updates will install automatically.</li>
       </ul>]]></description>
       <enclosure url="https://github.com/{repo}/releases/download/v{version}/MacProductivitySuite.dmg"
                  type="application/octet-stream"
@@ -104,17 +103,16 @@ echo "✅ $APPCAST_FILE updated successfully."
 # 4. Git Push & GitHub Release
 echo "[4/4] Publishing to GitHub..."
 git add -A
-git commit -m "fix(ui-profiles): release v$VERSION with live version sync, accessibility fix, and profile avatar improvements" || true
+git commit -m "fix(sparkle): resolve auto-updater failing by using stable designated requirement for ad-hoc signatures" || true
 git tag -a "v$VERSION" -m "Release v$VERSION" || true
 git push -u origin main || echo "⚠️  Git push failed. Ensure you have push access to the repository."
 git push origin "v$VERSION" || echo "⚠️  Git push tag failed."
 
 if command -v gh >/dev/null 2>&1; then
     gh release create "v$VERSION" "$DMG_FILE" "$PKG_FILE" --title "v$VERSION" --notes "### Release v$VERSION
-- **Dynamic Version Display**: UI now dynamically reads and synchronizes live version and build numbers from the app bundle.
-- **Accessibility & Onboarding Fix**: Removed aggressive startup prompts and fixed onboarding loop for existing users.
-- **Profile Avatar Improvements**: Full support for non-GAIA Chrome profiles and square center-cropping for undistorted circular rendering.
-- **Settings View Enhancements**: Added real-time accessibility shield status indicator and version footer." || echo "Release v$VERSION might already exist."
+- **Auto-Update Fix**: Fixed an issue where the in-app Sparkle updater would download the update but silently fail to install it.
+- **Stable Code Signatures**: Applied stable Designated Requirements to the ad-hoc signatures so future versions verify correctly.
+- **Action Required**: Because the previous signature validation was strict, you will need to **manually install this update one last time**. All future updates will apply automatically from within the app!" || echo "Release v$VERSION might already exist."
 else
     echo "⚠️  GitHub CLI (gh) not installed. Skip creating GitHub Release."
 fi
