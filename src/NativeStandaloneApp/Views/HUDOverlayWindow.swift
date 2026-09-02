@@ -28,7 +28,7 @@ public struct HUDOverlayView: View {
 
 @MainActor
 public struct HUDItemCardView: View {
-    let item: HUDItem
+    let item: AppSwitcherItem
     let isSelected: Bool
     
     public var body: some View {
