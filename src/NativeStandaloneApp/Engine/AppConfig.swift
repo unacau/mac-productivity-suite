@@ -22,6 +22,13 @@ public struct ChromeProfileConfig: Identifiable, Codable, Equatable {
 }
 
 public struct AppConfig: Codable, Equatable {
+    public static var currentAppVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "2.4.2"
+    }
+    public static var currentBuildNumber: String {
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "7"
+    }
+    
     public var version: String
     public var bindings: [String: [String]]
     public var autoDiscoverChromeProfiles: Bool
@@ -29,7 +36,7 @@ public struct AppConfig: Codable, Equatable {
     public var favoriteChromeProfiles: [String]
     
     public init(
-        version: String = "2.1.0",
+        version: String = AppConfig.currentAppVersion,
         bindings: [String: [String]],
         autoDiscoverChromeProfiles: Bool = true,
         hasCompletedOnboarding: Bool = false,
@@ -44,7 +51,7 @@ public struct AppConfig: Codable, Equatable {
     
     public static var `default`: AppConfig {
         AppConfig(
-            version: "2.1.0",
+            version: currentAppVersion,
             bindings: [
                 "f": ["Finder", "Freeform"],
                 "t": ["Telegram", "iTerm2", "iTerm", "Terminal"],
@@ -59,13 +66,24 @@ public struct AppConfig: Codable, Equatable {
         )
     }
     
-    // Custom decoding for backward compatibility
+    // Custom decoding for backward compatibility and auto-version migration
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.version = try container.decodeIfPresent(String.self, forKey: .version) ?? "2.1.0"
-        self.bindings = try container.decodeIfPresent([String: [String]].self, forKey: .bindings) ?? Self.default.bindings
+        // Automatically synchronize version with current app version
+        self.version = Self.currentAppVersion
+        let decodedBindings = try container.decodeIfPresent([String: [String]].self, forKey: .bindings) ?? Self.default.bindings
+        self.bindings = decodedBindings
         self.autoDiscoverChromeProfiles = try container.decodeIfPresent(Bool.self, forKey: .autoDiscoverChromeProfiles) ?? true
-        self.hasCompletedOnboarding = try container.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding) ?? false
+        
+        // If hasCompletedOnboarding is not explicitly true, but the user already has custom bindings configured, mark onboarding complete
+        let explicitOnboarding = try container.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding)
+        if let explicit = explicitOnboarding {
+            self.hasCompletedOnboarding = explicit
+        } else {
+            // Existing user with pre-existing config: do not nag with onboarding setup
+            self.hasCompletedOnboarding = !decodedBindings.isEmpty
+        }
+        
         self.favoriteChromeProfiles = try container.decodeIfPresent([String].self, forKey: .favoriteChromeProfiles) ?? []
     }
 }

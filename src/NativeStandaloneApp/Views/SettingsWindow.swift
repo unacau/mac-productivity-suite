@@ -140,11 +140,42 @@ public struct SettingsView: View {
             Divider()
             
             // Footer
-            HStack {
-                Text("Changes are applied instantly")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
+            HStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Mac Productivity Suite v\(AppConfig.currentAppVersion) (Build \(AppConfig.currentBuildNumber))")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.primary)
+                    Text("Changes are applied instantly")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                }
+                
                 Spacer()
+                
+                if AXIsProcessTrusted() {
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark.shield.fill")
+                            .foregroundStyle(.green)
+                        Text("Accessibility Active")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    Button(action: {
+                        let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
+                        AXIsProcessTrustedWithOptions(options)
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "exclamationmark.shield.fill")
+                                .foregroundStyle(.orange)
+                            Text("Grant Accessibility")
+                                .font(.system(size: 11, weight: .medium))
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+                
                 Button("Done") {
                     SettingsWindowController.shared.close()
                 }
@@ -152,7 +183,7 @@ public struct SettingsView: View {
                 .controlSize(.regular)
             }
             .padding(.horizontal, 20)
-            .padding(.vertical, 14)
+            .padding(.vertical, 12)
             .background(Color(nsColor: .windowBackgroundColor))
         }
         .frame(width: 720, height: 580)

@@ -64,9 +64,10 @@ new_item = f'''    <item>
       <sparkle:shortVersionString>{version}</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <description><![CDATA[<ul>
-        <li>Pre-compiled AppleScript bytecode cache for sub-millisecond browser profile switching</li>
-        <li>Modularized candidate item builder (buildSwitcherItems) and simplified engine control flow</li>
-        <li>Clean Swift 6 Sendable concurrency conformance and modern macOS 14+ application activation</li>
+        <li>Dynamic UI version display reading live bundle version metadata and syncing config</li>
+        <li>Eliminated repetitive accessibility prompts and onboarding loop for existing configurations</li>
+        <li>Fixed Chrome profile avatars with use_gaia_picture awareness and square center-cropping</li>
+        <li>Enhanced Settings Preferences view with live accessibility status indicator and version footer</li>
       </ul>]]></description>
       <enclosure url="https://github.com/{repo}/releases/download/v{version}/MacProductivitySuite.dmg"
                  type="application/octet-stream"
@@ -103,16 +104,17 @@ echo "✅ $APPCAST_FILE updated successfully."
 # 4. Git Push & GitHub Release
 echo "[4/4] Publishing to GitHub..."
 git add -A
-git commit -m "perf(engine): release v$VERSION with AppleScript bytecode caching, Sendable safety, and clean engine modularity" || true
+git commit -m "fix(ui-profiles): release v$VERSION with live version sync, accessibility fix, and profile avatar improvements" || true
 git tag -a "v$VERSION" -m "Release v$VERSION" || true
 git push -u origin main || echo "⚠️  Git push failed. Ensure you have push access to the repository."
 git push origin "v$VERSION" || echo "⚠️  Git push tag failed."
 
 if command -v gh >/dev/null 2>&1; then
     gh release create "v$VERSION" "$DMG_FILE" "$PKG_FILE" --title "v$VERSION" --notes "### Release v$VERSION
-- **Bytecode Caching**: Pre-compiled AppleScript cache reduces profile switching latency from 12.86ms to 0.00035ms.
-- **Engine Simplification**: Modularized candidate item builder and separated data formatting from HUD lifecycle.
-- **Swift 6 Concurrency**: Conformed HotkeyManager to Sendable and updated application activation for macOS 14+." || echo "Release v$VERSION might already exist."
+- **Dynamic Version Display**: UI now dynamically reads and synchronizes live version and build numbers from the app bundle.
+- **Accessibility & Onboarding Fix**: Removed aggressive startup prompts and fixed onboarding loop for existing users.
+- **Profile Avatar Improvements**: Full support for non-GAIA Chrome profiles and square center-cropping for undistorted circular rendering.
+- **Settings View Enhancements**: Added real-time accessibility shield status indicator and version footer." || echo "Release v$VERSION might already exist."
 else
     echo "⚠️  GitHub CLI (gh) not installed. Skip creating GitHub Release."
 fi

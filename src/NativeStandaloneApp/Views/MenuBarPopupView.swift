@@ -17,7 +17,7 @@ public struct MenuBarPopupView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Mac Productivity Suite")
                         .font(.system(size: 13, weight: .bold))
-                    Text("Version \(configManager.config.version)")
+                    Text("Version \(AppConfig.currentAppVersion) (Build \(AppConfig.currentBuildNumber))")
                         .font(.system(size: 10))
                         .foregroundStyle(.secondary)
                 }

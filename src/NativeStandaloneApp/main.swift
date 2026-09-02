@@ -41,19 +41,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         _ = ChromeProfileHelper.shared
         _ = AppSwitcherEngine.shared
         
-        // 4. Check & prompt accessibility immediately if not trusted
-        if !AXIsProcessTrusted() {
-            let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
-            AXIsProcessTrustedWithOptions(options)
-        }
+        // 4. Log accessibility permission status
+        let isTrusted = AXIsProcessTrusted()
+        AppLogger.getLogger(category: .engine).info("Accessibility status: \(isTrusted)")
         
-        // 5. Automatically open the onboarding wizard or welcome popover on launch
-        Task { @MainActor [weak self] in
+        // 5. Open onboarding wizard only for fresh unconfigured installs
+        Task { @MainActor in
             try? await Task.sleep(for: .seconds(0.4))
-            if !AppConfigManager.shared.config.hasCompletedOnboarding {
+            let config = AppConfigManager.shared.config
+            if !config.hasCompletedOnboarding {
                 OnboardingWindowController.shared.show()
-            } else {
-                self?.showPopover()
             }
         }
     }

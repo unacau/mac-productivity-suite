@@ -95,11 +95,17 @@ function ChromeProfiles.discoverProfiles()
                             table.insert(menuCandidates, email)
                         end
 
+                        local useGaia = true
+                        if info.use_gaia_picture == false or info.use_gaia_picture == 0 then
+                            useGaia = false
+                        end
+
                         table.insert(profiles, {
                             number = tostring(idx),
                             dir = dirKey,
                             name = profileName,
                             email = email,
+                            useGaia = useGaia,
                             menuCandidates = menuCandidates
                         })
 
@@ -118,6 +124,7 @@ function ChromeProfiles.discoverProfiles()
             number = "1",
             dir = "Default",
             name = "Default Profile",
+            useGaia = true,
             menuCandidates = { "Default", "Personal" }
         })
     end
@@ -125,40 +132,65 @@ function ChromeProfiles.discoverProfiles()
     return profiles
 end
 
--- Get profile avatar icon (resolves custom theme avatar or Google Profile picture)
+-- Get circular profile icon (loads cached or rasterizes into circular mask)
 function ChromeProfiles.getProfileIcon(profile)
     if not profile then return nil end
     if profile.cachedIcon then return profile.cachedIcon end
 
-    local baseDir = hs.configdir or (os.getenv("HOME") .. "/.hammerspoon")
     local sharedConfigDir = os.getenv("HOME") .. "/.config/mac-productivity-suite"
 
-    local candidatePaths = {
-        baseDir .. "/assets/profiles/" .. profile.dir .. ".png",
-        sharedConfigDir .. "/assets/profiles/" .. profile.dir .. ".png",
-        os.getenv("HOME") .. "/Library/Application Support/Google/Chrome/" .. profile.dir .. "/Google Profile Picture.png",
-        os.getenv("HOME") .. "/Library/Application Support/Google/Chrome/" .. profile.dir .. "/Google Profile Picture.jpg",
-        os.getenv("HOME") .. "/Library/Application Support/Google/Chrome/" .. profile.dir .. "/Google Profile Picture",
-        os.getenv("HOME") .. "/Library/Application Support/BraveSoftware/Brave-Browser/" .. profile.dir .. "/Google Profile Picture.png",
-        os.getenv("HOME") .. "/Library/Application Support/Microsoft Edge/" .. profile.dir .. "/Edge Profile Picture.png"
-    }
+    if profile.useGaia ~= false then
+        local candidatePaths = {
+            os.getenv("HOME") .. "/Library/Application Support/Google/Chrome/" .. profile.dir .. "/Google Profile Picture.png",
+            os.getenv("HOME") .. "/Library/Application Support/Google/Chrome/" .. profile.dir .. "/Google Profile Picture.jpg",
+            os.getenv("HOME") .. "/Library/Application Support/Google/Chrome/" .. profile.dir .. "/Google Profile Picture",
+            sharedConfigDir .. "/assets/profiles/" .. profile.dir .. ".png",
+            os.getenv("HOME") .. "/Library/Application Support/BraveSoftware/Brave-Browser/" .. profile.dir .. "/Google Profile Picture.png",
+            os.getenv("HOME") .. "/Library/Application Support/Microsoft Edge/" .. profile.dir .. "/Edge Profile Picture.png"
+        }
 
-    for _, picPath in ipairs(candidatePaths) do
-        if hs.fs.attributes(picPath) then
-            local img = hs.image.imageFromPath(picPath)
-            if img then
-                local circular = makeCircularImage(img)
-                profile.cachedIcon = circular
-                return circular
+        for _, picPath in ipairs(candidatePaths) do
+            if hs.fs.attributes(picPath) then
+                local img = hs.image.imageFromPath(picPath)
+                if img then
+                    local circular = makeCircularImage(img)
+                    profile.cachedIcon = circular
+                    return circular
+                end
             end
         end
     end
 
-    -- Fallback: Google Chrome application bundle icon
-    local chromeIcon = hs.image.imageFromAppBundle("com.google.Chrome") or hs.image.iconForFile("/System/Library/CoreServices/Finder.app")
-    local circularFallback = makeCircularImage(chromeIcon)
-    profile.cachedIcon = circularFallback
-    return circularFallback
+    -- Monogram / Chrome fallback
+    local c = hs.canvas.new({x = 0, y = 0, w = 96, h = 96})
+    local colors = {
+        {red = 0.22, green = 0.50, blue = 0.95, alpha = 1.0},
+        {red = 0.58, green = 0.30, blue = 0.88, alpha = 1.0},
+        {red = 0.95, green = 0.42, blue = 0.25, alpha = 1.0},
+        {red = 0.18, green = 0.70, blue = 0.45, alpha = 1.0},
+        {red = 0.92, green = 0.65, blue = 0.15, alpha = 1.0}
+    }
+    local colIdx = (string.byte(profile.name or "C") % #colors) + 1
+    local bg = colors[colIdx]
+
+    c[1] = {
+        type = "rectangle",
+        action = "fill",
+        roundedRectRadii = {xRadius = 48, yRadius = 48},
+        fillColor = bg
+    }
+    c[2] = {
+        type = "text",
+        text = string.upper(string.sub(profile.name or "C", 1, 1)),
+        textColor = {white = 1.0, alpha = 1.0},
+        textSize = 48,
+        textAlignment = "center",
+        frame = {x = 0, y = 18, w = 96, h = 60}
+    }
+    local monogram = c:imageFromCanvas()
+    c:delete()
+    profile.cachedIcon = monogram
+    return monogram
 end
 
 -- Find a discovered profile by directory name

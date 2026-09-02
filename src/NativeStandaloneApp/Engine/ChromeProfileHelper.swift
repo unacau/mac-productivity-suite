@@ -139,34 +139,44 @@ public final class ChromeProfileHelper: ObservableObject {
             return cached
         }
         
-        let profileDir = (baseDir as NSString).appendingPathComponent(dirKey)
-        var candidatePics: [String] = []
+        let name = (info["name"] as? String) ?? (info["gaia_name"] as? String) ?? dirKey
         
-        if let gaiaName = info["gaia_picture_file_name"] as? String, !gaiaName.isEmpty {
-            candidatePics.append((profileDir as NSString).appendingPathComponent(gaiaName))
+        // Check if profile explicitly disabled GAIA profile picture (e.g. use_gaia_picture == false / 0)
+        var useGaia = true
+        if let gaiaFlag = info["use_gaia_picture"] as? Bool {
+            useGaia = gaiaFlag
+        } else if let gaiaNum = info["use_gaia_picture"] as? Int {
+            useGaia = (gaiaNum != 0)
         }
-        candidatePics.append((profileDir as NSString).appendingPathComponent("Google Profile Picture.png"))
-        candidatePics.append((profileDir as NSString).appendingPathComponent("Google Profile Picture.jpg"))
-        candidatePics.append((profileDir as NSString).appendingPathComponent("Google Profile Picture"))
-        candidatePics.append((profileDir as NSString).appendingPathComponent("Edge Profile Picture.png"))
-        candidatePics.append((profileDir as NSString).appendingPathComponent("Brave Profile Picture.png"))
         
-        // Also check app assets directory if customized
-        let home = NSHomeDirectory()
-        candidatePics.append("\(home)/.config/mac-productivity-suite/assets/profiles/\(dirKey).png")
-        candidatePics.append("\(home)/.hammerspoon/assets/profiles/\(dirKey).png")
+        let profileDir = (baseDir as NSString).appendingPathComponent(dirKey)
         
-        for picPath in candidatePics {
-            if FileManager.default.fileExists(atPath: picPath),
-               let image = NSImage(contentsOfFile: picPath) {
-                let circular = makeCircularImage(image: image)
-                cachedIcons[dirKey] = circular
-                return circular
+        if useGaia {
+            var candidatePics: [String] = []
+            if let gaiaName = info["gaia_picture_file_name"] as? String, !gaiaName.isEmpty {
+                candidatePics.append((profileDir as NSString).appendingPathComponent(gaiaName))
+            }
+            candidatePics.append((profileDir as NSString).appendingPathComponent("Google Profile Picture.png"))
+            candidatePics.append((profileDir as NSString).appendingPathComponent("Google Profile Picture.jpg"))
+            candidatePics.append((profileDir as NSString).appendingPathComponent("Google Profile Picture"))
+            candidatePics.append((profileDir as NSString).appendingPathComponent("Edge Profile Picture.png"))
+            candidatePics.append((profileDir as NSString).appendingPathComponent("Brave Profile Picture.png"))
+            
+            // Also check app assets directory if customized
+            let home = NSHomeDirectory()
+            candidatePics.append("\(home)/.config/mac-productivity-suite/assets/profiles/\(dirKey).png")
+            
+            for picPath in candidatePics {
+                if FileManager.default.fileExists(atPath: picPath),
+                   let image = NSImage(contentsOfFile: picPath) {
+                    let circular = makeCircularImage(image: image)
+                    cachedIcons[dirKey] = circular
+                    return circular
+                }
             }
         }
         
-        // Fallback: Generate an aesthetic monogram avatar from profile name
-        let name = (info["name"] as? String) ?? (info["gaia_name"] as? String) ?? dirKey
+        // Fallback or Non-GAIA: Generate an aesthetic monogram avatar from profile name
         let monogram = makeMonogramImage(name: name)
         cachedIcons[dirKey] = monogram
         return monogram
@@ -180,7 +190,17 @@ public final class ChromeProfileHelper: ObservableObject {
         let rect = NSRect(origin: .zero, size: size)
         let path = NSBezierPath(ovalIn: rect)
         path.addClip()
-        image.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1.0)
+        
+        // Square center-crop so portrait/landscape avatars don't stretch
+        let srcSize = image.size
+        let minSide = min(srcSize.width, srcSize.height)
+        let srcRect = NSRect(
+            x: (srcSize.width - minSide) / 2,
+            y: (srcSize.height - minSide) / 2,
+            width: minSide,
+            height: minSide
+        )
+        image.draw(in: rect, from: srcRect, operation: .sourceOver, fraction: 1.0)
         
         // Subtle outer ring
         let ring = NSBezierPath(ovalIn: rect.insetBy(dx: 1, dy: 1))

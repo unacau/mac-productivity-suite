@@ -22,6 +22,12 @@ cp -R "$REPO_DIR/hammerspoon/"* "$HAMMERSPOON_DIR/"
 echo "[*] Installing Karabiner-Elements configuration..."
 cp "$REPO_DIR/karabiner/hyper-key-mapping.json" "$KARABINER_DIR/"
 
+if [ -d "$REPO_DIR/dist/Mac Productivity Suite.app" ]; then
+    echo "[*] Installing Native Standalone App to /Applications..."
+    rm -rf "/Applications/Mac Productivity Suite.app"
+    cp -R "$REPO_DIR/dist/Mac Productivity Suite.app" "/Applications/"
+fi
+
 echo "[*] Universal dynamic configuration initialized."
 echo "=================================================="
 echo " Installation Complete!                           "

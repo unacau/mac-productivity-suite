@@ -5,7 +5,24 @@
     <link>https://raw.githubusercontent.com/unacau/mac-productivity-suite/main/appcast.xml</link>
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
-                            <item>
+                                <item>
+      <title>Version 2.4.3 (Build 8)</title>
+      <pubDate>Wed, 02 Sep 2026 13:18:24 +0200</pubDate>
+      <sparkle:version>8</sparkle:version>
+      <sparkle:shortVersionString>2.4.3</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<ul>
+        <li>Dynamic UI version display reading live bundle version metadata and syncing config</li>
+        <li>Eliminated repetitive accessibility prompts and onboarding loop for existing configurations</li>
+        <li>Fixed Chrome profile avatars with use_gaia_picture awareness and square center-cropping</li>
+        <li>Enhanced Settings Preferences view with live accessibility status indicator and version footer</li>
+      </ul>]]></description>
+      <enclosure url="https://github.com/unacau/mac-productivity-suite/releases/download/v2.4.3/MacProductivitySuite.dmg"
+                 type="application/octet-stream"
+                 sparkle:edSignature="dAcKttyADD1NyZzFxVSfjnGTpSGIIqKQG1j2DldgKUUvz2qehNbyzJh77V1Rh76QvmVC1eNgpVqKZAe2K2caAQ=="
+                 length="1968964" />
+    </item>
+    <item>
       <title>Version 2.4.2 (Build 7)</title>
       <pubDate>Wed, 02 Sep 2026 12:57:30 +0200</pubDate>
       <sparkle:version>7</sparkle:version>
