@@ -5,7 +5,23 @@
     <link>https://raw.githubusercontent.com/unacau/mac-productivity-suite/main/appcast.xml</link>
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
-                                                    <item>
+                                                        <item>
+      <title>Version 2.4.8 (Build 13)</title>
+      <pubDate>Wed, 02 Sep 2026 16:44:43 +0200</pubDate>
+      <sparkle:version>13</sparkle:version>
+      <sparkle:shortVersionString>2.4.8</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<ul>
+        <li>Fixed a CI deadlock caused by parallel tests concurrently modifying the C-level environment variables (<code>setenv</code>).</li>
+        <li>Optimized CI compile times by caching the SPM <code>.build</code> directory for SwiftSyntax.</li>
+        <li>Serialized test execution to prevent <code>AppConfigManager</code> and <code>ChromeProfileHelper</code> singleton data races.</li>
+      </ul>]]></description>
+      <enclosure url="https://github.com/unacau/mac-productivity-suite/releases/download/v2.4.8/MacProductivitySuite.dmg"
+                 type="application/octet-stream"
+                 sparkle:edSignature="RvjYA79fxNcchehCOCIyO8M6wAemE8vHje36Nc2a8JrN50ZsVSG5GjIGrXFxV7ZK+c86x8PiSetxzl26mttlBw=="
+                 length="1986507" />
+    </item>
+    <item>
       <title>Version 2.4.7 (Build 12)</title>
       <pubDate>Wed, 02 Sep 2026 15:52:52 +0200</pubDate>
       <sparkle:version>12</sparkle:version>

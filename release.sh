@@ -66,9 +66,9 @@ new_item = f'''    <item>
       <sparkle:shortVersionString>{version}</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <description><![CDATA[<ul>
-        <li>Fixed number keys (1..9) not moving selector in UI when switching Chrome profiles.</li>
-        <li>Fixed avatar resolution for local and non-GAIA Chrome profiles to properly display profile pictures.</li>
-        <li>Fixed GitHub Actions CI/CD pipeline compatibility across Swift 5.10 and Swift 6 environments.</li>
+        <li>Fixed a CI deadlock caused by parallel tests concurrently modifying the C-level environment variables (<code>setenv</code>).</li>
+        <li>Optimized CI compile times by caching the SPM <code>.build</code> directory for SwiftSyntax.</li>
+        <li>Serialized test execution to prevent <code>AppConfigManager</code> and <code>ChromeProfileHelper</code> singleton data races.</li>
       </ul>]]></description>
       <enclosure url="https://github.com/{repo}/releases/download/v{version}/MacProductivitySuite.dmg"
                  type="application/octet-stream"
@@ -106,16 +106,16 @@ echo "✅ $APPCAST_FILE updated successfully."
 echo "[4/4] Publishing to GitHub..."
 if [ -z "${CI:-}" ]; then
     git add -A
-    git commit -m "release: v$VERSION with Chrome profile fixes and full CI/CD pipeline automation" || true
+    git commit -m "release: v$VERSION with CI/CD optimizations" || true
     git tag -a "v$VERSION" -m "Release v$VERSION" || true
     git push -u origin main || echo "⚠️  Git push failed. Ensure you have push access to the repository."
     git push origin "v$VERSION" || echo "⚠️  Git push tag failed."
 
     if command -v gh >/dev/null 2>&1; then
         gh release create "v$VERSION" "$DMG_FILE" "$PKG_FILE" --title "v$VERSION" --notes "### Release v$VERSION
-- **Chrome Profile Selector Navigation**: Pressing number keys (\`1\`..\`9\`) when selecting Chrome profiles immediately animates the selection highlight in the HUD overlay and resets the auto-dismiss timer.
-- **Chrome Profile Avatar Resolution**: Fixed avatar resolution for local and unlinked Chromium profiles with disabled GAIA flags so that on-disk profile photos render properly.
-- **CI/CD Pipeline Automation**: Fully resolved GitHub Actions CI and Release pipelines with automatic payload caching, dynamic Xcode 16 toolchain selection, and strict Swift 6 actor isolation." || echo "Release v$VERSION might already exist."
+- **CI Test Suite Hang Resolved**: Completely eliminated the deadlock in CI integration tests by removing parallel \`setenv\` mutations and fully serializing the test suites, preventing all cross-suite \`AppConfigManager\` singleton state corruption.
+- **Lightning Fast CI Compilations**: Configured SPM \`.build\` caching in GitHub Actions, massively accelerating \`SwiftSyntax\` and \`swift-testing\` compilation times across pipeline runs.
+- **Prevented Test Event Loop Hijacking**: Patched \`AppRunner.main()\` to dynamically intercept \`XCTest\` execution contexts, preventing \`NSApplication.shared.run()\` from indefinitely blocking headless CI runners." || echo "Release v$VERSION might already exist."
     else
         echo "⚠️  GitHub CLI (gh) not installed. Skip creating GitHub Release."
     fi
