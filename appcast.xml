@@ -5,7 +5,24 @@
     <link>https://raw.githubusercontent.com/unacau/mac-productivity-suite/main/appcast.xml</link>
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
-                                                        <item>
+                                                            <item>
+      <title>Version 2.4.9 (Build 14)</title>
+      <pubDate>Wed, 02 Sep 2026 16:49:26 +0200</pubDate>
+      <sparkle:version>14</sparkle:version>
+      <sparkle:shortVersionString>2.4.9</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<ul>
+        <li>Fixed number keys (1..9), numeric keypad, and arrow keys to immediately navigate and move selector in HUD overlay.</li>
+        <li>Added visual numeric index badges (1, 2, 3...) to HUD cards for instant shortcut clarity.</li>
+        <li>Fixed Chrome profile avatar resolution to strictly respect disabled GAIA flags (<code>use_gaia_picture: false</code>), rendering custom illustrations and monograms.</li>
+        <li>Synchronized Sparkle EdDSA signature verification and offline PKG bundle packaging.</li>
+      </ul>]]></description>
+      <enclosure url="https://github.com/unacau/mac-productivity-suite/releases/download/v2.4.9/MacProductivitySuite.dmg"
+                 type="application/octet-stream"
+                 sparkle:edSignature="HcouLlB59DrznxSXSERWZjbDNhAJj3L8KoW631IhuSvNRj79UBrTto2fueP8eE+UNZIjMJgAw7prjwgsAv2eBw=="
+                 length="2001874" />
+    </item>
+    <item>
       <title>Version 2.4.8 (Build 13)</title>
       <pubDate>Wed, 02 Sep 2026 16:44:43 +0200</pubDate>
       <sparkle:version>13</sparkle:version>

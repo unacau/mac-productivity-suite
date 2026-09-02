@@ -39,6 +39,8 @@ public final class AppSwitcherEngine: ObservableObject {
     private var activeKey: String?
     private var lastActiveIndices: [String: Int] = [:]
     private var cancellables = Set<AnyCancellable>()
+    private var globalEventMonitor: Any?
+    private var localEventMonitor: Any?
     
     public let workspace: WorkspaceProvider
     public let hotkeys: HotkeyProvider
@@ -101,16 +103,16 @@ public final class AppSwitcherEngine: ObservableObject {
     
     public func handleNumberPress(profileIndex: Int) {
         if isVisible && !currentItems.isEmpty {
-            // Priority 1: Match by explicit profileIndex
-            if let matchIdx = currentItems.firstIndex(where: { $0.profileIndex == profileIndex }) {
-                selectedIndex = matchIdx
-                resetDismissTimer()
-                return
-            }
-            // Priority 2: Match by 0-based array position (1-based number) if within bounds
+            // Priority 1: Match by 1-based card position in HUD (1 selects 1st card, 2 selects 2nd card, etc.)
             let targetIdx = profileIndex - 1
             if targetIdx >= 0 && targetIdx < currentItems.count {
                 selectedIndex = targetIdx
+                resetDismissTimer()
+                return
+            }
+            // Priority 2: Match by explicit profileIndex if outside direct card count bounds
+            if let matchIdx = currentItems.firstIndex(where: { $0.profileIndex == profileIndex }) {
+                selectedIndex = matchIdx
                 resetDismissTimer()
                 return
             }
@@ -247,6 +249,7 @@ public final class AppSwitcherEngine: ObservableObject {
     }
     
     public func hideHUDOnly() {
+        stopEventMonitoring()
         dismissTimer?.invalidate()
         dismissTimer = nil
         isVisible = false
@@ -265,6 +268,7 @@ public final class AppSwitcherEngine: ObservableObject {
     }
     
     public func commitAndHide() {
+        stopEventMonitoring()
         dismissTimer?.invalidate()
         dismissTimer = nil
         
@@ -283,7 +287,77 @@ public final class AppSwitcherEngine: ObservableObject {
     
     private func showHUD() {
         isVisible = true
+        startEventMonitoring()
         HUDOverlayWindow.shared.show()
+    }
+    
+    private func startEventMonitoring() {
+        stopEventMonitoring()
+        
+        globalEventMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let engine = self else { return }
+            Task { @MainActor in
+                engine.handleHUDKeyDown(event: event)
+            }
+        }
+        
+        localEventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let engine = self else { return event }
+            if engine.handleHUDKeyDown(event: event) {
+                return nil
+            }
+            return event
+        }
+    }
+    
+    private func stopEventMonitoring() {
+        if let monitor = globalEventMonitor {
+            NSEvent.removeMonitor(monitor)
+            globalEventMonitor = nil
+        }
+        if let monitor = localEventMonitor {
+            NSEvent.removeMonitor(monitor)
+            localEventMonitor = nil
+        }
+    }
+    
+    @discardableResult
+    private func handleHUDKeyDown(event: NSEvent) -> Bool {
+        guard isVisible && !currentItems.isEmpty else { return false }
+        
+        // 1. Direct number key presses (1..9 and numpad 1..9)
+        if let chars = event.charactersIgnoringModifiers, let first = chars.first, let num = Int(String(first)), num >= 1, num <= 9 {
+            handleNumberPress(profileIndex: num)
+            return true
+        }
+        
+        // 2. Navigation, commit, and cancel keys
+        switch event.keyCode {
+        case 0x7B, 0x7E: // Left Arrow, Up Arrow
+            selectedIndex = (selectedIndex - 1 + currentItems.count) % currentItems.count
+            resetDismissTimer()
+            return true
+        case 0x7C, 0x7D: // Right Arrow, Down Arrow
+            selectedIndex = (selectedIndex + 1) % currentItems.count
+            resetDismissTimer()
+            return true
+        case 0x30: // Tab / Shift+Tab
+            if event.modifierFlags.contains(.shift) {
+                selectedIndex = (selectedIndex - 1 + currentItems.count) % currentItems.count
+            } else {
+                selectedIndex = (selectedIndex + 1) % currentItems.count
+            }
+            resetDismissTimer()
+            return true
+        case 0x24, 0x4C, 0x31: // Return, Keypad Enter, Space
+            commitAndHide()
+            return true
+        case 0x35: // Escape
+            hideHUDOnly()
+            return true
+        default:
+            return false
+        }
     }
     
     public func launchOrFocusTarget(_ target: String) {

@@ -8,7 +8,12 @@ public struct HUDOverlayView: View {
     public var body: some View {
         HStack(spacing: 12) {
             ForEach(Array(engine.currentItems.enumerated()), id: \.element.id) { index, item in
-                HUDItemCardView(item: item, isSelected: index == engine.selectedIndex)
+                HUDItemCardView(
+                    item: item,
+                    index: index,
+                    totalCount: engine.currentItems.count,
+                    isSelected: index == engine.selectedIndex
+                )
             }
         }
         .padding(14)
@@ -29,6 +34,8 @@ public struct HUDOverlayView: View {
 @MainActor
 public struct HUDItemCardView: View {
     let item: AppSwitcherItem
+    let index: Int
+    let totalCount: Int
     let isSelected: Bool
     
     public var body: some View {
@@ -38,6 +45,9 @@ public struct HUDItemCardView: View {
                 badgeView
             }
             .frame(width: 52, height: 52)
+            .overlay(alignment: .topLeading) {
+                indexBadgeView
+            }
             
             Text(item.displayName)
                 .font(.system(size: 11, weight: .bold))
@@ -93,6 +103,25 @@ public struct HUDItemCardView: View {
                 .padding(.vertical, 1)
                 .background(Capsule().fill(Color.blue))
                 .offset(x: 4, y: 2)
+        }
+    }
+    
+    @ViewBuilder
+    private var indexBadgeView: some View {
+        if totalCount > 1 {
+            let label = "\(index + 1)"
+            Text(label)
+                .font(.system(size: 10, weight: .heavy, design: .monospaced))
+                .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.9))
+                .padding(.horizontal, 5)
+                .padding(.vertical, 2)
+                .background(
+                    Capsule().fill(isSelected ? Color.blue : Color.black.opacity(0.6))
+                )
+                .overlay(
+                    Capsule().stroke(isSelected ? Color.cyan.opacity(0.8) : Color.white.opacity(0.3), lineWidth: 1)
+                )
+                .offset(x: -8, y: -6)
         }
     }
 }

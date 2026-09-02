@@ -143,7 +143,15 @@ public final class ChromeProfileHelper: ObservableObject {
         
         let name = (info["name"] as? String) ?? (info["gaia_name"] as? String) ?? dirKey
         let profileDir = (baseDir as NSString).appendingPathComponent(dirKey)
-        let useGaiaPicture = (info["use_gaia_picture"] as? Bool) ?? true
+        let useGaiaPicture: Bool = {
+            if let b = info["use_gaia_picture"] as? Bool {
+                return b
+            }
+            if let i = info["use_gaia_picture"] as? Int {
+                return i != 0
+            }
+            return true
+        }()
         
         var candidatePics: [String] = []
         

@@ -212,6 +212,10 @@ extension SerializedTests {
         engine.handleKeyPress(key: "1")
         #expect(engine.selectedIndex == 0, "Pressing '1' should move selector back to first profile")
         
+        // 5. Out of bounds index should be safely ignored
+        engine.handleNumberPress(profileIndex: 9)
+        #expect(engine.selectedIndex == 0, "Out of bounds number press should retain previous valid selection")
+        
         engine.hideHUDOnly()
     }
 }
