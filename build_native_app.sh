@@ -24,6 +24,8 @@ mkdir -p "${MACOS_DIR}" "${CONTENTS_DIR}" "${ROOT_DIR}/Applications" "${SCRIPTS_
 SOURCES=(
     "src/NativeStandaloneApp/Engine/OSProviders.swift"
     "src/NativeStandaloneApp/Engine/HotkeyManager.swift"
+    "src/NativeStandaloneApp/Engine/HyperKeyEngine.swift"
+    "src/NativeStandaloneApp/Engine/CopyOnSelectEngine.swift"
     "src/NativeStandaloneApp/Engine/AppConfig.swift"
     "src/NativeStandaloneApp/Engine/AppDiscoveryService.swift"
     "src/NativeStandaloneApp/Engine/ChromeProfileHelper.swift"
@@ -88,8 +90,14 @@ if command -v create-dmg >/dev/null 2>&1; then
       "${DMG_PATH}" \
       "${APP_BUNDLE}"
 else
-    echo "create-dmg not found, creating standard DMG..."
-    hdiutil create -volname "Mac Productivity Suite" -srcfolder "${APP_BUNDLE}" -ov -format UDZO "${DMG_PATH}"
+    echo "create-dmg not found, creating standard DMG with Applications symlink..."
+    DMG_STAGE="${BUILD_DIR}/temp/dmg_stage"
+    rm -rf "${DMG_STAGE}"
+    mkdir -p "${DMG_STAGE}"
+    cp -R "${APP_BUNDLE}" "${DMG_STAGE}/"
+    ln -s /Applications "${DMG_STAGE}/Applications"
+    hdiutil create -volname "Mac Productivity Suite" -srcfolder "${DMG_STAGE}" -ov -format UDZO "${DMG_PATH}"
+    rm -rf "${DMG_STAGE}"
 fi
 
 echo "=================================================="

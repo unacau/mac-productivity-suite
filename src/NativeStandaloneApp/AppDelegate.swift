@@ -42,6 +42,17 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         _ = ChromeProfileHelper.shared
         _ = AppSwitcherEngine.shared
         
+        let config = AppConfigManager.shared.config
+        if config.remapCapsLockToHyper {
+            HyperKeyEngine.shared.escapeOnTapEnabled = config.escapeOnTap
+            HyperKeyEngine.shared.start()
+        }
+        
+        if config.copyOnSelectEnabled {
+            CopyOnSelectEngine.shared.isEnabled = true
+            CopyOnSelectEngine.shared.start()
+        }
+        
         // 4. Log accessibility permission status
         let isTrusted = AXIsProcessTrusted()
         AppLogger.getLogger(category: .engine).info("Accessibility status: \(isTrusted)")
@@ -49,11 +60,16 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         // 5. Open onboarding wizard only for fresh unconfigured installs
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(0.4))
-            let config = AppConfigManager.shared.config
-            if !config.hasCompletedOnboarding {
+            let currentConfig = AppConfigManager.shared.config
+            if !currentConfig.hasCompletedOnboarding {
                 OnboardingWindowController.shared.show()
             }
         }
+    }
+    
+    public func applicationWillTerminate(_ notification: Notification) {
+        HyperKeyEngine.shared.stop()
+        CopyOnSelectEngine.shared.stop()
     }
     
     @objc private func togglePopover() {

@@ -34,19 +34,28 @@ public struct AppConfig: Codable, Equatable {
     public var autoDiscoverChromeProfiles: Bool
     public var hasCompletedOnboarding: Bool
     public var favoriteChromeProfiles: [String]
+    public var remapCapsLockToHyper: Bool
+    public var escapeOnTap: Bool
+    public var copyOnSelectEnabled: Bool
     
     public init(
         version: String = AppConfig.currentAppVersion,
         bindings: [String: [String]],
         autoDiscoverChromeProfiles: Bool = true,
         hasCompletedOnboarding: Bool = false,
-        favoriteChromeProfiles: [String] = []
+        favoriteChromeProfiles: [String] = [],
+        remapCapsLockToHyper: Bool = true,
+        escapeOnTap: Bool = true,
+        copyOnSelectEnabled: Bool = false
     ) {
         self.version = version
         self.bindings = bindings
         self.autoDiscoverChromeProfiles = autoDiscoverChromeProfiles
         self.hasCompletedOnboarding = hasCompletedOnboarding
         self.favoriteChromeProfiles = favoriteChromeProfiles
+        self.remapCapsLockToHyper = remapCapsLockToHyper
+        self.escapeOnTap = escapeOnTap
+        self.copyOnSelectEnabled = copyOnSelectEnabled
     }
     
     public static var `default`: AppConfig {
@@ -62,7 +71,10 @@ public struct AppConfig: Codable, Equatable {
             ],
             autoDiscoverChromeProfiles: true,
             hasCompletedOnboarding: false,
-            favoriteChromeProfiles: []
+            favoriteChromeProfiles: [],
+            remapCapsLockToHyper: true,
+            escapeOnTap: true,
+            copyOnSelectEnabled: false
         )
     }
     
@@ -85,6 +97,9 @@ public struct AppConfig: Codable, Equatable {
         }
         
         self.favoriteChromeProfiles = try container.decodeIfPresent([String].self, forKey: .favoriteChromeProfiles) ?? []
+        self.remapCapsLockToHyper = try container.decodeIfPresent(Bool.self, forKey: .remapCapsLockToHyper) ?? true
+        self.escapeOnTap = try container.decodeIfPresent(Bool.self, forKey: .escapeOnTap) ?? true
+        self.copyOnSelectEnabled = try container.decodeIfPresent(Bool.self, forKey: .copyOnSelectEnabled) ?? false
     }
 }
 
@@ -234,18 +249,15 @@ public final class AppConfigManager: ObservableObject {
     public func save() {
         let fileManager = FileManager.default
         let configDir = configURL.deletingLastPathComponent()
-        let hsDir = hammerspoonConfigURL.deletingLastPathComponent()
         
         do {
             try fileManager.createDirectory(at: configDir, withIntermediateDirectories: true)
-            try fileManager.createDirectory(at: hsDir, withIntermediateDirectories: true)
             
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             let data = try encoder.encode(config)
             
             try data.write(to: configURL, options: .atomic)
-            try data.write(to: hammerspoonConfigURL, options: .atomic)
             
             AppLogger.getLogger(category: .config).info("Saved config successfully to \(self.configURL.path, privacy: .public)")
             

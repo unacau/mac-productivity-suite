@@ -40,27 +40,30 @@ graph TD
     A[Menu Bar Status Item / Popup] --> B[Preferences Window / SettingsView]
     B --> C[AppConfigManager]
     C -->|Persists JSON| D["~/.config/mac-productivity-suite/config.json"]
-    D -->|Syncs| E["~/.hammerspoon/config.json"]
     C --> F[AppSwitcherEngine]
     C --> G[ChromeProfileHelper]
     C --> H[CopyOnSelectEngine]
-    C --> I[ProductivityActionsHelper]
-    F --> J[HotkeyManager Carbon Global Tap]
+    C --> P[HyperKeyEngine]
+    P -->|hidutil| Q[IOHID Hardware Remapping Caps Lock -> F18]
+    P -->|CGEventTap| R[Event Tap: Dual-Role Hyper / Escape Dispatcher]
+    R --> F
+    F --> J[HotkeyManager Carbon Global Tap Fallback]
     F --> K[HUDOverlayWindow SwiftUI]
     F --> O[OSProviders Abstraction Layer]
     G --> O
     G --> L["Chrome Local State Auto-Discovery"]
-    O -->|Production| M[System Services: NSWorkspace, Carbon, Process]
+    O -->|Production| M[System Services: NSWorkspace, Carbon, Process, IOHID]
     O -->|Testing| N[Mocks: WorkspaceProvider, HotkeyProvider, ProcessProvider]
 ```
 
 ### 1. Configuration & Core Engines (`src/NativeStandaloneApp/Engine/`)
+- `HyperKeyEngine.swift`: 100% driverless native Caps Lock to Hyper (held) and Escape (tapped alone) dual-role engine. Eliminates Karabiner-Elements, Caps Lock delay, and green LED locking.
 - `AppConfig.swift`: Codable configuration models, preset definitions, and persistence manager. Supports `MPS_TEST_CONFIG_DIR` sandbox override.
 - `OSProviders.swift`: Abstracted OS protocols (`WorkspaceProvider`, `HotkeyProvider`, `ProcessProvider`, `RunningAppProvider`) enabling deterministic, headless dependency injection.
 - `AppDiscoveryService.swift`: Scans macOS applications, resolves icons, and builds smart bindings.
 - `ChromeProfileHelper.swift`: Dynamic profile detection and CLI/AppleScript activation.
 - `AppSwitcherEngine.swift`: Global hotkey dispatcher, candidate resolution, and HUD coordinator.
-- `CopyOnSelectEngine.swift`: Global event monitor for drag-selection copying.
+- `CopyOnSelectEngine.swift`: Native Swift global event monitor for Linux/X11-style drag-selection copying (eliminating Hammerspoon).
 - `HotkeyManager.swift`: Carbon event handler for high-performance global key registration.
 
 ### 2. User Interface (`src/NativeStandaloneApp/Views/`)

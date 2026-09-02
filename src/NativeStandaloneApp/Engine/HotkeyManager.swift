@@ -154,6 +154,7 @@ public enum KeyCodes {
     public static let kVK_Return: UInt32 = 0x24
     public static let kVK_Tab: UInt32 = 0x30
     public static let kVK_Escape: UInt32 = 0x35
+    public static let kVK_F18: UInt32 = 0x4F
     
     private static let charToKeyCodeMap: [String: UInt32] = [
         "a": kVK_ANSI_A, "b": kVK_ANSI_B, "c": kVK_ANSI_C, "d": kVK_ANSI_D,
@@ -172,7 +173,19 @@ public enum KeyCodes {
         "space": kVK_Space, "return": kVK_Return, "tab": kVK_Tab, "escape": kVK_Escape
     ]
     
+    private static let keyCodeToCharMap: [UInt32: String] = {
+        var map: [UInt32: String] = [:]
+        for (char, code) in charToKeyCodeMap {
+            map[code] = char
+        }
+        return map
+    }()
+    
     public static func keyCode(for character: String) -> UInt32? {
         charToKeyCodeMap[character.lowercased()]
+    }
+    
+    public static func character(for keyCode: UInt32) -> String? {
+        keyCodeToCharMap[keyCode]
     }
 }

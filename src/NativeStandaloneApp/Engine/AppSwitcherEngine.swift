@@ -52,6 +52,7 @@ public final class AppSwitcherEngine: ObservableObject {
         self.chromeHelper = chromeHelper ?? ChromeProfileHelper.shared
         
         setupBindings()
+        setupHyperKeyIntegration()
         
         NotificationCenter.default.publisher(for: NSNotification.Name("AppConfigDidChangeNotification"))
             .receive(on: DispatchQueue.main)
@@ -59,6 +60,28 @@ public final class AppSwitcherEngine: ObservableObject {
                 self?.setupBindings()
             }
             .store(in: &cancellables)
+    }
+    
+    private func setupHyperKeyIntegration() {
+        HyperKeyEngine.shared.keyBindingHandler = { [weak self] key in
+            guard let engine = self else { return false }
+            let keyLower = key.lowercased()
+            let config = AppConfigManager.shared.config
+            
+            if let num = Int(keyLower), num >= 1, num <= 9 {
+                if engine.isVisible || config.autoDiscoverChromeProfiles || config.bindings[keyLower] != nil {
+                    engine.handleKeyPress(key: keyLower)
+                    return true
+                }
+            }
+            
+            if config.bindings[keyLower] != nil {
+                engine.handleKeyPress(key: keyLower)
+                return true
+            }
+            
+            return false
+        }
     }
     
     public func setupBindings() {
