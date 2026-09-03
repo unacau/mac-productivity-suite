@@ -49,6 +49,7 @@ public final class SystemWorkspaceProvider: WorkspaceProvider {
         task.launchPath = "/usr/bin/open"
         task.arguments = ["-a", nameOrCandidate]
         try? task.run()
+        task.waitUntilExit()
     }
 }
 

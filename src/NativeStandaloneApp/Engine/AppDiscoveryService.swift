@@ -70,6 +70,7 @@ public final class AppDiscoveryService: ObservableObject {
             "/Applications",
             "/System/Applications",
             "/System/Applications/Utilities",
+            "/System/Library/CoreServices",
             "\(NSHomeDirectory())/Applications",
             "\(NSHomeDirectory())/Applications/Chrome Apps.localized",
             "/Applications/Setapp"

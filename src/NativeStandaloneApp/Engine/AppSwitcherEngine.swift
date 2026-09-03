@@ -494,6 +494,15 @@ public final class AppSwitcherEngine: ObservableObject {
         }
         
         let nameOrCandidate = target
+        
+        // Finder is a perpetual macOS system daemon that is always "running".
+        // Calling NSRunningApplication.activate() only highlights the menu bar and does NOT open a window if none is open.
+        // Using `open -a Finder` forces LaunchServices to both activate Finder and present an open Finder window.
+        if nameOrCandidate.lowercased() == "finder" {
+            workspace.fallbackOpen(nameOrCandidate: "Finder")
+            return
+        }
+        
         let running = workspace.runningApps
         if let app = running.first(where: {
             $0.localizedName?.lowercased() == nameOrCandidate.lowercased() ||
