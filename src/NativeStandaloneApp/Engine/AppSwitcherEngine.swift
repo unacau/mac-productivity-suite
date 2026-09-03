@@ -82,6 +82,11 @@ public final class AppSwitcherEngine: ObservableObject {
             
             Task { @MainActor [weak self] in
                 guard let engine = self else { return }
+                
+                if appName.contains("chrome") || appName.contains("brave") || appName.contains("edge") {
+                    engine.chromeHelper.refreshProfilesIfNeeded()
+                }
+                
                 let config = AppConfigManager.shared.config
                 for (key, candidates) in config.bindings {
                     if candidates.count > 1 {
@@ -163,6 +168,8 @@ public final class AppSwitcherEngine: ObservableObject {
     }
     
     public func handleNumberPress(profileIndex: Int) {
+        chromeHelper.refreshProfilesIfNeeded()
+        
         if isVisible && !currentItems.isEmpty {
             // Priority 1: Match by 1-based card position in HUD (1 selects 1st card, 2 selects 2nd card, etc.)
             let targetIdx = profileIndex - 1
@@ -205,7 +212,9 @@ public final class AppSwitcherEngine: ObservableObject {
         var items: [AppSwitcherItem] = []
         let isSoleChrome = (apps.count == 1 && (apps[0] == "Google Chrome" || apps[0] == "Chrome"))
         
-        if isSoleChrome && !chromeHelper.profiles.isEmpty {
+        if isSoleChrome {
+            chromeHelper.refreshProfilesIfNeeded()
+            if !chromeHelper.profiles.isEmpty {
             for (idx, profile) in chromeHelper.profiles.enumerated() {
                 let icon = profile.avatarImage ?? AppDiscoveryService.shared.iconForApp(nameOrBundle: "Google Chrome")
                 items.append(AppSwitcherItem(
@@ -220,6 +229,7 @@ public final class AppSwitcherEngine: ObservableObject {
             }
             return items
         }
+    }
         
         let hasExplicitProfiles = apps.contains(where: { $0.hasPrefix("chrome-profile:") })
         

@@ -30,7 +30,19 @@ public final class ChromeProfileHelper: ObservableObject {
     @Published public var browserBundleID: String = "com.google.Chrome"
     
     private var cachedIcons: [String: NSImage] = [:]
+    private var lastLocalStateModDates: [String: Date] = [:]
 
+    public var localStatePaths: [String] {
+        if let testDir = AppConfigManager.testOverrideDirectory {
+            return ["\(testDir)/Local State"]
+        }
+        return [
+            "\(NSHomeDirectory())/Library/Application Support/Google/Chrome/Local State",
+            "\(NSHomeDirectory())/Library/Application Support/BraveSoftware/Brave-Browser/Local State",
+            "\(NSHomeDirectory())/Library/Application Support/Microsoft Edge/Local State",
+            "\(NSHomeDirectory())/Library/Application Support/Chromium/Local State"
+        ]
+    }
     
     public let workspace: WorkspaceProvider
     public let process: ProcessProvider
@@ -41,23 +53,47 @@ public final class ChromeProfileHelper: ObservableObject {
         refreshProfiles()
     }
     
+    @discardableResult
+    public func refreshProfilesIfNeeded() -> Bool {
+        var needsRefresh = profiles.isEmpty
+        let fileManager = FileManager.default
+        
+        for path in localStatePaths {
+            guard fileManager.fileExists(atPath: path) else { continue }
+            if let attrs = try? fileManager.attributesOfItem(atPath: path),
+               let modDate = attrs[.modificationDate] as? Date {
+                if let last = lastLocalStateModDates[path] {
+                    if modDate > last {
+                        needsRefresh = true
+                        break
+                    }
+                } else {
+                    needsRefresh = true
+                    break
+                }
+            }
+        }
+        
+        if needsRefresh {
+            refreshProfiles()
+            return true
+        }
+        return false
+    }
+    
     public func refreshProfiles() {
         cachedIcons.removeAll()
         let fileManager = FileManager.default
         let chromeAppPath = "/Applications/Google Chrome.app"
         self.isChromeInstalled = fileManager.fileExists(atPath: chromeAppPath)
         
-        let localStatePaths: [String] = {
-            if let testDir = AppConfigManager.testOverrideDirectory {
-                return ["\(testDir)/Local State"]
+        // Update modification dates tracker
+        for path in localStatePaths {
+            if let attrs = try? fileManager.attributesOfItem(atPath: path),
+               let modDate = attrs[.modificationDate] as? Date {
+                lastLocalStateModDates[path] = modDate
             }
-            return [
-                "\(NSHomeDirectory())/Library/Application Support/Google/Chrome/Local State",
-                "\(NSHomeDirectory())/Library/Application Support/BraveSoftware/Brave-Browser/Local State",
-                "\(NSHomeDirectory())/Library/Application Support/Microsoft Edge/Local State",
-                "\(NSHomeDirectory())/Library/Application Support/Chromium/Local State"
-            ]
-        }()
+        }
         
         var foundProfiles: [DiscoveredChromeProfile] = []
         var discoveredBundleID = "com.google.Chrome"
@@ -290,16 +326,9 @@ public final class ChromeProfileHelper: ObservableObject {
     public func focusProfile(dir: String) {
         let bundleID = self.browserBundleID
         
-        // Launch or focus via command line argument --profile-directory
-        // This natively brings the existing profile window to the front or opens a new one
-        try? process.runCommand(launchPath: "/usr/bin/open", arguments: ["-b", bundleID, "--args", "--profile-directory=\(dir)"])
-        
-        Task { @MainActor in
-            try? await Task.sleep(for: .seconds(0.15))
-            let apps = workspace.runningApps
-            if let chrome = apps.first(where: { $0.bundleIdentifier == bundleID }) {
-                chrome.activateApp()
-            }
-        }
+        // Launch or focus via command line argument --profile-directory with -n (spawn auxiliary instance).
+        // With -n, macOS passes the command-line arguments to the running Chromium instance via IPC,
+        // which natively brings the designated profile window to the front or spawns a new one.
+        try? process.runCommand(launchPath: "/usr/bin/open", arguments: ["-n", "-b", bundleID, "--args", "--profile-directory=\(dir)"])
     }
 }
