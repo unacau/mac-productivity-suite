@@ -306,6 +306,7 @@ extension SerializedTests {
         #expect(engine.selectedIndex == 1)
         
         // 4. Repeated handleKeyPress should also cycle cleanly
+        try await Task.sleep(nanoseconds: 40_000_000)
         engine.handleKeyPress(key: "t")
         #expect(engine.selectedIndex == 2)
         

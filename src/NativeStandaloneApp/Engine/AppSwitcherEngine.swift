@@ -38,21 +38,30 @@ public final class AppSwitcherEngine: ObservableObject {
     private var dismissTimer: Timer?
     private var activeKey: String?
     private var lastActiveIndices: [String: Int] = [:]
+    private var lastKeyPressTime: DispatchTime = DispatchTime(uptimeNanoseconds: 0)
+    private var lastPressedKey: String = ""
     private var cancellables = Set<AnyCancellable>()
     private var globalEventMonitor: Any?
     private var localEventMonitor: Any?
     
     public let workspace: WorkspaceProvider
     public let hotkeys: HotkeyProvider
+    public let process: ProcessProvider
     public let chromeHelper: ChromeProfileHelper
     
-    public init(workspace: WorkspaceProvider, hotkeys: HotkeyProvider, chromeHelper: ChromeProfileHelper? = nil) {
+    public init(workspace: WorkspaceProvider = SystemWorkspaceProvider(),
+                hotkeys: HotkeyProvider? = nil,
+                process: ProcessProvider = SystemProcessProvider(),
+                chromeHelper: ChromeProfileHelper? = nil) {
+        let hotkeys = hotkeys ?? SystemHotkeyProvider(manager: HotkeyManager.shared)
         self.workspace = workspace
         self.hotkeys = hotkeys
+        self.process = process
         self.chromeHelper = chromeHelper ?? ChromeProfileHelper.shared
         
         setupBindings()
         setupHyperKeyIntegration()
+        setupActiveAppWatcher()
         
         NotificationCenter.default.publisher(for: NSNotification.Name("AppConfigDidChangeNotification"))
             .receive(on: DispatchQueue.main)
@@ -60,6 +69,33 @@ public final class AppSwitcherEngine: ObservableObject {
                 self?.setupBindings()
             }
             .store(in: &cancellables)
+    }
+    
+    private func setupActiveAppWatcher() {
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notif in
+            guard let app = notif.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                  let appName = app.localizedName?.lowercased() else { return }
+            
+            Task { @MainActor [weak self] in
+                guard let engine = self else { return }
+                let config = AppConfigManager.shared.config
+                for (key, candidates) in config.bindings {
+                    if candidates.count > 1 {
+                        for (idx, target) in candidates.enumerated() {
+                            let lowerTarget = target.lowercased()
+                            if appName == lowerTarget || appName.contains(lowerTarget) || lowerTarget.contains(appName) {
+                                engine.lastActiveIndices[key.lowercased()] = idx
+                                break
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
     
     private func setupHyperKeyIntegration() {
@@ -219,6 +255,15 @@ public final class AppSwitcherEngine: ObservableObject {
     
     public func handleKeyPress(key: String) {
         let keyLower = key.lowercased()
+        let now = DispatchTime.now()
+        let elapsedMs = Double(now.uptimeNanoseconds - lastKeyPressTime.uptimeNanoseconds) / 1_000_000.0
+        
+        // Prevent duplicate calls for the same key within 35ms (e.g. from simultaneous CGEventTap and Carbon Hotkey)
+        if keyLower == lastPressedKey && elapsedMs < 35.0 {
+            return
+        }
+        lastKeyPressTime = now
+        lastPressedKey = keyLower
         
         // If HUD is already open and key is a number 1..9, navigate directly to that item/profile
         if isVisible && !currentItems.isEmpty, let num = Int(keyLower), num >= 1, num <= 9 {
@@ -251,9 +296,34 @@ public final class AppSwitcherEngine: ObservableObject {
             currentItems = items
             
             let frontAppName = workspace.frontmostApplicationName?.lowercased()
-            if let front = frontAppName, let idx = items.firstIndex(where: { $0.displayName.lowercased() == front }) {
-                selectedIndex = (idx + 1) % items.count
+            var matchedIndex: Int? = nil
+            
+            if let front = frontAppName {
+                // Pass 1: Exact name or displayName match
+                if let idx = items.firstIndex(where: {
+                    $0.displayName.lowercased() == front || $0.name.lowercased() == front
+                }) {
+                    matchedIndex = idx
+                }
+                
+                // Pass 2: Substring matching (e.g. "Google Chrome" contains "Chrome", or "iTerm2" vs "iTerm")
+                if matchedIndex == nil {
+                    if let idx = items.firstIndex(where: {
+                        let nameLower = $0.name.lowercased()
+                        let displayLower = $0.displayName.lowercased()
+                        return front.contains(nameLower) || nameLower.contains(front) ||
+                               front.contains(displayLower) || displayLower.contains(front)
+                    }) {
+                        matchedIndex = idx
+                    }
+                }
+            }
+            
+            if let matched = matchedIndex {
+                // Focused window IS in the same shortcut group: select NEXT candidate
+                selectedIndex = (matched + 1) % items.count
             } else if let lastIdx = lastActiveIndices[keyLower], lastIdx < items.count {
+                // Focused window is OTHER than pressed shortcut: select PREVIOUSLY focused candidate
                 selectedIndex = lastIdx
             } else {
                 // Find first candidate that is running or discovered on disk

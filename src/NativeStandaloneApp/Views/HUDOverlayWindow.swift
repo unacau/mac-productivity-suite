@@ -108,9 +108,8 @@ public struct HUDItemCardView: View {
     
     @ViewBuilder
     private var indexBadgeView: some View {
-        if totalCount > 1 {
-            let label = "\(index + 1)"
-            Text(label)
+        if item.isChromeProfile, let pIdx = item.profileIndex {
+            Text("\(pIdx)")
                 .font(.system(size: 10, weight: .heavy, design: .monospaced))
                 .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.9))
                 .padding(.horizontal, 5)
