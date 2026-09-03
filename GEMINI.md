@@ -85,6 +85,18 @@
 10. **Installer Payloads & Security**:
    - Do not modify payloads in `payload_cache/` directly. Always rely on build scripts (`build_native_app.sh`, `build_full_pkg.sh`) to assemble payloads.
    - Never commit user configuration tokens, private browser profile paths, or the raw Sparkle EdDSA private key (`sparkle_private.key`).
+11. **Headless Integration Testing (Anti-Deadlock)**:
+    - Integration tests must NEVER spawn or interact with real GUI applications (like Google Chrome) using `/usr/bin/open` or `NSAppleScript`.
+    - Executing synchronous `NSAppleScript` commands (`tell application "System Events"`) against UI apps in headless CI runners (which lack WindowServer and TCC permissions) will permanently deadlock the runner.
+    - Always use Dependency Injection (e.g., `MockProcessProvider`) for tests instead of hardcoded singletons (`.shared`).
+12. **Swift Testing Dependency Resilience**:
+    - Do not remove the `apple/swift-testing` dependency from `Package.swift` to resolve deprecation warnings in Xcode 16 / Swift 6. Removing it causes `missing required module '_TestingInternals'` on CI environments that only have macOS Command Line Tools (CLT) installed.
+13. **SPM Target Entry Points**:
+    - To prevent SPM warnings, `main.swift` containing `@main` must be excluded from library targets in `Package.swift`, and application setup should be decoupled into a separate `AppDelegate.swift`.
+14. **Modern Node Actions in CI**:
+    - GitHub Actions workflows must use modern versions (`actions/checkout@v7` and `actions/cache@v6`) to avoid Node.js 20 deprecation warnings.
+15. **Release DMG Origin**:
+    - Never use cloud CI workflows to build or overwrite DMG release assets if they cannot be signed with the Sparkle EdDSA private key. Releases must only be built and signed locally using `release.sh`.
 
 ## Task-Specific Context Matrix
 - **Native App Logic**: Load `src/NativeStandaloneApp/`, consult `tests/SwiftUnitTests.swift` and `tests/IntegrationTests/`, and test with `./tests/run_tests.sh`.
