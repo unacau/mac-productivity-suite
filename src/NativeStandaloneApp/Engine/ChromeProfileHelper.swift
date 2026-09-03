@@ -387,11 +387,7 @@ public final class ChromeProfileHelper: ObservableObject {
     }
     
     private func launchBrowserColdStart(bundleID: String, dir: String) {
-        if let execPath = resolveBrowserExecutablePath(bundleID: bundleID) {
-            AppLogger.getLogger(category: .browser).info("Cold-starting browser with profile '\(dir, privacy: .public)' via binary invocation.")
-            try? process.runCommand(launchPath: execPath, arguments: ["--profile-directory=\(dir)"])
-            return
-        }
+        AppLogger.getLogger(category: .browser).info("Cold-starting browser with profile '\(dir, privacy: .public)' via /usr/bin/open.")
         try? process.runCommand(launchPath: "/usr/bin/open", arguments: ["-b", bundleID, "--args", "--profile-directory=\(dir)"])
     }
     
