@@ -195,7 +195,7 @@ public final class AppSwitcherEngine: ObservableObject {
             selectedIndex = 0
             launchOrFocusTarget(item.name)
             showHUD()
-            resetSingleDismissTimer()
+            resetDismissTimer()
         } else {
             chromeHelper.focusProfile(index: profileIndex)
         }
@@ -278,13 +278,11 @@ public final class AppSwitcherEngine: ObservableObject {
         if items.isEmpty { return }
         
         if items.count == 1 {
-            // Single target shortcut: switch immediately AND present HUD visual feedback briefly
             activeKey = keyLower
-            currentItems = items
             selectedIndex = 0
-            launchOrFocusTarget(items[0].name)
+            currentItems = items
             showHUD()
-            resetSingleDismissTimer()
+            resetDismissTimer()
             return
         }
         
@@ -346,16 +344,6 @@ public final class AppSwitcherEngine: ObservableObject {
         }
     }
     
-    private func resetSingleDismissTimer() {
-        dismissTimer?.invalidate()
-        dismissTimer = Timer.scheduledTimer(withTimeInterval: 0.45, repeats: false) { [weak self] _ in
-            guard let engine = self else { return }
-            Task { @MainActor in
-                engine.hideHUDOnly()
-            }
-        }
-    }
-    
     public func hideHUDOnly() {
         stopEventMonitoring()
         dismissTimer?.invalidate()
@@ -377,15 +365,21 @@ public final class AppSwitcherEngine: ObservableObject {
         resetDismissTimer()
     }
     
+    public var isHyperModifierHeld: Bool {
+        if HyperKeyEngine.shared.isHyperActive { return true }
+        let flags = NSEvent.modifierFlags
+        return flags.contains([.command, .option, .control, .shift])
+    }
+    
     private func resetDismissTimer() {
         dismissTimer?.invalidate()
-        // If Hyper key is held down, DO NOT auto-dismiss! Keep HUD open until user releases Caps Lock.
-        if HyperKeyEngine.shared.isHyperActive {
+        // If Hyper key is held down (Caps Lock or Cmd+Opt+Ctrl+Shift), DO NOT auto-dismiss! Keep HUD open until user releases Hyper key.
+        if isHyperModifierHeld {
             dismissTimer = nil
             return
         }
         // Fallback safety timeout if triggered without holding Hyper key
-        dismissTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { [weak self] _ in
+        dismissTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: false) { [weak self] _ in
             guard let engine = self else { return }
             Task { @MainActor in
                 engine.commitAndHide()
@@ -420,19 +414,34 @@ public final class AppSwitcherEngine: ObservableObject {
     private func startEventMonitoring() {
         stopEventMonitoring()
         
-        globalEventMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+        globalEventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { [weak self] event in
             guard let engine = self else { return }
             Task { @MainActor in
-                engine.handleHUDKeyDown(event: event)
+                if event.type == .flagsChanged {
+                    engine.handleFlagsChanged(event: event)
+                } else {
+                    engine.handleHUDKeyDown(event: event)
+                }
             }
         }
         
-        localEventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+        localEventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { [weak self] event in
             guard let engine = self else { return event }
+            if event.type == .flagsChanged {
+                engine.handleFlagsChanged(event: event)
+                return event
+            }
             if engine.handleHUDKeyDown(event: event) {
                 return nil
             }
             return event
+        }
+    }
+    
+    private func handleFlagsChanged(event: NSEvent) {
+        guard isVisible, !currentItems.isEmpty else { return }
+        if !isHyperModifierHeld {
+            commitAndHide()
         }
     }
     

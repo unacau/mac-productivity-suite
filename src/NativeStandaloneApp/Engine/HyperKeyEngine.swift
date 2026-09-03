@@ -207,8 +207,27 @@ public final class HyperKeyEngine: @unchecked Sendable {
             return nil
         }
         
+        // 5b. Modifier flags check for Hyper combination (Cmd + Opt + Ctrl + Shift) from Karabiner or external mapping
+        let hyperFlagsMask: CGEventFlags = [.maskCommand, .maskAlternate, .maskControl, .maskShift]
+        let isHyperModifiers = event.flags.contains(hyperFlagsMask)
+        if type == .flagsChanged {
+            if isHyperModifiers {
+                if !isHyperActive {
+                    isHyperActive = true
+                    hyperUsedAsModifier = false
+                }
+            } else if isHyperActive {
+                let wasUsed = hyperUsedAsModifier
+                isHyperActive = false
+                hyperUsedAsModifier = false
+                if wasUsed {
+                    AppSwitcherEngine.shared.commitAndHide()
+                }
+            }
+        }
+        
         // 6. Any other key while Hyper is held down
-        if isHyperActive {
+        if isHyperActive || isHyperModifiers {
             if type == .keyDown {
                 // Ignore key autorepeat to prevent uncontrollable spinning through apps
                 if event.getIntegerValueField(.keyboardEventAutorepeat) != 0 {
