@@ -378,21 +378,30 @@ public final class ChromeProfileHelper: ObservableObject {
             AppLogger.getLogger(category: .browser).info("focusProfile: Eval window '\(rawTitle)' -> matchesName:\(matchesName), matchesEmail:\(matchesEmail), matchesDir:\(matchesDir)")
             
             if matchesName || matchesEmail || matchesDir {
-                let res = AXUIElementPerformAction(win, kAXRaiseAction as CFString)
-                AppLogger.getLogger(category: .browser).info("focusProfile: Match found! kAXRaiseAction result: \(res.rawValue)")
-                if res == .success {
-                    // Try to force the app to the front using NSRunningApplication
-                    chrome.activate()
-                    
-                    // Fallback to AppleScript activation to bypass macOS 14 focus stealing prevention
-                    let script = "tell application \"System Events\" to set frontmost of process id \(chrome.processIdentifier) to true"
-                    var error: NSDictionary?
-                    if let appleScript = NSAppleScript(source: script) {
-                        appleScript.executeAndReturnError(&error)
-                    }
-                    
-                    return true
+                AppLogger.getLogger(category: .browser).info("focusProfile: Match found! Preparing to raise and activate.")
+                
+                // 1. Un-minimize if necessary
+                var isMinimized: CFTypeRef?
+                if AXUIElementCopyAttributeValue(win, kAXMinimizedAttribute as CFString, &isMinimized) == .success,
+                   let min = isMinimized as? Bool, min {
+                    AXUIElementSetAttributeValue(win, kAXMinimizedAttribute as CFString, false as CFTypeRef)
                 }
+                
+                // 2. Make it the main window of the application
+                AXUIElementSetAttributeValue(win, kAXMainAttribute as CFString, true as CFTypeRef)
+                
+                // 3. Force the application to the foreground using System Events (bypasses macOS 14 focus stealing prevention)
+                let script = "tell application \"System Events\" to set frontmost of process id \(chrome.processIdentifier) to true"
+                var error: NSDictionary?
+                if let appleScript = NSAppleScript(source: script) {
+                    appleScript.executeAndReturnError(&error)
+                }
+                
+                // 4. Raise the specific window to the top of the app's window stack
+                let res = AXUIElementPerformAction(win, kAXRaiseAction as CFString)
+                AppLogger.getLogger(category: .browser).info("focusProfile: kAXRaiseAction result: \(res.rawValue)")
+                
+                return true
             }
         }
         
