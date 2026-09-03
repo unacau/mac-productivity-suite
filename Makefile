@@ -20,6 +20,9 @@ full:
 test:
 	@./tests/run_tests.sh
 
+release:
+	@./release.sh
+
 health:
 	@./scripts/health_check.sh
 

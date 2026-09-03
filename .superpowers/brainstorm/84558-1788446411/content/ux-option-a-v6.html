@@ -1,0 +1,317 @@
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+  body { font-family: 'Inter', sans-serif; color: #FFFFFF; }
+  
+  .macos-window {
+    background: #0F172A;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.08);
+    width: 800px;
+    margin: 0 auto;
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .macos-header {
+    height: 52px;
+    background: rgba(30,41,59,0.5);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    justify-content: center;
+    position: relative;
+  }
+  
+  .traffic-lights {
+    position: absolute;
+    left: 20px;
+    display: flex;
+    gap: 8px;
+  }
+  .traffic-lights div { width: 12px; height: 12px; border-radius: 50%; }
+  .tl-red { background: #FF5F56; }
+  .tl-yellow { background: #FFBD2E; }
+  .tl-green { background: #27C93F; }
+  
+  .tab-bar {
+    display: flex;
+    gap: 4px;
+    background: #192134;
+    padding: 4px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .tab {
+    padding: 6px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #94A3B8;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .tab.active {
+    background: rgba(255,255,255,0.1);
+    color: #FFFFFF;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  }
+
+  .content-area {
+    padding: 32px 40px 40px 40px;
+    background: #0F172A;
+    position: relative;
+  }
+
+  /* Global Instructions */
+  .global-instructions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .global-instructions h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 500;
+    color: #E2E8F0;
+  }
+  .global-instructions p {
+    margin: 4px 0 0 0;
+    font-size: 13px;
+    color: #94A3B8;
+  }
+  .global-prefix-badge {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-family: ui-monospace, monospace;
+    font-size: 13px;
+    color: #94A3B8;
+  }
+  .global-prefix-badge span {
+    color: #E2E8F0;
+    font-weight: 600;
+  }
+
+  .profile-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: relative;
+  }
+
+  .profile-card {
+    background: #192134;
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: background 0.2s ease, border-color 0.2s;
+    cursor: grab;
+    position: relative;
+  }
+  .profile-card:hover {
+    background: #1E293B;
+    border-color: rgba(255,255,255,0.15);
+  }
+  .profile-card:active {
+    cursor: grabbing;
+  }
+  
+  /* SortableJS Drag & Drop Classes */
+  .sortable-ghost {
+    opacity: 0;
+  }
+  .sortable-drag {
+    background: #192134;
+    border: 1px solid #10B981;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(16,185,129,0.5);
+    opacity: 1 !important;
+    cursor: grabbing !important;
+  }
+
+  .drag-handle {
+    color: #475569;
+    cursor: grab;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: -4px;
+    transition: color 0.2s;
+  }
+  .profile-card:hover .drag-handle {
+    color: #94A3B8;
+  }
+
+  .avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 600;
+    color: white;
+    border: 2px solid rgba(255,255,255,0.1);
+    flex-shrink: 0;
+  }
+  .avatar.default { background: linear-gradient(135deg, #059669, #3B82F6); }
+  .avatar.al11 { background: linear-gradient(135deg, #EA580C, #EAB308); }
+  .avatar.gcp { background: linear-gradient(135deg, #2563EB, #06B6D4); }
+  .avatar.nastya { background: linear-gradient(135deg, #9333EA, #DB2777); }
+
+  .identity { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .name { font-size: 15px; font-weight: 600; color: #F8FAFC; }
+  .email { font-size: 13px; color: #94A3B8; }
+
+  /* Number Display */
+  .activation-number {
+    width: 40px;
+    height: 40px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: ui-monospace, monospace;
+    font-size: 16px;
+    color: #E2E8F0;
+    font-weight: 600;
+    pointer-events: none;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .profile-card:hover .activation-number {
+    background: rgba(255,255,255,0.1);
+    color: #10B981;
+    border-color: rgba(16,185,129,0.3);
+  }
+
+</style>
+
+<!-- Load SortableJS for smooth Apple Dock-like sliding -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
+<div style="padding-bottom: 24px;">
+  <h2>Chrome Profiles UX (v6)</h2>
+  <p class="subtitle">Smooth Apple Dock-style drag animations. Zero footer clutter.</p>
+</div>
+
+<div class="macos-window">
+  <div class="macos-header">
+    <div class="traffic-lights">
+      <div class="tl-red"></div><div class="tl-yellow"></div><div class="tl-green"></div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab">General</div>
+      <div class="tab">Shortcuts</div>
+      <div class="tab active">Chrome Profiles</div>
+      <div class="tab">Advanced</div>
+    </div>
+  </div>
+
+  <div class="content-area">
+    <div class="global-instructions">
+      <div>
+        <h3>Profile Shortcuts</h3>
+        <p>Drag to reorder. Click a profile to test its focus.</p>
+      </div>
+      <div class="global-prefix-badge">
+        Prefix key: <span>Hyper + C + </span>[Num]
+      </div>
+    </div>
+
+    <div class="profile-list" id="sortable-list">
+      <!-- Cards rendered via JS -->
+    </div>
+  </div>
+</div>
+
+<script>
+  const profiles = [
+    { id: 'p1', name: 'Igor', email: 'igorekishev92@gmail.com', avatarClass: 'default', initial: 'I' },
+    { id: 'p2', name: 'Igor (Al11)', email: 'igor@almosteleven.com', avatarClass: 'al11', initial: 'A' },
+    { id: 'p3', name: 'Igor (GCP Free Trial)', email: 'igorekishev729@gmail.com', avatarClass: 'gcp', initial: 'G' },
+    { id: 'p4', name: 'Nastya', email: 'betapoozytron@gmail.com', avatarClass: 'nastya', initial: 'N' }
+  ];
+
+  const listEl = document.getElementById('sortable-list');
+
+  function renderList() {
+    listEl.innerHTML = '';
+    profiles.forEach((p, index) => {
+      const card = document.createElement('div');
+      card.className = 'profile-card';
+      
+      // Click to test
+      card.onclick = () => {
+        const num = card.querySelector('.activation-number');
+        const origColor = num.style.color;
+        const origBorder = num.style.borderColor;
+        num.style.color = '#34D399';
+        num.style.borderColor = '#34D399';
+        num.innerHTML = '✓';
+        setTimeout(() => {
+          num.style.color = origColor;
+          num.style.borderColor = origBorder;
+          
+          // Re-update the number just in case
+          const nodes = Array.from(listEl.children);
+          num.innerHTML = nodes.indexOf(card) + 1;
+        }, 500);
+      };
+      
+      card.innerHTML = `
+        <div class="drag-handle">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="8" y1="6" x2="21" y2="6"></line>
+            <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="21" y2="18"></line>
+            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+          </svg>
+        </div>
+        <div class="avatar ${p.avatarClass}">${p.initial}</div>
+        <div class="identity">
+          <span class="name">${p.name}</span>
+          <span class="email">${p.email}</span>
+        </div>
+        <div class="activation-number">${index + 1}</div>
+      `;
+      listEl.appendChild(card);
+    });
+  }
+
+  function updateNumbers() {
+    const cards = listEl.querySelectorAll('.profile-card');
+    cards.forEach((card, i) => {
+      card.querySelector('.activation-number').innerText = i + 1;
+    });
+  }
+
+  // Initial Render
+  renderList();
+
+  // Initialize SortableJS for silky smooth Apple-like sliding
+  new Sortable(listEl, {
+    animation: 250,
+    easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+    ghostClass: 'sortable-ghost',
+    dragClass: 'sortable-drag',
+    forceFallback: true, // Forces custom drag image for consistent styling
+    fallbackTolerance: 3,
+    onEnd: function (evt) {
+      updateNumbers();
+    }
+  });
+
+</script>

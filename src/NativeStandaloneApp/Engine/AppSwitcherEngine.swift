@@ -190,13 +190,17 @@ public final class AppSwitcherEngine: ObservableObject {
         let config = AppConfigManager.shared.config
         var explicitProfileDirs: [String] = []
         
-        // Extract all explicitly defined chrome profiles across all bindings in order
-        for apps in config.bindings.values {
-            for app in apps {
-                if app.hasPrefix("chrome-profile:") {
-                    let dir = String(app.dropFirst("chrome-profile:".count))
-                    if !explicitProfileDirs.contains(dir) {
-                        explicitProfileDirs.append(dir)
+        if !config.chromeProfileOrder.isEmpty {
+            explicitProfileDirs = config.chromeProfileOrder
+        } else {
+            // Extract all explicitly defined chrome profiles across all bindings in order
+            for apps in config.bindings.values {
+                for app in apps {
+                    if app.hasPrefix("chrome-profile:") {
+                        let dir = String(app.dropFirst("chrome-profile:".count))
+                        if !explicitProfileDirs.contains(dir) {
+                            explicitProfileDirs.append(dir)
+                        }
                     }
                 }
             }
@@ -233,6 +237,7 @@ public final class AppSwitcherEngine: ObservableObject {
                 showHUD()
                 resetDismissTimer()
             } else {
+                HUDOverlayWindow.shared.hide()
                 launchOrFocusTarget(item.name)
             }
         } else {

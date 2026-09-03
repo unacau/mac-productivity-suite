@@ -70,4 +70,30 @@ extension SerializedTests {
         helper.refreshProfiles()
         #expect(!helper.profiles.isEmpty, "Profiles list should never be empty")
     }
+    
+    @Test @MainActor
+    func testChromeProfileOrderConfigPersistence() throws {
+        var config = AppConfig.default
+        config.chromeProfileOrder = ["Profile 2", "Default", "Profile 1"]
+        
+        let encoder = JSONEncoder()
+        let data = try encoder.encode(config)
+        let decoded = try JSONDecoder().decode(AppConfig.self, from: data)
+        
+        #expect(decoded.chromeProfileOrder == ["Profile 2", "Default", "Profile 1"])
+    }
+    
+    @Test @MainActor
+    func testSortedProfilesByMenuAppearance() {
+        let helper = ChromeProfileHelper(workspace: MockWorkspaceProvider(), process: MockProcessProvider())
+        let p1 = DiscoveredChromeProfile(index: 1, dir: "Profile 2", name: "Zachary")
+        let p2 = DiscoveredChromeProfile(index: 2, dir: "Profile 1", name: "Alice")
+        let p3 = DiscoveredChromeProfile(index: 3, dir: "Default", name: "Igor")
+        
+        helper.rawDiscoveredProfiles = [p1, p2, p3]
+        helper.profiles = [p1, p2, p3]
+        
+        let sorted = helper.sortedProfilesByMenuAppearance()
+        #expect(sorted.map(\.name) == ["Alice", "Igor", "Zachary"])
+    }
 }

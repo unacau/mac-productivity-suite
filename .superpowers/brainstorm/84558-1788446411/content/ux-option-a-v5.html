@@ -1,0 +1,356 @@
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+  body { font-family: 'Inter', sans-serif; color: #FFFFFF; }
+  
+  .macos-window {
+    background: #0F172A;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.08);
+    width: 800px;
+    margin: 0 auto;
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .macos-header {
+    height: 52px;
+    background: rgba(30,41,59,0.5);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    justify-content: center;
+    position: relative;
+  }
+  
+  .traffic-lights {
+    position: absolute;
+    left: 20px;
+    display: flex;
+    gap: 8px;
+  }
+  .traffic-lights div { width: 12px; height: 12px; border-radius: 50%; }
+  .tl-red { background: #FF5F56; }
+  .tl-yellow { background: #FFBD2E; }
+  .tl-green { background: #27C93F; }
+  
+  .tab-bar {
+    display: flex;
+    gap: 4px;
+    background: #192134;
+    padding: 4px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .tab {
+    padding: 6px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #94A3B8;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .tab.active {
+    background: rgba(255,255,255,0.1);
+    color: #FFFFFF;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  }
+
+  .content-area {
+    padding: 32px 40px;
+    background: #0F172A;
+    min-height: 400px;
+    position: relative;
+  }
+
+  /* Global Instructions */
+  .global-instructions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .global-instructions h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 500;
+    color: #E2E8F0;
+  }
+  .global-instructions p {
+    margin: 4px 0 0 0;
+    font-size: 13px;
+    color: #94A3B8;
+  }
+  .global-prefix-badge {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-family: ui-monospace, monospace;
+    font-size: 13px;
+    color: #94A3B8;
+  }
+  .global-prefix-badge span {
+    color: #E2E8F0;
+    font-weight: 600;
+  }
+
+  .profile-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 40px;
+  }
+
+  .profile-card {
+    background: #192134;
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: background 0.2s ease, border-color 0.2s, box-shadow 0.2s;
+    cursor: grab;
+    position: relative;
+    z-index: 1;
+  }
+  .profile-card:hover {
+    background: #1E293B;
+    border-color: rgba(255,255,255,0.15);
+  }
+  .profile-card:active {
+    cursor: grabbing;
+  }
+  .profile-card.dragging {
+    opacity: 0.8;
+    z-index: 100;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    border-color: #10B981;
+    background: rgba(16,185,129,0.05);
+  }
+  .profile-card.drag-over {
+    border-top: 2px solid #10B981;
+  }
+
+  .drag-handle {
+    color: #475569;
+    cursor: grab;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: -4px;
+    transition: color 0.2s;
+  }
+  .profile-card:hover .drag-handle {
+    color: #94A3B8;
+  }
+
+  .avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 600;
+    color: white;
+    border: 2px solid rgba(255,255,255,0.1);
+  }
+  .avatar.default { background: linear-gradient(135deg, #059669, #3B82F6); }
+  .avatar.al11 { background: linear-gradient(135deg, #EA580C, #EAB308); }
+  .avatar.gcp { background: linear-gradient(135deg, #2563EB, #06B6D4); }
+  .avatar.nastya { background: linear-gradient(135deg, #9333EA, #DB2777); }
+
+  .identity { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .name { font-size: 15px; font-weight: 600; color: #F8FAFC; }
+  .email { font-size: 13px; color: #94A3B8; }
+
+  /* Number Display */
+  .activation-number {
+    width: 40px;
+    height: 40px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: ui-monospace, monospace;
+    font-size: 16px;
+    color: #E2E8F0;
+    font-weight: 600;
+    pointer-events: none; /* Passive label now */
+    transition: all 0.2s;
+  }
+  .profile-card:hover .activation-number {
+    background: rgba(255,255,255,0.1);
+    color: #10B981;
+    border-color: rgba(16,185,129,0.3);
+  }
+
+  /* Micro status footer */
+  .micro-footer {
+    position: absolute;
+    bottom: 20px;
+    left: 40px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .micro-dot {
+    width: 6px;
+    height: 6px;
+    background: #10B981;
+    border-radius: 50%;
+    animation: pulse 3s infinite;
+  }
+  @keyframes pulse {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(1.2); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  .micro-text {
+    font-size: 12px;
+    color: #64748B;
+    font-weight: 500;
+  }
+</style>
+
+<div style="padding-bottom: 24px;">
+  <h2>Chrome Profiles UX (v5)</h2>
+  <p class="subtitle">Drag & Drop reordering. No popovers. No messy icon overlays. Pure minimalism.</p>
+</div>
+
+<div class="macos-window">
+  <div class="macos-header">
+    <div class="traffic-lights">
+      <div class="tl-red"></div><div class="tl-yellow"></div><div class="tl-green"></div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab">General</div>
+      <div class="tab">Shortcuts</div>
+      <div class="tab active">Chrome Profiles</div>
+      <div class="tab">Advanced</div>
+    </div>
+  </div>
+
+  <div class="content-area">
+    <div class="global-instructions">
+      <div>
+        <h3>Profile Shortcuts</h3>
+        <p>Drag to reorder. Click a profile to test its focus.</p>
+      </div>
+      <div class="global-prefix-badge">
+        Prefix key: <span>Hyper + C + </span>[Num]
+      </div>
+    </div>
+
+    <div class="profile-list" id="sortable-list">
+      <!-- JS rendered -->
+    </div>
+
+    <div class="micro-footer">
+      <div class="micro-dot"></div>
+      <span class="micro-text">Chrome Profiles synced</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  let profiles = [
+    { id: 'p1', name: 'Igor', email: 'igorekishev92@gmail.com', avatarClass: 'default', initial: 'I' },
+    { id: 'p2', name: 'Igor (Al11)', email: 'igor@almosteleven.com', avatarClass: 'al11', initial: 'A' },
+    { id: 'p3', name: 'Igor (GCP Free Trial)', email: 'igorekishev729@gmail.com', avatarClass: 'gcp', initial: 'G' },
+    { id: 'p4', name: 'Nastya', email: 'betapoozytron@gmail.com', avatarClass: 'nastya', initial: 'N' }
+  ];
+
+  const listEl = document.getElementById('sortable-list');
+
+  function render() {
+    listEl.innerHTML = '';
+    profiles.forEach((p, index) => {
+      const card = document.createElement('div');
+      card.className = 'profile-card';
+      card.draggable = true;
+      card.dataset.index = index;
+      
+      // Click to test
+      card.onclick = () => {
+        const num = card.querySelector('.activation-number');
+        const origColor = num.style.color;
+        const origBorder = num.style.borderColor;
+        num.style.color = '#34D399';
+        num.style.borderColor = '#34D399';
+        num.innerHTML = '✓';
+        setTimeout(() => {
+          num.style.color = origColor;
+          num.style.borderColor = origBorder;
+          num.innerHTML = index + 1;
+        }, 500);
+      };
+      
+      card.innerHTML = `
+        <div class="drag-handle">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="8" y1="6" x2="21" y2="6"></line>
+            <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="21" y2="18"></line>
+            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+          </svg>
+        </div>
+        <div class="avatar ${p.avatarClass}">${p.initial}</div>
+        <div class="identity">
+          <span class="name">${p.name}</span>
+          <span class="email">${p.email}</span>
+        </div>
+        <div class="activation-number">${index + 1}</div>
+      `;
+
+      // Drag and Drop HTML5 events
+      card.addEventListener('dragstart', (e) => {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', index);
+        setTimeout(() => card.classList.add('dragging'), 0);
+      });
+
+      card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+        document.querySelectorAll('.profile-card').forEach(c => c.classList.remove('drag-over'));
+      });
+
+      card.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        card.classList.add('drag-over');
+      });
+
+      card.addEventListener('dragleave', () => {
+        card.classList.remove('drag-over');
+      });
+
+      card.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'));
+        const targetIndex = index;
+        
+        if (draggedIndex !== targetIndex) {
+          // Reorder array
+          const item = profiles.splice(draggedIndex, 1)[0];
+          profiles.splice(targetIndex, 0, item);
+          render();
+        }
+      });
+
+      listEl.appendChild(card);
+    });
+  }
+
+  render();
+</script>

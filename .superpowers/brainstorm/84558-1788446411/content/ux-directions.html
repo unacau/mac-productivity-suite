@@ -1,0 +1,75 @@
+<h2>Browser Profile UX & Selection Architecture</h2>
+<p class="subtitle">Select the UX direction that best solves the profile mismatch and improves workflow clarity.</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Dedicated "Browser Profiles" Tab & Manual Mapping</h3>
+      <p>A new Settings tab that displays all discovered profiles with their real avatars, emails, and live menu positions. Lets users customize shortcut keys directly (e.g., <code>Hyper + 1</code>, <code>Hyper + 2</code>) and includes an interactive <b>"Test Focus"</b> button to immediately verify window switching.</p>
+      <div class="pros-cons" style="margin-top: 10px;">
+        <div class="pros">
+          <h4>Pros</h4>
+          <ul>
+            <li>100% deterministic: user sees exact mapping</li>
+            <li>Easy to test & debug profile switching on any machine</li>
+            <li>Custom hotkey assignment per profile</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Cons</h4>
+          <ul>
+            <li>Requires initial one-time configuration if automatic order doesn't match preferences</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Smart Dynamic Menu Synchronization (Zero-Config)</h3>
+      <p>Automatically synchronize with the live Chrome menu bar. Instead of showing internal directory IDs like <code>Profile 2</code>, the switcher and Settings dynamically display Chrome's formatted names (e.g. <code>Igor (Al11)</code>) and bind <code>Hyper + 1..9</code> directly to the exact live menu bar positions.</p>
+      <div class="pros-cons" style="margin-top: 10px;">
+        <div class="pros">
+          <h4>Pros</h4>
+          <ul>
+            <li>Zero configuration needed</li>
+            <li>Always mirrors Chrome's real menu order (1st item = 1, 2nd = 2)</li>
+            <li>Works seamlessly across multiple Macs without manual setup</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Cons</h4>
+          <ul>
+            <li>Menu order is controlled by Chrome's sorting algorithms</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Unified App & Profile Carousel with Instant Visual Badging</h3>
+      <p>Treat profiles as first-class applications in the App Switcher HUD. Show rich circular profile badges with account emails and active indicators, and allow switching between profiles using normal App Switcher key cycling or numeric direct-jump.</p>
+      <div class="pros-cons" style="margin-top: 10px;">
+        <div class="pros">
+          <h4>Pros</h4>
+          <ul>
+            <li>Deeply integrated with the existing app switcher workflow</li>
+            <li>Clear visual distinction between work and personal profiles</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Cons</h4>
+          <ul>
+            <li>Still requires underlying menu synchronization to be solved accurately</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

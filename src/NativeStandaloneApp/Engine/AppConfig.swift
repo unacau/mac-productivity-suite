@@ -37,6 +37,7 @@ public struct AppConfig: Codable, Equatable {
     public var remapCapsLockToHyper: Bool
     public var escapeOnTap: Bool
     public var copyOnSelectEnabled: Bool
+    public var chromeProfileOrder: [String]
     
     public init(
         version: String = AppConfig.currentAppVersion,
@@ -46,7 +47,8 @@ public struct AppConfig: Codable, Equatable {
         favoriteChromeProfiles: [String] = [],
         remapCapsLockToHyper: Bool = true,
         escapeOnTap: Bool = true,
-        copyOnSelectEnabled: Bool = false
+        copyOnSelectEnabled: Bool = false,
+        chromeProfileOrder: [String] = []
     ) {
         self.version = version
         self.bindings = bindings
@@ -56,6 +58,7 @@ public struct AppConfig: Codable, Equatable {
         self.remapCapsLockToHyper = remapCapsLockToHyper
         self.escapeOnTap = escapeOnTap
         self.copyOnSelectEnabled = copyOnSelectEnabled
+        self.chromeProfileOrder = chromeProfileOrder
     }
     
     public static var `default`: AppConfig {
@@ -74,7 +77,8 @@ public struct AppConfig: Codable, Equatable {
             favoriteChromeProfiles: [],
             remapCapsLockToHyper: true,
             escapeOnTap: true,
-            copyOnSelectEnabled: false
+            copyOnSelectEnabled: false,
+            chromeProfileOrder: []
         )
     }
     
@@ -100,6 +104,7 @@ public struct AppConfig: Codable, Equatable {
         self.remapCapsLockToHyper = try container.decodeIfPresent(Bool.self, forKey: .remapCapsLockToHyper) ?? true
         self.escapeOnTap = try container.decodeIfPresent(Bool.self, forKey: .escapeOnTap) ?? true
         self.copyOnSelectEnabled = try container.decodeIfPresent(Bool.self, forKey: .copyOnSelectEnabled) ?? false
+        self.chromeProfileOrder = try container.decodeIfPresent([String].self, forKey: .chromeProfileOrder) ?? []
     }
 }
 

@@ -1,0 +1,529 @@
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+  body { 
+    font-family: 'Inter', -apple-system, sans-serif; 
+    margin: 0; 
+    padding: 40px;
+    background: transparent;
+  }
+  
+  /* --- LIGHT MODE (DEFAULT) --- */
+  .macos-window {
+    background: #F9FAFB;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.05);
+    width: 800px;
+    margin: 0 auto;
+    overflow: hidden;
+    position: relative;
+    color: #111827;
+  }
+  
+  .macos-header {
+    height: 52px;
+    background: rgba(243,244,246,0.8);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    justify-content: center;
+    position: relative;
+  }
+  
+  .traffic-lights {
+    position: absolute;
+    left: 20px;
+    display: flex;
+    gap: 8px;
+  }
+  .traffic-lights div { width: 12px; height: 12px; border-radius: 50%; }
+  .tl-red { background: #FF5F56; border: 1px solid #E0443E; }
+  .tl-yellow { background: #FFBD2E; border: 1px solid #DEA123; }
+  .tl-green { background: #27C93F; border: 1px solid #1AAB29; }
+  
+  .tab-bar {
+    display: flex;
+    gap: 4px;
+    background: rgba(0,0,0,0.05);
+    padding: 4px;
+    border-radius: 8px;
+  }
+  .tab {
+    padding: 6px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #4B5563;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .tab.active {
+    background: #FFFFFF;
+    color: #111827;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  .content-area {
+    padding: 40px;
+    background: #F9FAFB;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+  }
+
+  /* --- HUD TILE STYLING --- */
+  .profile-list {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    padding: 20px;
+    /* HUD Background Simulator */
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(20px);
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.2);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+  }
+
+  .hud-tile {
+    width: 104px; /* 84 text + 20 padding */
+    padding: 12px 10px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: grab;
+    position: relative;
+    transition: all 0.2s;
+  }
+  .hud-tile:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.3);
+  }
+  .hud-tile:active {
+    cursor: grabbing;
+  }
+
+  /* Testing Highlight */
+  .hud-tile.testing {
+    background: rgba(0, 122, 255, 0.65) !important; /* Color.blue.opacity(0.65) */
+    border: 2px solid #32ADE6 !important; /* Color.cyan */
+  }
+
+  .avatar-container {
+    width: 52px;
+    height: 52px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 700;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+  }
+  .hud-tile.testing .avatar {
+    border: 2px solid rgba(50, 173, 230, 0.8);
+  }
+  .avatar.default { background: linear-gradient(135deg, #059669, #3B82F6); }
+  .avatar.al11 { background: linear-gradient(135deg, #EA580C, #EAB308); }
+  .avatar.gcp { background: linear-gradient(135deg, #2563EB, #06B6D4); }
+  .avatar.nastya { background: linear-gradient(135deg, #9333EA, #DB2777); }
+
+  .chrome-badge {
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 16px;
+    height: 16px;
+    background: #FFFFFF;
+    border-radius: 50%;
+    /* Simple chrome logo mockup */
+    background-image: conic-gradient(from 120deg, #EA4335 0 120deg, #34A853 120deg 240deg, #FBBC04 240deg 360deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  }
+  .chrome-badge::after {
+    content: '';
+    width: 7px;
+    height: 7px;
+    background: #4285F4;
+    border-radius: 50%;
+    border: 1.5px solid white;
+  }
+
+  .index-badge {
+    position: absolute;
+    top: -6px;
+    left: -8px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+    padding: 2px 5px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 10px;
+    font-weight: 900;
+    font-family: ui-monospaced, SFMono-Regular, monospace;
+  }
+  .hud-tile.testing .index-badge {
+    background: #007AFF;
+    border-color: rgba(50, 173, 230, 0.8);
+    color: #FFFFFF;
+  }
+
+  .hud-name {
+    width: 84px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.75);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .hud-tile.testing .hud-name {
+    color: #FFFFFF;
+  }
+
+  /* Sortable JS Drag Styles */
+  .sortable-ghost { opacity: 0; }
+  .sortable-drag {
+    background: rgba(255, 255, 255, 0.15) !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5) !important;
+    opacity: 1 !important;
+    cursor: grabbing !important;
+  }
+
+
+  /* --- INTERACTIVE KEYS TUTORIAL --- */
+  .interactive-keys-tutorial {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 24px 32px;
+    background: #FFFFFF;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02), inset 0 2px 6px rgba(0,0,0,0.02);
+    border: 1px solid rgba(0,0,0,0.05);
+  }
+
+  /* MacBook Black Key Styling */
+  .mac-key {
+    background: #1C1C1E;
+    border-radius: 6px;
+    color: #FFFFFF;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 0.3px;
+    box-shadow: 
+      0 1px 1px rgba(0,0,0,0.5), 
+      inset 0 1px 0 rgba(255,255,255,0.1),
+      inset 0 -1px 0 rgba(0,0,0,0.2);
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.05s, box-shadow 0.05s;
+    height: 48px;
+    display: flex;
+  }
+  
+  .mac-key:active, .mac-key.pressed {
+    transform: translateY(1px);
+    box-shadow: 
+      0 0px 0px rgba(0,0,0,0.5), 
+      inset 0 2px 4px rgba(0,0,0,0.3);
+  }
+
+  .mac-key.prompt {
+    animation: mac-pulse 1.5s infinite;
+  }
+
+  @keyframes mac-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(59,130,246,0.6), 0 1px 1px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1); }
+    70% { box-shadow: 0 0 0 6px rgba(59,130,246,0), 0 1px 1px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1); }
+    100% { box-shadow: 0 0 0 0 rgba(59,130,246,0), 0 1px 1px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1); }
+  }
+
+  .key-capslock {
+    width: 80px;
+    align-items: flex-end;
+    justify-content: flex-start;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  
+  .caps-led {
+    position: absolute;
+    top: 8px;
+    left: 10px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #333333;
+    box-shadow: inset 0 1px 1px rgba(0,0,0,0.5);
+    transition: background 0.1s, box-shadow 0.1s;
+  }
+  
+  .key-capslock.pressed .caps-led {
+    background: #34C759;
+    box-shadow: 0 0 6px #34C759, inset 0 1px 2px rgba(255,255,255,0.8);
+  }
+
+  .key-letter {
+    width: 48px;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+
+  .kbd-plus {
+    color: #9CA3AF;
+    font-weight: 500;
+    font-size: 18px;
+    padding: 0 4px;
+  }
+
+  /* --- DARK MODE OVERRIDES --- */
+  @media (prefers-color-scheme: dark) {
+    .macos-window {
+      background: #0F172A;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #FFFFFF;
+    }
+    .macos-header {
+      background: rgba(30,41,59,0.5);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .tl-red { border: none; }
+    .tl-yellow { border: none; }
+    .tl-green { border: none; }
+    .tab-bar {
+      background: #192134;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    .tab { color: #94A3B8; }
+    .tab.active {
+      background: rgba(255,255,255,0.1);
+      color: #FFFFFF;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    .content-area { background: #0F172A; }
+    
+    .interactive-keys-tutorial {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: inset 0 2px 6px rgba(0,0,0,0.2);
+    }
+    .kbd-plus { color: #6B7280; }
+  }
+
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
+<div class="macos-window">
+  <div class="macos-header">
+    <div class="traffic-lights">
+      <div class="tl-red"></div><div class="tl-yellow"></div><div class="tl-green"></div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab">General</div>
+      <div class="tab">Shortcuts</div>
+      <div class="tab active">Chrome Profiles</div>
+      <div class="tab">Advanced</div>
+    </div>
+  </div>
+
+  <div class="content-area">
+    
+    <!-- HUD Style Profile Tiles (Horizontal) -->
+    <div class="profile-list" id="sortable-list">
+      <!-- Cards rendered via JS -->
+    </div>
+
+    <!-- MacBook Pro Styled Interactive Keys (Below) -->
+    <div class="interactive-keys-tutorial" id="kbd-container">
+      <div class="mac-key key-capslock prompt" id="key-caps" onmousedown="pressKey('caps')" onmouseup="releaseKey('caps')" onmouseleave="releaseKey('caps')">
+        <div class="caps-led"></div>
+        caps lock
+      </div>
+      <div class="kbd-plus">+</div>
+      <div class="mac-key key-letter" id="key-c" onmousedown="pressKey('c')" onmouseup="releaseKey('c')" onmouseleave="releaseKey('c')">C</div>
+      <div class="kbd-plus">+</div>
+      <div class="mac-key key-letter" id="key-num" onmousedown="pressKey('num')" onmouseup="releaseKey('num')" onmouseleave="releaseKey('num')">1</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // --- KEYBOARD INTERACTION LOGIC ---
+  const keyCaps = document.getElementById('key-caps');
+  const keyC = document.getElementById('key-c');
+  const keyNum = document.getElementById('key-num');
+  
+  let currentStage = 0;
+
+  function updatePrompts() {
+    keyCaps.classList.remove('prompt');
+    keyC.classList.remove('prompt');
+    keyNum.classList.remove('prompt');
+    
+    if (currentStage === 0) keyCaps.classList.add('prompt');
+    if (currentStage === 1) keyC.classList.add('prompt');
+    if (currentStage === 2) keyNum.classList.add('prompt');
+  }
+
+  function pressKey(id) {
+    if (id === 'caps') {
+      keyCaps.classList.add('pressed');
+      if(currentStage === 0) currentStage = 1;
+    }
+    if (id === 'c') {
+      keyC.classList.add('pressed');
+      if(currentStage === 1) currentStage = 2;
+    }
+    if (id === 'num') {
+      keyNum.classList.add('pressed');
+      if(currentStage === 2) currentStage = 3;
+    }
+    updatePrompts();
+  }
+
+  function releaseKey(id) {
+    if (id === 'caps') keyCaps.classList.remove('pressed');
+    if (id === 'c') keyC.classList.remove('pressed');
+    if (id === 'num') keyNum.classList.remove('pressed');
+    
+    if(!keyCaps.classList.contains('pressed') && !keyC.classList.contains('pressed') && !keyNum.classList.contains('pressed')) {
+      setTimeout(() => {
+        if(!keyCaps.classList.contains('pressed')) {
+          currentStage = 0;
+          keyNum.innerText = '1';
+          updatePrompts();
+        }
+      }, 1000);
+    }
+  }
+
+  // --- PROFILE LIST LOGIC (HUD STYLE) ---
+  const profiles = [
+    { id: 'p1', name: 'Igor', avatarClass: 'default', initial: 'I' },
+    { id: 'p2', name: 'Igor (Al11)', avatarClass: 'al11', initial: 'A' },
+    { id: 'p3', name: 'Igor (GCP Free Trial)', avatarClass: 'gcp', initial: 'G' },
+    { id: 'p4', name: 'Nastya', avatarClass: 'nastya', initial: 'N' }
+  ];
+
+  const listEl = document.getElementById('sortable-list');
+
+  function renderList() {
+    listEl.innerHTML = '';
+    profiles.forEach((p, index) => {
+      const card = document.createElement('div');
+      card.className = 'hud-tile';
+      card.onclick = () => {
+        card.classList.add('testing');
+        setTimeout(() => {
+          card.classList.remove('testing');
+        }, 500);
+      };
+      card.innerHTML = `
+        <div class="avatar-container">
+          <div class="avatar ${p.avatarClass}">${p.initial}</div>
+          <div class="chrome-badge"></div>
+          <div class="index-badge">${index + 1}</div>
+        </div>
+        <div class="hud-name">${p.name}</div>
+      `;
+      listEl.appendChild(card);
+    });
+  }
+
+  function updateNumbers() {
+    const cards = listEl.querySelectorAll('.hud-tile');
+    cards.forEach((card, i) => {
+      card.querySelector('.index-badge').innerText = i + 1;
+    });
+  }
+
+  renderList();
+
+  new Sortable(listEl, {
+    animation: 250,
+    easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+    ghostClass: 'sortable-ghost',
+    dragClass: 'sortable-drag',
+    direction: 'horizontal',
+    onEnd: function (evt) {
+      updateNumbers();
+    }
+  });
+
+  // Listen to actual keyboard for immersive testing
+  document.addEventListener('keydown', (e) => {
+    if (e.getModifierState('CapsLock') || e.key === 'CapsLock' || e.metaKey || e.ctrlKey || e.altKey) {
+      keyCaps.classList.add('pressed');
+      if (currentStage === 0) { currentStage = 1; updatePrompts(); }
+    }
+    if (e.key.toLowerCase() === 'c') {
+      keyC.classList.add('pressed');
+      if (currentStage === 1) { currentStage = 2; updatePrompts(); }
+    }
+    if (parseInt(e.key) >= 1 && parseInt(e.key) <= 9) {
+      keyNum.classList.add('pressed');
+      keyNum.innerText = e.key;
+      if (currentStage === 2) { currentStage = 3; updatePrompts(); }
+      
+      const idx = parseInt(e.key) - 1;
+      const cards = listEl.querySelectorAll('.hud-tile');
+      if(cards[idx]) {
+        cards[idx].classList.add('testing');
+        setTimeout(() => { cards[idx].classList.remove('testing'); }, 500);
+      }
+    }
+  });
+
+  document.addEventListener('keyup', (e) => {
+    if (e.key === 'CapsLock' || (!e.metaKey && !e.ctrlKey && !e.altKey)) {
+      keyCaps.classList.remove('pressed');
+    }
+    if (e.key.toLowerCase() === 'c') {
+      keyC.classList.remove('pressed');
+    }
+    if (parseInt(e.key) >= 1 && parseInt(e.key) <= 9) {
+      keyNum.classList.remove('pressed');
+    }
+    
+    if(!keyCaps.classList.contains('pressed') && !keyC.classList.contains('pressed') && !keyNum.classList.contains('pressed')) {
+      setTimeout(() => {
+        if(!keyCaps.classList.contains('pressed')) {
+          currentStage = 0;
+          keyNum.innerText = '1';
+          updatePrompts();
+        }
+      }, 1000);
+    }
+  });
+
+</script>

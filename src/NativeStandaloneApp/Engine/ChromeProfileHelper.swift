@@ -69,6 +69,7 @@ public final class ChromeProfileHelper: ObservableObject {
     )
     
     @Published public var profiles: [DiscoveredChromeProfile] = []
+    @Published public var rawDiscoveredProfiles: [DiscoveredChromeProfile] = []
     @Published public var isChromeInstalled: Bool = false
     @Published public var browserBundleID: String = "com.google.Chrome"
     
@@ -185,6 +186,7 @@ public final class ChromeProfileHelper: ObservableObject {
             
             if !foundProfiles.isEmpty {
                 self.browserBundleID = discoveredBundleID
+                self.rawDiscoveredProfiles = foundProfiles
                 
                 // Sort profiles to match Chrome's native menu order
                 let runningMenuItems = getProfilesMenuItems(bundleID: discoveredBundleID)
@@ -203,6 +205,23 @@ public final class ChromeProfileHelper: ObservableObject {
                     foundProfiles.sort { p1, p2 in
                         p1.expectedMenuTitle.localizedStandardCompare(p2.expectedMenuTitle) == .orderedAscending
                     }
+                }
+                
+                // Apply custom user-configured profile order from AppConfig if present
+                let customOrder = AppConfigManager.shared.config.chromeProfileOrder
+                if !customOrder.isEmpty {
+                    var ordered: [DiscoveredChromeProfile] = []
+                    for dir in customOrder {
+                        if let match = foundProfiles.first(where: { $0.dir == dir }) {
+                            ordered.append(match)
+                        }
+                    }
+                    for p in foundProfiles {
+                        if !ordered.contains(where: { $0.dir == p.dir }) {
+                            ordered.append(p)
+                        }
+                    }
+                    foundProfiles = ordered
                 }
                 
                 // Limit to top 8 profiles and assign 1-based sequential indices
@@ -515,6 +534,13 @@ public final class ChromeProfileHelper: ObservableObject {
         return nil
     }
     
+    public func sortedProfilesByMenuAppearance() -> [DiscoveredChromeProfile] {
+        let list = rawDiscoveredProfiles.isEmpty ? profiles : rawDiscoveredProfiles
+        return list.sorted { p1, p2 in
+            p1.expectedMenuTitle.localizedStandardCompare(p2.expectedMenuTitle) == .orderedAscending
+        }
+    }
+    
     public func focusProfile(index: Int) {
         if let p = profiles.first(where: { $0.index == index }) {
             focusProfile(dir: p.dir)
@@ -528,10 +554,23 @@ public final class ChromeProfileHelper: ObservableObject {
     public func focusProfile(dir: String) {
         let bundleID = self.browserBundleID
         
-        if let profile = profiles.first(where: { $0.dir == dir }) {
+        if let profile = profiles.first(where: { $0.dir == dir }) ?? rawDiscoveredProfiles.first(where: { $0.dir == dir }) {
             let menuItems = getProfilesMenuItems(bundleID: bundleID)
             if !menuItems.isEmpty {
-                if let targetItem = findMenuItem(for: profile, in: menuItems) {
+                // Tier 1: Target by visual index in sorted menu appearance
+                let menuProfiles = sortedProfilesByMenuAppearance()
+                var targetItem: AXUIElement?
+                if let visualIdx = menuProfiles.firstIndex(where: { $0.dir == dir }),
+                   menuItems.indices.contains(visualIdx) {
+                    targetItem = menuItems[visualIdx]
+                }
+                
+                // Tier 2: Fallback to attribute match if index out of range or not found
+                if targetItem == nil {
+                    targetItem = findMenuItem(for: profile, in: menuItems)
+                }
+                
+                if let targetItem = targetItem {
                     var titleRef: CFTypeRef?
                     AXUIElementCopyAttributeValue(targetItem, kAXTitleAttribute as CFString, &titleRef)
                     AppLogger.getLogger(category: .browser).info("focusProfile(dir: \(dir)): Selecting matched menu item '\(titleRef as? String ?? "", privacy: .public)' for profile '\(profile.name, privacy: .public)'")
@@ -637,22 +676,9 @@ public final class ChromeProfileHelper: ObservableObject {
     }
     
     public func detectActiveProfileIndex(bundleID: String) -> Int? {
-        let menuItems = getProfilesMenuItems(bundleID: bundleID)
-        guard !menuItems.isEmpty else { return nil }
-        
-        for (idx, mi) in menuItems.enumerated() {
-            var markRef: CFTypeRef?
-            AXUIElementCopyAttributeValue(mi, "AXMenuItemMarkChar" as CFString, &markRef)
-            if let m = markRef as? String, !m.isEmpty {
-                var titleRef: CFTypeRef?
-                AXUIElementCopyAttributeValue(mi, kAXTitleAttribute as CFString, &titleRef)
-                let title = titleRef as? String ?? ""
-                
-                if let matched = profileMatchingMenuItemTitle(title, among: profiles) {
-                    return matched.index
-                }
-                
-                return idx + 1 // 1-based index fallback
+        if let dir = detectActiveProfileDir(bundleID: bundleID) {
+            if let p = profiles.first(where: { $0.dir == dir }) {
+                return p.index
             }
         }
         return nil
@@ -701,10 +727,15 @@ public final class ChromeProfileHelper: ObservableObject {
         let menuItems = getProfilesMenuItems(bundleID: bundleID)
         guard !menuItems.isEmpty else { return nil }
         
+        let menuProfiles = sortedProfilesByMenuAppearance()
         for (idx, mi) in menuItems.enumerated() {
             var markRef: CFTypeRef?
             AXUIElementCopyAttributeValue(mi, "AXMenuItemMarkChar" as CFString, &markRef)
             if let m = markRef as? String, !m.isEmpty {
+                if menuProfiles.indices.contains(idx) {
+                    return menuProfiles[idx].dir
+                }
+                
                 var titleRef: CFTypeRef?
                 AXUIElementCopyAttributeValue(mi, kAXTitleAttribute as CFString, &titleRef)
                 let title = titleRef as? String ?? ""

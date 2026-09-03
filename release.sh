@@ -66,12 +66,12 @@ new_item = f'''    <item>
       <sparkle:shortVersionString>{version}</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <description><![CDATA[<ul>
-        <li><strong>Comprehensive Profile Switching Resilience (11 Edge Cases)</strong>: Hardened Chromium profile selection against duplicate account display names, identical GAIA given names, decomposed Unicode accents, and whitespace padding via canonical Unicode normalization and email-disambiguated title matching.</li>
+        <li><strong>Deterministic Chrome Profile Focus</strong>: Replaced window title substring matching with exact menu bar position index selection via <code>kAXMenuBarAttribute</code>, ensuring 100% deterministic switching without false-positive window matching across identical names.</li>
+        <li><strong>Native Drag-and-Drop Chrome Profiles Tab</strong>: Dedicated SwiftUI configuration tab featuring floating HUD-style tiles with smooth horizontal drag-and-drop reordering.</li>
+        <li><strong>Interactive MacBook Pro Physical Keys</strong>: Photorealistic keyboard simulation with working Caps Lock green LED indicator and live keyboard event feedback for testing profile hotkeys.</li>
+        <li><strong>Persistent Custom Profile Order</strong>: Custom drag-and-drop order is persistently saved in <code>AppConfig</code> and automatically mapped to <code>Hyper + C + [1..9]</code> hotkeys.</li>
         <li><strong>Minimized Window Recovery</strong>: Automatically detects and un-minimizes profile windows from the macOS Dock upon selection via Accessibility window queries.</li>
-        <li><strong>Defensive Parsing & Deleted Profile Fallback</strong>: Resilient to malformed Local State JSON and deleted profiles, falling back smoothly to CLI cold-starts without hanging or crashing.</li>
-        <li><strong>Direct Quick-Tap Hotkey Launch</strong>: Fixed single-tap Hyper + [1..9] activation when the Hyper key is released quickly.</li>
-        <li><strong>Fixed HUD Profile Numbering</strong>: Explicit Chrome profiles in custom bindings are assigned strictly sequential visual indices (1, 2, 3...) matching card order.</li>
-        <li><strong>Pure Native Driverless Engine</strong>: 100% native Swift 6 engine with driverless Caps Lock Hyper Key mapping via hidutil and Carbon/CGEvent taps.</li>
+        <li><strong>Pure Native Driverless Engine</strong>: 100% native Swift 6 engine with driverless Caps Lock Hyper Key mapping via macOS <code>hidutil</code> and Carbon/CGEvent taps.</li>
         <li><strong>Sparkle Auto-Updates</strong>: Integrated Sparkle 2.x with EdDSA signature verification.</li>
       </ul>]]></description>
       <enclosure url="https://github.com/{repo}/releases/download/v{version}/MacProductivitySuite.dmg"
@@ -110,7 +110,7 @@ echo "✅ $APPCAST_FILE updated successfully."
 echo "[4/4] Publishing to GitHub..."
 if [ -z "${CI:-}" ]; then
     git add -A
-    git commit -m "release: v$VERSION with 11 Chromium profile edge cases and minimized window recovery" || true
+    git commit -m "release: v$VERSION with deterministic Chrome profile focus and native Drag & Drop HUD settings tab" || true
     git tag -a "v$VERSION" -m "Release v$VERSION" || true
     CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
     git push -u origin "$CURRENT_BRANCH" || echo "⚠️  Git push failed. Ensure you have push access to the repository."
@@ -121,13 +121,12 @@ if [ -z "${CI:-}" ]; then
 
     if command -v gh >/dev/null 2>&1; then
         gh release create "v$VERSION" "$DMG_FILE" "$PKG_FILE" --title "v$VERSION" --notes "### Release v$VERSION
-- **Comprehensive Profile Switching Resilience (11 Edge Cases)**: Hardened Chromium profile selection against duplicate account display names, identical GAIA given names, decomposed Unicode accents, and whitespace padding via canonical Unicode normalization and email-disambiguated title matching.
+- **Deterministic Chrome Profile Focus**: Replaced window title substring matching with exact menu bar position index selection via \`kAXMenuBarAttribute\`, ensuring 100% deterministic switching without false-positive window matching across identical names.
+- **Native Drag-and-Drop Chrome Profiles Tab**: Dedicated SwiftUI configuration tab featuring floating HUD-style tiles with smooth horizontal drag-and-drop reordering.
+- **Interactive MacBook Pro Physical Keys**: Photorealistic keyboard simulation with working Caps Lock green LED indicator and live keyboard event feedback for testing profile hotkeys.
+- **Persistent Custom Profile Order**: Custom drag-and-drop order is persistently saved in \`AppConfig\` and automatically mapped to \`Hyper + C + [1..9]\` hotkeys.
 - **Minimized Window Recovery**: Automatically detects and un-minimizes profile windows from the macOS Dock upon selection via Accessibility window queries.
-- **Defensive Parsing & Deleted Profile Fallback**: Resilient to malformed Local State JSON and deleted profiles, falling back smoothly to CLI cold-starts without hanging or crashing.
-- **Direct Quick-Tap Hotkey Launch**: Fixed single-tap Hyper + [1..9] activation when the Hyper key is released quickly.
-- **Fixed HUD Profile Numbering**: Explicit Chrome profiles in custom bindings are assigned strictly sequential visual indices (1, 2, 3...) matching card order.
 - **Pure Native Driverless Engine**: 100% native Swift 6 engine with driverless Caps Lock Hyper Key mapping via macOS \`hidutil\` and Carbon/CGEvent taps.
-- **Instant HUD Overlay Dismissal**: Re-engineered dismissal lifecycle so the floating HUD vanishes the exact millisecond keys are released.
 - **Sparkle Auto-Updates**: Integrated Sparkle 2.x with EdDSA signature verification and offline PKG bundle packaging." || echo "Release v$VERSION might already exist."
     else
         echo "⚠️  GitHub CLI (gh) not installed. Skip creating GitHub Release."

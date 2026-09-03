@@ -5,7 +5,27 @@
     <link>https://raw.githubusercontent.com/unacau/mac-productivity-suite/main/appcast.xml</link>
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
-                                                                            <item>
+                                                                                <item>
+      <title>Version 2.5.0 (Build 31)</title>
+      <pubDate>Thu, 03 Sep 2026 21:05:30 +0200</pubDate>
+      <sparkle:version>31</sparkle:version>
+      <sparkle:shortVersionString>2.5.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<ul>
+        <li><strong>Deterministic Chrome Profile Focus</strong>: Replaced window title substring matching with exact menu bar position index selection via <code>kAXMenuBarAttribute</code>, ensuring 100% deterministic switching without false-positive window matching across identical names.</li>
+        <li><strong>Native Drag-and-Drop Chrome Profiles Tab</strong>: Dedicated SwiftUI configuration tab featuring floating HUD-style tiles with smooth horizontal drag-and-drop reordering.</li>
+        <li><strong>Interactive MacBook Pro Physical Keys</strong>: Photorealistic keyboard simulation with working Caps Lock green LED indicator and live keyboard event feedback for testing profile hotkeys.</li>
+        <li><strong>Persistent Custom Profile Order</strong>: Custom drag-and-drop order is persistently saved in <code>AppConfig</code> and automatically mapped to <code>Hyper + C + [1..9]</code> hotkeys.</li>
+        <li><strong>Minimized Window Recovery</strong>: Automatically detects and un-minimizes profile windows from the macOS Dock upon selection via Accessibility window queries.</li>
+        <li><strong>Pure Native Driverless Engine</strong>: 100% native Swift 6 engine with driverless Caps Lock Hyper Key mapping via macOS <code>hidutil</code> and Carbon/CGEvent taps.</li>
+        <li><strong>Sparkle Auto-Updates</strong>: Integrated Sparkle 2.x with EdDSA signature verification.</li>
+      </ul>]]></description>
+      <enclosure url="https://github.com/unacau/mac-productivity-suite/releases/download/v2.5.0/MacProductivitySuite.dmg"
+                 type="application/octet-stream"
+                 sparkle:edSignature="uh7jzERPnxYQTQa9rinB5mnXyMvvqmwJob/w4fz1Gv6LwM9pWFVgFz8vMhy0QX/quDguCVJLUUGErIWViU95AQ=="
+                 length="2289601" />
+    </item>
+    <item>
       <title>Version 2.4.25 (Build 30)</title>
       <pubDate>Thu, 03 Sep 2026 15:18:49 +0200</pubDate>
       <sparkle:version>30</sparkle:version>
