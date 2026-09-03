@@ -5,7 +5,26 @@
     <link>https://raw.githubusercontent.com/unacau/mac-productivity-suite/main/appcast.xml</link>
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
-                                                                    <item>
+                                                                        <item>
+      <title>Version 2.4.24 (Build 29)</title>
+      <pubDate>Thu, 03 Sep 2026 14:50:57 +0200</pubDate>
+      <sparkle:version>29</sparkle:version>
+      <sparkle:shortVersionString>2.4.24</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<ul>
+        <li><strong>Fixed HUD Profile Numbering</strong>: Explicit Chrome profiles in custom bindings are now assigned strictly sequential visual indices (1, 2, 3...) matching card order, eliminating out-of-order badges (e.g. 2, 1, 3).</li>
+        <li><strong>Stable Global Profile Hotkeys</strong>: Hyper + [1..9] shortcuts now respect user-defined profile order from config bindings rather than shifting when Chrome re-sorts profiles alphabetically after renaming.</li>
+        <li><strong>Accurate Chromium Profile Selection & Focus</strong>: Resolved an issue where selecting a browser profile in the HUD opened/focused the wrong profile window due to menu ordering differences. Implemented GAIA title disambiguation and precise native menu title matching.</li>
+        <li><strong>Pure Native Driverless Engine</strong>: 100% native Swift 6 engine with driverless Caps Lock Hyper Key mapping via hidutil and Carbon/CGEvent taps.</li>
+        <li><strong>Instant HUD Overlay Dismissal</strong>: Re-engineered dismissal lifecycle so the floating HUD vanishes the exact millisecond keys are released.</li>
+        <li><strong>Sparkle Auto-Updates</strong>: Integrated Sparkle 2.x with EdDSA signature verification.</li>
+      </ul>]]></description>
+      <enclosure url="https://github.com/unacau/mac-productivity-suite/releases/download/v2.4.24/MacProductivitySuite.dmg"
+                 type="application/octet-stream"
+                 sparkle:edSignature="nra4NsIolxChnqa6GN/xSfzhOLF1WkUhc3F+Mc9oal3O5burcbYalbL8MMp8Dv1bNsE1NXaq9X2z5y7Kk+iwAQ=="
+                 length="2125489" />
+    </item>
+    <item>
       <title>Version 2.4.23 (Build 28)</title>
       <pubDate>Thu, 03 Sep 2026 14:30:43 +0200</pubDate>
       <sparkle:version>28</sparkle:version>

@@ -66,8 +66,9 @@ new_item = f'''    <item>
       <sparkle:shortVersionString>{version}</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <description><![CDATA[<ul>
+        <li><strong>Fixed HUD Profile Numbering</strong>: Explicit Chrome profiles in custom bindings are now assigned strictly sequential visual indices (1, 2, 3...) matching card order, eliminating out-of-order badges (e.g. 2, 1, 3).</li>
+        <li><strong>Stable Global Profile Hotkeys</strong>: Hyper + [1..9] shortcuts now respect user-defined profile order from config bindings rather than shifting when Chrome re-sorts profiles alphabetically after renaming.</li>
         <li><strong>Accurate Chromium Profile Selection & Focus</strong>: Resolved an issue where selecting a browser profile in the HUD opened/focused the wrong profile window due to menu ordering differences. Implemented GAIA title disambiguation and precise native menu title matching.</li>
-        <li><strong>Synchronized Active Profile Tracking</strong>: Checkmark (✓) active profile tracking now accurately identifies the focused window across all profiles, eliminating HUD desynchronization.</li>
         <li><strong>Pure Native Driverless Engine</strong>: 100% native Swift 6 engine with driverless Caps Lock Hyper Key mapping via hidutil and Carbon/CGEvent taps.</li>
         <li><strong>Instant HUD Overlay Dismissal</strong>: Re-engineered dismissal lifecycle so the floating HUD vanishes the exact millisecond keys are released.</li>
         <li><strong>Sparkle Auto-Updates</strong>: Integrated Sparkle 2.x with EdDSA signature verification.</li>
@@ -108,7 +109,7 @@ echo "✅ $APPCAST_FILE updated successfully."
 echo "[4/4] Publishing to GitHub..."
 if [ -z "${CI:-}" ]; then
     git add -A
-    git commit -m "release: v$VERSION with accurate Chromium profile selection and focus synchronization" || true
+    git commit -m "release: v$VERSION with sequential HUD profile badges and stable global hotkeys" || true
     git tag -a "v$VERSION" -m "Release v$VERSION" || true
     CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
     git push -u origin "$CURRENT_BRANCH" || echo "⚠️  Git push failed. Ensure you have push access to the repository."
@@ -119,11 +120,11 @@ if [ -z "${CI:-}" ]; then
 
     if command -v gh >/dev/null 2>&1; then
         gh release create "v$VERSION" "$DMG_FILE" "$PKG_FILE" --title "v$VERSION" --notes "### Release v$VERSION
+- **Fixed HUD Profile Numbering**: Explicit Chrome profiles in custom bindings are now assigned strictly sequential visual indices (1, 2, 3...) matching card order, eliminating out-of-order badges (e.g. 2, 1, 3).
+- **Stable Global Profile Hotkeys**: Hyper + [1..9] shortcuts now respect user-defined profile order from config bindings rather than shifting when Chrome re-sorts profiles alphabetically after renaming.
 - **Accurate Chromium Profile Selection & Focus**: Resolved an issue where selecting a browser profile in the HUD opened/focused the wrong profile window due to menu ordering differences. Implemented GAIA title disambiguation and precise native menu title matching.
-- **Synchronized Active Profile Tracking**: Checkmark (\`✓\`) active profile tracking now accurately identifies the focused window across all profiles, eliminating HUD desynchronization.
 - **Pure Native Driverless Engine**: 100% native Swift 6 engine with driverless Caps Lock Hyper Key mapping via macOS \`hidutil\` and Carbon/CGEvent taps.
 - **Instant HUD Overlay Dismissal**: Re-engineered dismissal lifecycle so the floating HUD vanishes the exact millisecond keys are released.
-- **Non-Blocking App Cold Starts**: Delegated browser launches to \`/usr/bin/open\` to eliminate main-thread hangs on cold start.
 - **Sparkle Auto-Updates**: Integrated Sparkle 2.x with EdDSA signature verification and offline PKG bundle packaging." || echo "Release v$VERSION might already exist."
     else
         echo "⚠️  GitHub CLI (gh) not installed. Skip creating GitHub Release."
