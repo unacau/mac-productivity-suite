@@ -77,12 +77,14 @@
 6. **Sparkle Auto-Updates Delivery Boundary**:
    - The `.pkg` installs core applications once. `appcast.xml` and Sparkle exclusively update `Mac Productivity Suite Native.app` via DMG encapsulation. **Never** attempt to deliver the `.pkg` payload via Sparkle.
    - **Code Signing & Sparkle Requirements**: Because the app is ad-hoc signed (`-`), the default `cdhash` Designated Requirement will change on every build, causing Sparkle updates to fail. Always sign the main application with a stable DR (`-r="designated => identifier \"com.unacau.macproductivitysuite\""`). Furthermore, NEVER use `--deep` when code signing, as it overwrites and corrupts the internal Sparkle framework's pre-existing XPC service signatures.
-7. **Security & Secrets**:
-   - Never commit user configuration tokens, private browser profile paths, or the raw Sparkle EdDSA private key (`sparkle_private.key`).
-8. **Dependencies & Frameworks**:
-   - Do not introduce external C++/Objective-C dependencies for core productivity features—leverage native Apple frameworks (`ApplicationServices`, `Carbon`, `AppKit`, `SwiftUI`).
-9. **Installer Payloads**:
+8. **Chromium Profile Automation Guardrail**:
+   - **Never match Chromium windows by profile name or title substrings.** Users frequently have multiple profiles with identical display names (e.g. personal and work signed in under the same first name "Igor").
+   - **Always automate via native macOS menu bar (`kAXMenuBarAttribute`)**: Target the browser's "Profiles" menu bar item (`getProfilesMenuItems`), select items strictly by position/index, and detect the currently active profile using `AXMenuItemMarkChar == "✓"`. This prevents duplicate windows, extra new tabs, and avoids all Automation permission prompts.
+9. **HUD Overlay Lifecycle & Dismissal Order**:
+   - In window switchers and HUD managers, **always hide the HUD overlay window (`HUDOverlayWindow.shared.hide()`) BEFORE triggering application activation or window focus (`launchOrFocusTarget`)**. External window launches cause macOS window server transitions that can swallow keyboard `flagsChanged` events and block the run loop, trapping the HUD on screen if hidden after the launch.
+10. **Installer Payloads & Security**:
    - Do not modify payloads in `payload_cache/` directly. Always rely on build scripts (`build_native_app.sh`, `build_full_pkg.sh`) to assemble payloads.
+   - Never commit user configuration tokens, private browser profile paths, or the raw Sparkle EdDSA private key (`sparkle_private.key`).
 
 ## Task-Specific Context Matrix
 - **Native App Logic**: Load `src/NativeStandaloneApp/`, consult `tests/SwiftUnitTests.swift` and `tests/IntegrationTests/`, and test with `./tests/run_tests.sh`.
