@@ -5,7 +5,25 @@
     <link>https://raw.githubusercontent.com/unacau/mac-productivity-suite/main/appcast.xml</link>
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
-                                                            <item>
+                                                                <item>
+      <title>Version 2.4.22 (Build 27)</title>
+      <pubDate>Thu, 03 Sep 2026 08:40:42 +0200</pubDate>
+      <sparkle:version>27</sparkle:version>
+      <sparkle:shortVersionString>2.4.22</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<ul>
+        <li><strong>Pure Native Driverless Engine</strong>: Migrated to a 100% native Swift 6 engine with driverless Caps Lock Hyper Key mapping via hidutil and Carbon/CGEvent taps.</li>
+        <li><strong>Index-Based Chromium Profile Switching</strong>: Automates Chrome's native macOS "Profiles" menu bar item by position, cleanly supporting identical profile names (e.g. multiple "Igor" accounts), checkmark (✓) active tracking, with zero tab bloat and zero Automation permission prompts.</li>
+        <li><strong>Instant HUD Overlay Dismissal</strong>: Re-engineered dismissal lifecycle so the floating HUD vanishes the exact millisecond keys are released.</li>
+        <li><strong>Non-Blocking App Cold Starts</strong>: Delegated browser launches to <code>open</code> to eliminate main-thread hangs on cold start.</li>
+        <li><strong>Sparkle Auto-Updates</strong>: Integrated Sparkle 2.x with EdDSA signature verification.</li>
+      </ul>]]></description>
+      <enclosure url="https://github.com/unacau/mac-productivity-suite/releases/download/v2.4.22/MacProductivitySuite.dmg"
+                 type="application/octet-stream"
+                 sparkle:edSignature="4sZFPtGQaAlOPh/qZQLGTr+zQPPTZYlQu/T7ZiBnYokQR91O6XAWv2QrD03/HwekMYhdF+7rhEBrJj0DVJHPDA=="
+                 length="2097667" />
+    </item>
+    <item>
       <title>Version 2.4.9 (Build 14)</title>
       <pubDate>Wed, 02 Sep 2026 16:49:26 +0200</pubDate>
       <sparkle:version>14</sparkle:version>
