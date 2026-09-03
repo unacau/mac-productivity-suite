@@ -327,17 +327,17 @@ public final class ChromeProfileHelper: ObservableObject {
     public func focusProfile(dir: String) {
         let bundleID = self.browserBundleID
         
-        // Priority 1: If an open window for this profile exists, raise it directly without spawning new windows!
+        // Priority 1: If browser is running, select profile via native Profiles menu bar
         if let profile = profiles.first(where: { $0.dir == dir }) {
-            if focusProfileWindowViaAccessibility(bundleID: bundleID, profile: profile) {
-                AppLogger.getLogger(category: .browser).info("Raised existing window for profile '\(profile.name)'.")
+            if selectProfileViaMenuBar(bundleID: bundleID, profile: profile) {
+                AppLogger.getLogger(category: .browser).info("Selected profile '\(profile.name, privacy: .public)' via browser Profiles menu.")
                 return
             }
         }
         
-        // Priority 2: Fallback / Open new window for target profile if none is currently open
+        // Priority 2: Fallback / Open new window for target profile if browser is not running or menu item not found
         if let execPath = resolveBrowserExecutablePath(bundleID: bundleID) {
-            AppLogger.getLogger(category: .browser).info("Opening profile '\(dir)' via binary invocation.")
+            AppLogger.getLogger(category: .browser).info("Opening profile '\(dir, privacy: .public)' via binary invocation.")
             try? process.runCommand(launchPath: execPath, arguments: ["--profile-directory=\(dir)"])
             return
         }
@@ -346,66 +346,95 @@ public final class ChromeProfileHelper: ObservableObject {
     }
     
     @discardableResult
-    private func focusProfileWindowViaAccessibility(bundleID: String, profile: DiscoveredChromeProfile) -> Bool {
+    public func selectProfileViaMenuBar(bundleID: String, profile: DiscoveredChromeProfile) -> Bool {
         let runningApps = NSWorkspace.shared.runningApplications
         guard let chrome = runningApps.first(where: { $0.bundleIdentifier == bundleID }) else {
-            AppLogger.getLogger(category: .browser).error("focusProfile: Browser with bundleID \(bundleID) is not running.")
             return false
         }
         
         let appRef = AXUIElementCreateApplication(chrome.processIdentifier)
-        var windowsRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(appRef, kAXWindowsAttribute as CFString, &windowsRef) == .success,
-              let windows = windowsRef as? [AXUIElement] else {
-            AppLogger.getLogger(category: .browser).error("focusProfile: Failed to copy kAXWindowsAttribute (Accessibility permissions missing?)")
+        var menuBarRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(appRef, kAXMenuBarAttribute as CFString, &menuBarRef) == .success,
+              let menuBar = menuBarRef else {
             return false
         }
         
-        let pName = profile.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let pEmail = profile.email?.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        AppLogger.getLogger(category: .browser).info("focusProfile: Searching \(windows.count) windows for profile Name='\(pName)', Dir='\(profile.dir)', Email='\(pEmail ?? "nil")'")
-        
-        for win in windows {
-            var titleRef: CFTypeRef?
-            AXUIElementCopyAttributeValue(win, kAXTitleAttribute as CFString, &titleRef)
-            guard let rawTitle = titleRef as? String, !rawTitle.isEmpty else { continue }
-            
-            let matchesName = (!pName.isEmpty && (rawTitle.hasSuffix("- \(pName)") || rawTitle.contains(" - \(pName)")))
-            let matchesEmail = (pEmail != nil && !pEmail!.isEmpty && rawTitle.contains(pEmail!))
-            let matchesDir = (!profile.dir.isEmpty && (rawTitle.hasSuffix("- \(profile.dir)") || rawTitle.contains(" - \(profile.dir)")))
-            
-            if matchesName || matchesEmail || matchesDir {
-                AppLogger.getLogger(category: .browser).info("focusProfile: Match found! Preparing to raise and activate without AppleScript.")
-                
-                // 1. Un-minimize if necessary
-                var isMinimized: CFTypeRef?
-                if AXUIElementCopyAttributeValue(win, kAXMinimizedAttribute as CFString, &isMinimized) == .success,
-                   let min = isMinimized as? Bool, min {
-                    AXUIElementSetAttributeValue(win, kAXMinimizedAttribute as CFString, false as CFTypeRef)
-                }
-                
-                // 2. Make it the main window of the application
-                AXUIElementSetAttributeValue(win, kAXMainAttribute as CFString, true as CFTypeRef)
-                
-                // 3. Raise the specific window to the top of the app's window stack
-                let res = AXUIElementPerformAction(win, kAXRaiseAction as CFString)
-                AppLogger.getLogger(category: .browser).info("focusProfile: kAXRaiseAction result: \(res.rawValue)")
-                
-                // 4. Force the application to the foreground using the `/usr/bin/open` system command.
-                // This bypasses macOS 14 focus stealing prevention WITHOUT triggering "System Events" automation permission prompts!
-                let task = Process()
-                task.launchPath = "/usr/bin/open"
-                task.arguments = ["-b", bundleID]
-                try? task.run()
-                task.waitUntilExit()
-                
-                return true
-            }
+        var childrenRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(menuBar as! AXUIElement, kAXChildrenAttribute as CFString, &childrenRef) == .success,
+              let menuBarItems = childrenRef as? [AXUIElement] else {
+            return false
         }
         
-        AppLogger.getLogger(category: .browser).info("focusProfile: No matching window found for profile '\(pName)'. Falling back to binary invocation.")
+        let pNameLower = profile.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let pEmailLower = profile.email?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let dirLower = profile.dir.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        
+        for mbItem in menuBarItems {
+            var subMenuRef: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(mbItem, kAXChildrenAttribute as CFString, &subMenuRef) == .success,
+                  let subMenus = subMenuRef as? [AXUIElement], let subMenu = subMenus.first else { continue }
+            
+            var itemsRef: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(subMenu, kAXChildrenAttribute as CFString, &itemsRef) == .success,
+              let menuItems = itemsRef as? [AXUIElement] else { continue }
+            
+            for item in menuItems {
+                var titleRef: CFTypeRef?
+                AXUIElementCopyAttributeValue(item, kAXTitleAttribute as CFString, &titleRef)
+                guard let title = titleRef as? String, !title.isEmpty else { continue }
+                let titleLower = title.lowercased()
+                
+                let matches = titleLower == pNameLower ||
+                              titleLower.hasSuffix("(\(pNameLower))") ||
+                              titleLower.contains("(\(pNameLower))") ||
+                              (pEmailLower != nil && !pEmailLower!.isEmpty && titleLower.contains(pEmailLower!)) ||
+                              (titleLower.contains("(\(dirLower))"))
+                
+                if matches {
+                    AppLogger.getLogger(category: .browser).info("selectProfileViaMenuBar: Found match '\(title, privacy: .public)' for profile '\(profile.name, privacy: .public)'")
+                    let res = AXUIElementPerformAction(item, kAXPressAction as CFString)
+                    if res == .success {
+                        chrome.activate()
+                        let task = Process()
+                        task.launchPath = "/usr/bin/open"
+                        task.arguments = ["-b", bundleID]
+                        try? task.run()
+                        task.waitUntilExit()
+                        return true
+                    }
+                }
+            }
+        }
         return false
+    }
+    
+    public func detectActiveProfileDir(bundleID: String) -> String? {
+        let runningApps = NSWorkspace.shared.runningApplications
+        guard let chrome = runningApps.first(where: { $0.bundleIdentifier == bundleID }) else { return nil }
+        
+        let appRef = AXUIElementCreateApplication(chrome.processIdentifier)
+        var winRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(appRef, kAXFocusedWindowAttribute as CFString, &winRef) == .success,
+              let win = winRef else {
+            return nil
+        }
+        
+        var titleRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(win as! AXUIElement, kAXTitleAttribute as CFString, &titleRef) == .success,
+              let title = titleRef as? String else {
+            return nil
+        }
+        
+        let parts = title.components(separatedBy: " - ")
+        guard let tag = parts.last?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() else { return nil }
+        
+        for p in profiles {
+            let pNameLower = p.name.lowercased()
+            if tag == pNameLower || tag.contains("(\(pNameLower))") || tag.hasSuffix("(\(pNameLower))") {
+                return p.dir
+            }
+        }
+        return nil
     }
     
     public func resolveBrowserExecutablePath(bundleID: String) -> String? {

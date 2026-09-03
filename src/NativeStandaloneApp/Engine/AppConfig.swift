@@ -23,10 +23,10 @@ public struct ChromeProfileConfig: Identifiable, Codable, Equatable {
 
 public struct AppConfig: Codable, Equatable {
     public static var currentAppVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "2.4.18"
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "2.4.19"
     }
     public static var currentBuildNumber: String {
-        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "23"
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "24"
     }
     
     public var version: String
