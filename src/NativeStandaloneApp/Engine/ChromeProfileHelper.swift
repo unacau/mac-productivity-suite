@@ -327,18 +327,62 @@ public final class ChromeProfileHelper: ObservableObject {
     public func focusProfile(dir: String) {
         let bundleID = self.browserBundleID
         
+        // Priority 1: If an open window for this profile exists, raise it directly without spawning new windows!
+        if let profile = profiles.first(where: { $0.dir == dir }) {
+            if focusProfileWindowViaAccessibility(bundleID: bundleID, profile: profile) {
+                AppLogger.getLogger(category: .browser).info("Raised existing window for profile '\(profile.name)'.")
+                return
+            }
+        }
+        
+        // Priority 2: Fallback / Open new window for target profile if none is currently open
         if let execPath = resolveBrowserExecutablePath(bundleID: bundleID) {
-            // Direct browser executable invocation:
-            // Chromium connects directly to the running instance via IPC/Mach port,
-            // natively focusing the existing window of that profile without spawning duplicates ("Opening in existing browser session.").
-            AppLogger.getLogger(category: .browser).info("Focusing profile '\(dir)' via direct binary invocation at \(execPath)")
+            AppLogger.getLogger(category: .browser).info("Opening profile '\(dir)' via binary invocation.")
             try? process.runCommand(launchPath: execPath, arguments: ["--profile-directory=\(dir)"])
             return
         }
         
-        // Fallback for mocked test suites or non-standard environments
-        AppLogger.getLogger(category: .browser).info("Fallback focusing profile '\(dir)' via /usr/bin/open")
         try? process.runCommand(launchPath: "/usr/bin/open", arguments: ["-b", bundleID, "--args", "--profile-directory=\(dir)"])
+    }
+    
+    @discardableResult
+    private func focusProfileWindowViaAccessibility(bundleID: String, profile: DiscoveredChromeProfile) -> Bool {
+        let runningApps = NSWorkspace.shared.runningApplications
+        guard let chrome = runningApps.first(where: { $0.bundleIdentifier == bundleID }) else {
+            return false
+        }
+        
+        let appRef = AXUIElementCreateApplication(chrome.processIdentifier)
+        var windowsRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(appRef, kAXWindowsAttribute as CFString, &windowsRef) == .success,
+              let windows = windowsRef as? [AXUIElement] else {
+            return false
+        }
+        
+        let pName = profile.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let pEmail = profile.email?.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        for win in windows {
+            var titleRef: CFTypeRef?
+            AXUIElementCopyAttributeValue(win, kAXTitleAttribute as CFString, &titleRef)
+            guard let rawTitle = titleRef as? String, !rawTitle.isEmpty else { continue }
+            
+            // Chrome window titles end with "- <Browser Name> - <Profile Name>"
+            // e.g. "New Tab - Google Chrome - Nastya" or "Docs - Google Chrome - Igor (Al11)"
+            let matchesName = (!pName.isEmpty && (rawTitle.hasSuffix("- \(pName)") || rawTitle.contains(" - \(pName)")))
+            let matchesEmail = (pEmail != nil && !pEmail!.isEmpty && rawTitle.contains(pEmail!))
+            let matchesDir = (!profile.dir.isEmpty && (rawTitle.hasSuffix("- \(profile.dir)") || rawTitle.contains(" - \(profile.dir)")))
+            
+            if matchesName || matchesEmail || matchesDir {
+                let res = AXUIElementPerformAction(win, kAXRaiseAction as CFString)
+                if res == .success {
+                    chrome.activate()
+                    return true
+                }
+            }
+        }
+        
+        return false
     }
     
     public func resolveBrowserExecutablePath(bundleID: String) -> String? {
