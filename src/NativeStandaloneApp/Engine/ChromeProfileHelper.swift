@@ -541,13 +541,8 @@ public final class ChromeProfileHelper: ObservableObject {
                         let runningApps = NSWorkspace.shared.runningApplications
                         if let chromeApp = runningApps.first(where: { $0.bundleIdentifier == bundleID }) {
                             chromeApp.activate()
-                            unminimizeWindowsIfNeeded(for: chromeApp.processIdentifier)
+                            unminimizeWindowsIfNeeded(for: chromeApp.processIdentifier, matching: profile.effectiveName)
                         }
-                        let task = Process()
-                        task.launchPath = "/usr/bin/open"
-                        task.arguments = ["-b", bundleID]
-                        try? task.run()
-                        task.waitUntilExit()
                         return
                     }
                 }
@@ -564,7 +559,7 @@ public final class ChromeProfileHelper: ObservableObject {
         launchBrowserColdStart(bundleID: bundleID, dir: dir)
     }
     
-    public func unminimizeWindowsIfNeeded(for pid: pid_t) {
+    public func unminimizeWindowsIfNeeded(for pid: pid_t, matching profileName: String? = nil) {
         let appRef = AXUIElementCreateApplication(pid)
         var windowsRef: CFTypeRef?
         guard AXUIElementCopyAttributeValue(appRef, kAXWindowsAttribute as CFString, &windowsRef) == .success,
@@ -574,9 +569,17 @@ public final class ChromeProfileHelper: ObservableObject {
             var isMinimizedRef: CFTypeRef?
             if AXUIElementCopyAttributeValue(win, kAXMinimizedAttribute as CFString, &isMinimizedRef) == .success,
                let isMin = isMinimizedRef as? Bool, isMin {
+                if let pName = profileName, !pName.isEmpty {
+                    var titleRef: CFTypeRef?
+                    AXUIElementCopyAttributeValue(win, kAXTitleAttribute as CFString, &titleRef)
+                    let title = titleRef as? String ?? ""
+                    if !title.localizedCaseInsensitiveContains(pName) {
+                        continue
+                    }
+                }
                 AXUIElementSetAttributeValue(win, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
+                AXUIElementPerformAction(win, kAXRaiseAction as CFString)
             }
-            AXUIElementPerformAction(win, kAXRaiseAction as CFString)
         }
     }
     
