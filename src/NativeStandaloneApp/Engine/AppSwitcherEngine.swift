@@ -200,9 +200,13 @@ public final class AppSwitcherEngine: ObservableObject {
             activeKey = String(profileIndex)
             currentItems = [item]
             selectedIndex = 0
-            launchOrFocusTarget(item.name)
-            showHUD()
-            resetDismissTimer()
+            
+            if isHyperModifierHeld {
+                showHUD()
+                resetDismissTimer()
+            } else {
+                commitAndHide()
+            }
         } else {
             chromeHelper.focusProfile(index: profileIndex)
         }
@@ -416,8 +420,8 @@ public final class AppSwitcherEngine: ObservableObject {
             dismissTimer = nil
             return
         }
-        // Fallback safety timeout if triggered without holding Hyper key
-        dismissTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: false) { [weak self] _ in
+        // Fallback safety timeout if triggered without holding Hyper key (quick tap)
+        dismissTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { [weak self] _ in
             guard let engine = self else { return }
             Task { @MainActor in
                 engine.commitAndHide()
@@ -430,17 +434,22 @@ public final class AppSwitcherEngine: ObservableObject {
         dismissTimer?.invalidate()
         dismissTimer = nil
         
-        if isVisible && !currentItems.isEmpty {
-            let selected = currentItems[selectedIndex]
-            if let key = activeKey {
-                lastActiveIndices[key] = selectedIndex
-            }
-            launchOrFocusTarget(selected.name)
-        }
+        let shouldLaunch = isVisible && !currentItems.isEmpty
+        let targetItem = shouldLaunch ? currentItems[selectedIndex] : nil
+        let targetKey = activeKey
+        let targetIdx = selectedIndex
         
+        // Hide HUD immediately so it never lingers while the application is activating or opening windows
         isVisible = false
         activeKey = nil
         HUDOverlayWindow.shared.hide()
+        
+        if let target = targetItem {
+            if let key = targetKey {
+                lastActiveIndices[key] = targetIdx
+            }
+            launchOrFocusTarget(target.name)
+        }
     }
     
     private func showHUD() {
