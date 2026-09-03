@@ -1,5 +1,6 @@
 import Cocoa
 import AppKit
+import ApplicationServices
 
 public struct DiscoveredChromeProfile: Identifiable, Equatable {
     public var id: String { dir }
@@ -326,9 +327,115 @@ public final class ChromeProfileHelper: ObservableObject {
     public func focusProfile(dir: String) {
         let bundleID = self.browserBundleID
         
-        // Launch or focus via command line argument --profile-directory with -n (spawn auxiliary instance).
-        // With -n, macOS passes the command-line arguments to the running Chromium instance via IPC,
-        // which natively brings the designated profile window to the front or spawns a new one.
-        try? process.runCommand(launchPath: "/usr/bin/open", arguments: ["-n", "-b", bundleID, "--args", "--profile-directory=\(dir)"])
+        // Priority 1: If Chrome is already running, switch to the profile window via Accessibility Profiles menu.
+        // This focuses the existing window without opening redundant new windows!
+        if let profile = profiles.first(where: { $0.dir == dir }) {
+            if selectProfileViaAccessibility(bundleID: bundleID, profile: profile) {
+                AppLogger.getLogger(category: .browser).info("Focused profile '\(profile.name)' via Accessibility menu.")
+                return
+            }
+        }
+        
+        // Priority 2: Fallback / Cold launch
+        // If Chrome is not running or profile menu item not found, launch Chrome directly into the target profile.
+        try? process.runCommand(launchPath: "/usr/bin/open", arguments: ["-b", bundleID, "--args", "--profile-directory=\(dir)"])
+        
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(0.15))
+            let apps = workspace.runningApps
+            if let chrome = apps.first(where: { $0.bundleIdentifier == bundleID }) {
+                chrome.activateApp()
+            }
+        }
+    }
+    
+    @discardableResult
+    private func selectProfileViaAccessibility(bundleID: String, profile: DiscoveredChromeProfile) -> Bool {
+        let runningApps = NSWorkspace.shared.runningApplications
+        guard let chrome = runningApps.first(where: { $0.bundleIdentifier == bundleID }) else {
+            return false
+        }
+        
+        let appRef = AXUIElementCreateApplication(chrome.processIdentifier)
+        var menuBarRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(appRef, kAXMenuBarAttribute as CFString, &menuBarRef) == .success,
+              let menuBar = menuBarRef else {
+            return false
+        }
+        
+        var menuBarChildrenRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(menuBar as! AXUIElement, kAXChildrenAttribute as CFString, &menuBarChildrenRef) == .success,
+              let menus = menuBarChildrenRef as? [AXUIElement] else {
+            return false
+        }
+        
+        // Locate "Profiles" menu (support English, localized, or positional)
+        var profilesMenu: AXUIElement?
+        for menu in menus {
+            var titleRef: CFTypeRef?
+            AXUIElementCopyAttributeValue(menu, kAXTitleAttribute as CFString, &titleRef)
+            let title = (titleRef as? String ?? "").lowercased()
+            if title == "profiles" || title == "profile" || title == "профили" {
+                profilesMenu = menu
+                break
+            }
+        }
+        
+        guard let pMenu = profilesMenu else { return false }
+        
+        var subMenusRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(pMenu, kAXChildrenAttribute as CFString, &subMenusRef) == .success,
+              let subMenus = subMenusRef as? [AXUIElement] else {
+            return false
+        }
+        
+        let targetName = profile.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let targetEmail = profile.email?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let targetDir = profile.dir.lowercased()
+        
+        for sub in subMenus {
+            var itemsRef: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(sub, kAXChildrenAttribute as CFString, &itemsRef) == .success,
+                  let items = itemsRef as? [AXUIElement] else {
+                continue
+            }
+            
+            // Pass 1: Exact matches
+            for item in items {
+                var itemTitleRef: CFTypeRef?
+                AXUIElementCopyAttributeValue(item, kAXTitleAttribute as CFString, &itemTitleRef)
+                guard let rawTitle = itemTitleRef as? String else { continue }
+                let itemTitle = rawTitle.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                
+                if itemTitle == targetName || (!targetDir.isEmpty && itemTitle == targetDir) {
+                    let result = AXUIElementPerformAction(item, kAXPressAction as CFString)
+                    if result == .success {
+                        chrome.activate()
+                        return true
+                    }
+                }
+            }
+            
+            // Pass 2: Partial matches (e.g. "Igor (Al11)" matching "Al11", or matching email)
+            for item in items {
+                var itemTitleRef: CFTypeRef?
+                AXUIElementCopyAttributeValue(item, kAXTitleAttribute as CFString, &itemTitleRef)
+                guard let rawTitle = itemTitleRef as? String else { continue }
+                let itemTitle = rawTitle.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                
+                let matchesName = !targetName.isEmpty && itemTitle.contains(targetName)
+                let matchesEmail = targetEmail != nil && !targetEmail!.isEmpty && itemTitle.contains(targetEmail!)
+                
+                if matchesName || matchesEmail {
+                    let result = AXUIElementPerformAction(item, kAXPressAction as CFString)
+                    if result == .success {
+                        chrome.activate()
+                        return true
+                    }
+                }
+            }
+        }
+        
+        return false
     }
 }
