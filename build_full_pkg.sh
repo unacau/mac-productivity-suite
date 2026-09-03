@@ -35,6 +35,10 @@ if [ -z "$TARGET_USER" ] || [ "$TARGET_USER" = "root" ]; then
     TARGET_USER=$(who | grep console | awk '{print $1}' | head -n 1)
 fi
 
+# Terminate any existing running instance so the freshly installed binary starts
+pkill -f "Mac Productivity Suite" 2>/dev/null || true
+sleep 1
+
 # Auto-launch app if running in user session
 if [ -n "$TARGET_USER" ] && [ "$TARGET_USER" != "root" ]; then
     sudo -u "$TARGET_USER" open "/Applications/Mac Productivity Suite.app" 2>/dev/null || true
