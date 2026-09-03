@@ -7,6 +7,7 @@ import Carbon
 public protocol RunningAppProvider: Sendable {
     var localizedName: String? { get }
     var bundleIdentifier: String? { get }
+    var processIdentifier: pid_t { get }
     func activateApp()
 }
 

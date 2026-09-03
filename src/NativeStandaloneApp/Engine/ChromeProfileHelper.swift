@@ -320,88 +320,174 @@ public final class ChromeProfileHelper: ObservableObject {
     }
     
     public func focusProfile(index: Int) {
-        guard let p = profiles.first(where: { $0.index == index }) else { return }
-        focusProfile(dir: p.dir)
+        let bundleID = self.browserBundleID
+        let menuItems = getProfilesMenuItems(bundleID: bundleID)
+        let zeroBasedIndex = index - 1
+        
+        if menuItems.indices.contains(zeroBasedIndex) {
+            let targetItem = menuItems[zeroBasedIndex]
+            var titleRef: CFTypeRef?
+            AXUIElementCopyAttributeValue(targetItem, kAXTitleAttribute as CFString, &titleRef)
+            AppLogger.getLogger(category: .browser).info("focusProfile(index: \(index)): Selecting menu item '\(titleRef as? String ?? "", privacy: .public)'")
+            
+            let res = AXUIElementPerformAction(targetItem, kAXPressAction as CFString)
+            if res == .success {
+                let runningApps = NSWorkspace.shared.runningApplications
+                runningApps.first(where: { $0.bundleIdentifier == bundleID })?.activate()
+                let task = Process()
+                task.launchPath = "/usr/bin/open"
+                task.arguments = ["-b", bundleID]
+                try? task.run()
+                task.waitUntilExit()
+                return
+            }
+        }
+        
+        // Cold start fallback if browser is not running or menu item not found
+        if let p = profiles.first(where: { $0.index == index }) {
+            launchBrowserColdStart(bundleID: bundleID, dir: p.dir)
+            return
+        }
+        
+        if let first = profiles.first {
+            launchBrowserColdStart(bundleID: bundleID, dir: first.dir)
+        }
     }
     
     public func focusProfile(dir: String) {
         let bundleID = self.browserBundleID
         
-        // Priority 1: If browser is running, select profile via native Profiles menu bar
+        // Priority 1: Map profile directory to discovered profile index and select from native Profiles menu
         if let profile = profiles.first(where: { $0.dir == dir }) {
+            let menuItems = getProfilesMenuItems(bundleID: bundleID)
+            let zeroBasedIndex = profile.index - 1
+            if menuItems.indices.contains(zeroBasedIndex) {
+                let targetItem = menuItems[zeroBasedIndex]
+                let res = AXUIElementPerformAction(targetItem, kAXPressAction as CFString)
+                if res == .success {
+                    let runningApps = NSWorkspace.shared.runningApplications
+                    runningApps.first(where: { $0.bundleIdentifier == bundleID })?.activate()
+                    let task = Process()
+                    task.launchPath = "/usr/bin/open"
+                    task.arguments = ["-b", bundleID]
+                    try? task.run()
+                    task.waitUntilExit()
+                    return
+                }
+            }
+            
+            // Name/Email-based match as secondary attempt
             if selectProfileViaMenuBar(bundleID: bundleID, profile: profile) {
-                AppLogger.getLogger(category: .browser).info("Selected profile '\(profile.name, privacy: .public)' via browser Profiles menu.")
                 return
             }
         }
         
-        // Priority 2: Fallback / Open new window for target profile if browser is not running or menu item not found
+        // Priority 2: Cold start browser with profile directory
+        launchBrowserColdStart(bundleID: bundleID, dir: dir)
+    }
+    
+    private func launchBrowserColdStart(bundleID: String, dir: String) {
         if let execPath = resolveBrowserExecutablePath(bundleID: bundleID) {
-            AppLogger.getLogger(category: .browser).info("Opening profile '\(dir, privacy: .public)' via binary invocation.")
+            AppLogger.getLogger(category: .browser).info("Cold-starting browser with profile '\(dir, privacy: .public)' via binary invocation.")
             try? process.runCommand(launchPath: execPath, arguments: ["--profile-directory=\(dir)"])
             return
         }
-        
         try? process.runCommand(launchPath: "/usr/bin/open", arguments: ["-b", bundleID, "--args", "--profile-directory=\(dir)"])
     }
     
-    @discardableResult
-    public func selectProfileViaMenuBar(bundleID: String, profile: DiscoveredChromeProfile) -> Bool {
-        let runningApps = NSWorkspace.shared.runningApplications
-        guard let chrome = runningApps.first(where: { $0.bundleIdentifier == bundleID }) else {
-            return false
-        }
+    public func getProfilesMenuItems(bundleID: String) -> [AXUIElement] {
+        let running = workspace.runningApps
+        guard let chrome = running.first(where: { $0.bundleIdentifier == bundleID }) else { return [] }
         
         let appRef = AXUIElementCreateApplication(chrome.processIdentifier)
         var menuBarRef: CFTypeRef?
         guard AXUIElementCopyAttributeValue(appRef, kAXMenuBarAttribute as CFString, &menuBarRef) == .success,
-              let menuBar = menuBarRef else {
-            return false
-        }
+              let menuBar = menuBarRef else { return [] }
         
         var childrenRef: CFTypeRef?
         guard AXUIElementCopyAttributeValue(menuBar as! AXUIElement, kAXChildrenAttribute as CFString, &childrenRef) == .success,
-              let menuBarItems = childrenRef as? [AXUIElement] else {
-            return false
-        }
+              let mbItems = childrenRef as? [AXUIElement] else { return [] }
         
-        let pNameLower = profile.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let pEmailLower = profile.email?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let dirLower = profile.dir.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let knownProfilesTitles: Set<String> = [
+            "profiles", "профили", "profile", "perfiles", "profils", "profili", "perfis", "profielen", "профілі", "个人资料", "プロフィール", "프로필"
+        ]
         
-        for mbItem in menuBarItems {
+        for mbItem in mbItems {
+            var titleRef: CFTypeRef?
+            AXUIElementCopyAttributeValue(mbItem, kAXTitleAttribute as CFString, &titleRef)
+            let title = (titleRef as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            
+            guard knownProfilesTitles.contains(title) else { continue }
+            
             var subMenuRef: CFTypeRef?
             guard AXUIElementCopyAttributeValue(mbItem, kAXChildrenAttribute as CFString, &subMenuRef) == .success,
                   let subMenus = subMenuRef as? [AXUIElement], let subMenu = subMenus.first else { continue }
             
             var itemsRef: CFTypeRef?
             guard AXUIElementCopyAttributeValue(subMenu, kAXChildrenAttribute as CFString, &itemsRef) == .success,
-              let menuItems = itemsRef as? [AXUIElement] else { continue }
+                  let mis = itemsRef as? [AXUIElement] else { continue }
             
-            for item in menuItems {
-                var titleRef: CFTypeRef?
-                AXUIElementCopyAttributeValue(item, kAXTitleAttribute as CFString, &titleRef)
-                guard let title = titleRef as? String, !title.isEmpty else { continue }
-                let titleLower = title.lowercased()
-                
-                let matches = titleLower == pNameLower ||
-                              titleLower.hasSuffix("(\(pNameLower))") ||
-                              titleLower.contains("(\(pNameLower))") ||
-                              (pEmailLower != nil && !pEmailLower!.isEmpty && titleLower.contains(pEmailLower!)) ||
-                              (titleLower.contains("(\(dirLower))"))
-                
-                if matches {
-                    AppLogger.getLogger(category: .browser).info("selectProfileViaMenuBar: Found match '\(title, privacy: .public)' for profile '\(profile.name, privacy: .public)'")
-                    let res = AXUIElementPerformAction(item, kAXPressAction as CFString)
-                    if res == .success {
-                        chrome.activate()
-                        let task = Process()
-                        task.launchPath = "/usr/bin/open"
-                        task.arguments = ["-b", bundleID]
-                        try? task.run()
-                        task.waitUntilExit()
-                        return true
-                    }
+            var profileItems: [AXUIElement] = []
+            for mi in mis {
+                var miTitleRef: CFTypeRef?
+                AXUIElementCopyAttributeValue(mi, kAXTitleAttribute as CFString, &miTitleRef)
+                let miTitle = miTitleRef as? String ?? ""
+                // The profile list ends at the first separator (empty title)
+                if miTitle.isEmpty { break }
+                profileItems.append(mi)
+            }
+            return profileItems
+        }
+        return []
+    }
+    
+    public func detectActiveProfileIndex(bundleID: String) -> Int? {
+        let menuItems = getProfilesMenuItems(bundleID: bundleID)
+        guard !menuItems.isEmpty else { return nil }
+        
+        for (idx, mi) in menuItems.enumerated() {
+            var markRef: CFTypeRef?
+            AXUIElementCopyAttributeValue(mi, "AXMenuItemMarkChar" as CFString, &markRef)
+            if let m = markRef as? String, !m.isEmpty {
+                return idx + 1 // 1-based index
+            }
+        }
+        return nil
+    }
+    
+    @discardableResult
+    public func selectProfileViaMenuBar(bundleID: String, profile: DiscoveredChromeProfile) -> Bool {
+        let menuItems = getProfilesMenuItems(bundleID: bundleID)
+        guard !menuItems.isEmpty else { return false }
+        
+        let pNameLower = profile.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let pEmailLower = profile.email?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let dirLower = profile.dir.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        
+        for item in menuItems {
+            var titleRef: CFTypeRef?
+            AXUIElementCopyAttributeValue(item, kAXTitleAttribute as CFString, &titleRef)
+            guard let title = titleRef as? String, !title.isEmpty else { continue }
+            let titleLower = title.lowercased()
+            
+            let matches = titleLower == pNameLower ||
+                          titleLower.hasSuffix("(\(pNameLower))") ||
+                          titleLower.contains("(\(pNameLower))") ||
+                          (pEmailLower != nil && !pEmailLower!.isEmpty && titleLower.contains(pEmailLower!)) ||
+                          (titleLower.contains("(\(dirLower))"))
+            
+            if matches {
+                AppLogger.getLogger(category: .browser).info("selectProfileViaMenuBar: Found match '\(title, privacy: .public)' for profile '\(profile.name, privacy: .public)'")
+                let res = AXUIElementPerformAction(item, kAXPressAction as CFString)
+                if res == .success {
+                    let runningApps = NSWorkspace.shared.runningApplications
+                    runningApps.first(where: { $0.bundleIdentifier == bundleID })?.activate()
+                    let task = Process()
+                    task.launchPath = "/usr/bin/open"
+                    task.arguments = ["-b", bundleID]
+                    try? task.run()
+                    task.waitUntilExit()
+                    return true
                 }
             }
         }
@@ -409,30 +495,9 @@ public final class ChromeProfileHelper: ObservableObject {
     }
     
     public func detectActiveProfileDir(bundleID: String) -> String? {
-        let runningApps = NSWorkspace.shared.runningApplications
-        guard let chrome = runningApps.first(where: { $0.bundleIdentifier == bundleID }) else { return nil }
-        
-        let appRef = AXUIElementCreateApplication(chrome.processIdentifier)
-        var winRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(appRef, kAXFocusedWindowAttribute as CFString, &winRef) == .success,
-              let win = winRef else {
-            return nil
-        }
-        
-        var titleRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(win as! AXUIElement, kAXTitleAttribute as CFString, &titleRef) == .success,
-              let title = titleRef as? String else {
-            return nil
-        }
-        
-        let parts = title.components(separatedBy: " - ")
-        guard let tag = parts.last?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() else { return nil }
-        
-        for p in profiles {
-            let pNameLower = p.name.lowercased()
-            if tag == pNameLower || tag.contains("(\(pNameLower))") || tag.hasSuffix("(\(pNameLower))") {
-                return p.dir
-            }
+        if let activeIdx = detectActiveProfileIndex(bundleID: bundleID),
+           let p = profiles.first(where: { $0.index == activeIdx }) {
+            return p.dir
         }
         return nil
     }

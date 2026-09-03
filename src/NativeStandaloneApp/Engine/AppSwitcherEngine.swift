@@ -320,7 +320,10 @@ public final class AppSwitcherEngine: ObservableObject {
                 
                 // Pass 3: Browser profile matching when front app is a browser
                 if matchedIndex == nil, (front.contains("chrome") || front.contains("brave") || front.contains("edge")) {
-                    if let activeProfileDir = chromeHelper.detectActiveProfileDir(bundleID: chromeHelper.browserBundleID),
+                    if let activeIdx = chromeHelper.detectActiveProfileIndex(bundleID: chromeHelper.browserBundleID),
+                       let idx = items.firstIndex(where: { $0.profileIndex == activeIdx }) {
+                        matchedIndex = idx
+                    } else if let activeProfileDir = chromeHelper.detectActiveProfileDir(bundleID: chromeHelper.browserBundleID),
                        let idx = items.firstIndex(where: { $0.profileDir == activeProfileDir }) {
                         matchedIndex = idx
                     } else if let lastIdx = lastActiveIndices[keyLower], lastIdx < items.count {
