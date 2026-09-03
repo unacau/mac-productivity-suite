@@ -405,14 +405,7 @@ public final class ChromeProfileHelper: ObservableObject {
             normTitles.append(DiscoveredChromeProfile.normalizeForMenuMatch(title))
         }
         
-        // Tier 1: Exact match with expectedMenuTitle (e.g. "Igor (Al11)", "Igor (GCP Free Trial)", "Igor", "Nastya")
-        for (idx, normTitle) in normTitles.enumerated() {
-            if !normTitle.isEmpty && normTitle == expectedNorm {
-                return idx
-            }
-        }
-        
-        // Tier 1.5: Exact match with email-disambiguated title (e.g. "Work (alice@company.com)")
+        // Tier 1: Exact match with email-disambiguated title (e.g. "Work (alice@company.com)")
         if let disambiguatedEmailNorm = disambiguatedEmailNorm {
             for (idx, normTitle) in normTitles.enumerated() {
                 if !normTitle.isEmpty && normTitle == disambiguatedEmailNorm {
@@ -421,21 +414,28 @@ public final class ChromeProfileHelper: ObservableObject {
             }
         }
         
-        // Tier 2: Exact match with effective profile name (e.g. "Nastya", "Personal")
+        // Tier 2: Exact match with expectedMenuTitle (e.g. "Igor (Al11)", "Igor (GCP Free Trial)", "Igor", "Nastya")
+        for (idx, normTitle) in normTitles.enumerated() {
+            if !normTitle.isEmpty && normTitle == expectedNorm {
+                return idx
+            }
+        }
+        
+        // Tier 3: Exact match with effective profile name (e.g. "Nastya", "Personal")
         for (idx, normTitle) in normTitles.enumerated() {
             if !normTitle.isEmpty && normTitle == pNameNorm {
                 return idx
             }
         }
         
-        // Tier 3: Disambiguated profile name in parentheses (e.g. title ends with or contains "(Al11)")
+        // Tier 4: Disambiguated profile name in parentheses (e.g. title ends with or contains "(Al11)")
         for (idx, normTitle) in normTitles.enumerated() {
             if !pNameNorm.isEmpty && (normTitle.hasSuffix("(\(pNameNorm))") || normTitle.contains("(\(pNameNorm))")) {
                 return idx
             }
         }
         
-        // Tier 4: Email match if email exists and non-empty
+        // Tier 5: Email match if email exists and non-empty
         if let emailNorm = emailNorm, !emailNorm.isEmpty {
             for (idx, normTitle) in normTitles.enumerated() {
                 if normTitle.contains(emailNorm) {
@@ -465,12 +465,7 @@ public final class ChromeProfileHelper: ObservableObject {
         let tNorm = DiscoveredChromeProfile.normalizeForMenuMatch(title)
         guard !tNorm.isEmpty else { return nil }
         
-        // Tier 1: Exact match with expectedMenuTitle
-        if let match = profiles.first(where: { DiscoveredChromeProfile.normalizeForMenuMatch($0.expectedMenuTitle) == tNorm }) {
-            return match
-        }
-        
-        // Tier 1.5: Exact match with disambiguatedEmailTitle
+        // Tier 1: Exact match with disambiguatedEmailTitle
         if let match = profiles.first(where: {
             guard let de = $0.disambiguatedEmailTitle else { return false }
             return DiscoveredChromeProfile.normalizeForMenuMatch(de) == tNorm
@@ -478,7 +473,12 @@ public final class ChromeProfileHelper: ObservableObject {
             return match
         }
         
-        // Tier 2: Exact match with effectiveName
+        // Tier 2: Exact match with expectedMenuTitle
+        if let match = profiles.first(where: { DiscoveredChromeProfile.normalizeForMenuMatch($0.expectedMenuTitle) == tNorm }) {
+            return match
+        }
+        
+        // Tier 3: Exact match with effectiveName
         if let match = profiles.first(where: { DiscoveredChromeProfile.normalizeForMenuMatch($0.effectiveName) == tNorm }) {
             return match
         }
@@ -551,11 +551,6 @@ public final class ChromeProfileHelper: ObservableObject {
                         return
                     }
                 }
-            }
-            
-            // Name/Email-based match as secondary attempt
-            if selectProfileViaMenuBar(bundleID: bundleID, profile: profile) {
-                return
             }
         } else {
             // Profile directory not found in cache (e.g. cold launch or unindexed profile).
@@ -658,44 +653,7 @@ public final class ChromeProfileHelper: ObservableObject {
         return nil
     }
     
-    @discardableResult
-    public func selectProfileViaMenuBar(bundleID: String, profile: DiscoveredChromeProfile) -> Bool {
-        let menuItems = getProfilesMenuItems(bundleID: bundleID)
-        guard !menuItems.isEmpty else { return false }
-        
-        let pNameLower = profile.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let pEmailLower = profile.email?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let dirLower = profile.dir.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        
-        for item in menuItems {
-            var titleRef: CFTypeRef?
-            AXUIElementCopyAttributeValue(item, kAXTitleAttribute as CFString, &titleRef)
-            guard let title = titleRef as? String, !title.isEmpty else { continue }
-            let titleLower = title.lowercased()
-            
-            let matches = titleLower == pNameLower ||
-                          titleLower.hasSuffix("(\(pNameLower))") ||
-                          titleLower.contains("(\(pNameLower))") ||
-                          (pEmailLower != nil && !pEmailLower!.isEmpty && titleLower.contains(pEmailLower!)) ||
-                          (titleLower.contains("(\(dirLower))"))
-            
-            if matches {
-                AppLogger.getLogger(category: .browser).info("selectProfileViaMenuBar: Found match '\(title, privacy: .public)' for profile '\(profile.name, privacy: .public)'")
-                let res = AXUIElementPerformAction(item, kAXPressAction as CFString)
-                if res == .success {
-                    let runningApps = NSWorkspace.shared.runningApplications
-                    runningApps.first(where: { $0.bundleIdentifier == bundleID })?.activate()
-                    let task = Process()
-                    task.launchPath = "/usr/bin/open"
-                    task.arguments = ["-b", bundleID]
-                    try? task.run()
-                    task.waitUntilExit()
-                    return true
-                }
-            }
-        }
-        return false
-    }
+
     
     public func detectActiveProfileDir(bundleID: String) -> String? {
         let menuItems = getProfilesMenuItems(bundleID: bundleID)

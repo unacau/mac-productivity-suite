@@ -286,4 +286,29 @@ extension SerializedTests {
         #expect(process.commandsRun.count == 2)
         #expect(process.commandsRun.last?.1.contains("--profile-directory=Default") == true)
     }
+    
+    @Test @MainActor
+    func testEdgeCase11_IdenticalExpectedTitlesTierShadowing() async throws {
+        // Simulates the exact bug where renaming a profile causes expectedMenuTitle to match another profile,
+        // and Chrome appends the email to disambiguate. If Tiers are not ordered correctly, the exact name
+        // match (Tier 1 previously) shadows the email-disambiguated match (Tier 1.5 previously).
+        
+        let p1 = DiscoveredChromeProfile(index: 1, dir: "Default", name: "Igor", email: "igorekishev92@gmail.com", gaiaName: "Igor Ekishev", gaiaGivenName: "Igor")
+        let p2 = DiscoveredChromeProfile(index: 2, dir: "Profile 2", name: "Igor", email: "igor@almosteleven.com", gaiaName: "Igor Ekishev", gaiaGivenName: "Igor")
+        
+        // expectedMenuTitle for BOTH is "Igor".
+        #expect(p1.expectedMenuTitle == "Igor")
+        #expect(p2.expectedMenuTitle == "Igor")
+        
+        let helper = ChromeProfileHelper(workspace: MockWorkspaceProvider(), process: MockProcessProvider())
+        
+        // Prior to the fix, passing "Igor (igor@almosteleven.com)" would wrongly match p1 
+        // because Tier 1 blindly matched "Igor".
+        
+        let matchedP1 = helper.profileMatchingMenuItemTitle("Igor", among: [p1, p2])
+        #expect(matchedP1?.dir == "Default")
+        
+        let matchedP2 = helper.profileMatchingMenuItemTitle("Igor (igor@almosteleven.com)", among: [p1, p2])
+        #expect(matchedP2?.dir == "Profile 2")
+    }
 }
