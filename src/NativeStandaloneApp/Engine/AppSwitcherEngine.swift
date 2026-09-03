@@ -277,17 +277,10 @@ public final class AppSwitcherEngine: ObservableObject {
         let items = buildSwitcherItems(for: apps)
         if items.isEmpty { return }
         
-        if items.count == 1 {
-            activeKey = keyLower
-            selectedIndex = 0
-            currentItems = items
-            showHUD()
-            resetDismissTimer()
-            return
-        }
-        
         if isVisible && activeKey == keyLower && currentItems.count == items.count {
-            selectedIndex = (selectedIndex + 1) % items.count
+            if items.count > 1 {
+                selectedIndex = (selectedIndex + 1) % items.count
+            }
             resetDismissTimer()
         } else {
             activeKey = keyLower
@@ -317,7 +310,9 @@ public final class AppSwitcherEngine: ObservableObject {
             }
             
             let targetIndex: Int
-            if let matched = matchedIndex {
+            if items.count == 1 {
+                targetIndex = 0
+            } else if let matched = matchedIndex {
                 // Focused window IS in the same shortcut group: select NEXT candidate (think of Cmd+Tab)
                 targetIndex = (matched + 1) % items.count
             } else if let lastIdx = lastActiveIndices[keyLower], lastIdx < items.count {
@@ -367,8 +362,28 @@ public final class AppSwitcherEngine: ObservableObject {
     
     public var isHyperModifierHeld: Bool {
         if HyperKeyEngine.shared.isHyperActive { return true }
+        
+        // 1. Direct hardware HID query for F18 (remapped Caps Lock)
+        if CGEventSource.keyState(.hidSystemState, key: CGKeyCode(KeyCodes.kVK_F18)) {
+            return true
+        }
+        
+        // 2. Direct hardware HID query for physical Caps Lock
+        if CGEventSource.keyState(.hidSystemState, key: 57) {
+            return true
+        }
+        
+        // 3. Direct hardware HID query for Hyper combination flags (Cmd + Opt + Ctrl + Shift)
+        let hidFlags = CGEventSource.flagsState(.hidSystemState)
+        let hyperMask: CGEventFlags = [.maskCommand, .maskAlternate, .maskControl, .maskShift]
+        if hidFlags.contains(hyperMask) {
+            return true
+        }
+        
+        // 4. Cocoa NSEvent modifier flags fallback
         let flags = NSEvent.modifierFlags
-        return flags.contains([.command, .option, .control, .shift])
+        let required: NSEvent.ModifierFlags = [.command, .option, .control, .shift]
+        return flags.isSuperset(of: required)
     }
     
     private func resetDismissTimer() {
