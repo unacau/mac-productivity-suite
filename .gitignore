@@ -15,6 +15,7 @@ build/
 *.zip
 *.app/
 !Frameworks/**
+Frameworks/*.app/
 *.dSYM/
 *.o
 *.swiftdoc
