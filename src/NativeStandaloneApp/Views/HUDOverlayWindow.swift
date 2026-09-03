@@ -27,7 +27,6 @@ public struct HUDOverlayView: View {
                 .stroke(Color.white.opacity(0.2), lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.45), radius: 20, x: 0, y: 10)
-        .animation(.spring(response: 0.25, dampingFraction: 0.8), value: engine.selectedIndex)
     }
 }
 

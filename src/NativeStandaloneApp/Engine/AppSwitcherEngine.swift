@@ -293,7 +293,6 @@ public final class AppSwitcherEngine: ObservableObject {
             resetDismissTimer()
         } else {
             activeKey = keyLower
-            currentItems = items
             
             let frontAppName = workspace.frontmostApplicationName?.lowercased()
             var matchedIndex: Int? = nil
@@ -319,12 +318,13 @@ public final class AppSwitcherEngine: ObservableObject {
                 }
             }
             
+            let targetIndex: Int
             if let matched = matchedIndex {
-                // Focused window IS in the same shortcut group: select NEXT candidate
-                selectedIndex = (matched + 1) % items.count
+                // Focused window IS in the same shortcut group: select NEXT candidate (think of Cmd+Tab)
+                targetIndex = (matched + 1) % items.count
             } else if let lastIdx = lastActiveIndices[keyLower], lastIdx < items.count {
                 // Focused window is OTHER than pressed shortcut: select PREVIOUSLY focused candidate
-                selectedIndex = lastIdx
+                targetIndex = lastIdx
             } else {
                 // Find first candidate that is running or discovered on disk
                 let firstAvailable = items.firstIndex(where: { it in
@@ -334,8 +334,12 @@ public final class AppSwitcherEngine: ObservableObject {
                     }
                     return AppDiscoveryService.shared.findApp(nameOrBundle: it.name) != nil
                 })
-                selectedIndex = firstAvailable ?? 0
+                targetIndex = firstAvailable ?? 0
             }
+            
+            // Atomically update selectedIndex and items BEFORE displaying HUD so it appears already on the target
+            self.selectedIndex = targetIndex
+            self.currentItems = items
             
             showHUD()
             resetDismissTimer()
