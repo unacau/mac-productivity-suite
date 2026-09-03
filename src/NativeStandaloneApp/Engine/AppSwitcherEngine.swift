@@ -233,7 +233,7 @@ public final class AppSwitcherEngine: ObservableObject {
                 showHUD()
                 resetDismissTimer()
             } else {
-                commitAndHide()
+                launchOrFocusTarget(item.name)
             }
         } else {
             chromeHelper.focusProfile(index: profileIndex)
