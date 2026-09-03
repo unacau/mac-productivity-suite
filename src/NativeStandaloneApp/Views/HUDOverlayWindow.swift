@@ -6,14 +6,24 @@ public struct HUDOverlayView: View {
     @ObservedObject var engine = AppSwitcherEngine.shared
     
     public var body: some View {
-        HStack(spacing: 12) {
-            ForEach(Array(engine.currentItems.enumerated()), id: \.element.id) { index, item in
-                HUDItemCardView(
-                    item: item,
-                    index: index,
-                    totalCount: engine.currentItems.count,
-                    isSelected: index == engine.selectedIndex
-                )
+        VStack(spacing: 8) {
+            HStack(spacing: 12) {
+                ForEach(Array(engine.currentItems.enumerated()), id: \.element.id) { index, item in
+                    HUDItemCardView(
+                        item: item,
+                        index: index,
+                        totalCount: engine.currentItems.count,
+                        isSelected: index == engine.selectedIndex
+                    )
+                }
+            }
+            
+            HStack {
+                Spacer()
+                Text("v\(AppConfig.currentAppVersion) (\(AppConfig.currentBuildNumber))")
+                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.35))
+                    .padding(.trailing, 2)
             }
         }
         .padding(14)

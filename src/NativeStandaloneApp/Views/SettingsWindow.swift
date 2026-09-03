@@ -13,8 +13,17 @@ public struct SettingsView: View {
             // Header
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("App Switcher Bindings")
-                        .font(.title2.bold())
+                    HStack(spacing: 8) {
+                        Text("App Switcher Bindings")
+                            .font(.title2.bold())
+                        Text("v\(AppConfig.currentAppVersion) (Build \(AppConfig.currentBuildNumber))")
+                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.secondary.opacity(0.12))
+                            .clipShape(Capsule())
+                    }
                     Text("Press Caps Lock (Hyper) + key to switch or cycle between designated apps or Chrome profiles.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
