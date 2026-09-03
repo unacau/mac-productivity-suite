@@ -8,13 +8,35 @@ public struct DiscoveredChromeProfile: Identifiable, Equatable {
     public let dir: String
     public let name: String
     public let email: String?
+    public let gaiaName: String?
+    public let gaiaGivenName: String?
     public let avatarImage: NSImage?
     
-    public init(index: Int, dir: String, name: String, email: String? = nil, avatarImage: NSImage? = nil) {
+    public var expectedMenuTitle: String {
+        let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let given = gaiaGivenName?.trimmingCharacters(in: .whitespacesAndNewlines), !given.isEmpty {
+            if cleanName.lowercased() != given.lowercased() {
+                return "\(given) (\(cleanName))"
+            }
+        }
+        return cleanName
+    }
+    
+    public init(
+        index: Int,
+        dir: String,
+        name: String,
+        email: String? = nil,
+        gaiaName: String? = nil,
+        gaiaGivenName: String? = nil,
+        avatarImage: NSImage? = nil
+    ) {
         self.index = index
         self.dir = dir
         self.name = name
         self.email = email
+        self.gaiaName = gaiaName
+        self.gaiaGivenName = gaiaGivenName
         self.avatarImage = avatarImage
     }
 }
@@ -114,15 +136,7 @@ public final class ChromeProfileHelper: ObservableObject {
             else if path.contains("Chromium") { discoveredBundleID = "org.chromium.Chromium" }
             else { discoveredBundleID = "com.google.Chrome" }
             
-            // Sort profile directory keys: "Default" first, then "Profile 1", "Profile 2", etc.
-            let sortedKeys = infoCache.keys.sorted { k1, k2 in
-                if k1 == "Default" { return true }
-                if k2 == "Default" { return false }
-                return k1.localizedStandardCompare(k2) == .orderedAscending
-            }
-            
-            var index = 1
-            for dirKey in sortedKeys {
+            for dirKey in infoCache.keys {
                 guard let info = infoCache[dirKey] else { continue }
                 
                 let name = (info["name"] as? String)
@@ -131,26 +145,59 @@ public final class ChromeProfileHelper: ObservableObject {
                     ?? (dirKey == "Default" ? "Personal" : dirKey)
                 
                 let email = (info["user_name"] as? String) ?? (info["email"] as? String)
+                let gaiaName = info["gaia_name"] as? String
+                let gaiaGivenName = info["gaia_given_name"] as? String
                 
                 // Avatar resolution
                 let avatar = self.resolveAvatar(baseDir: baseDir, dirKey: dirKey, info: info)
                 
                 let profile = DiscoveredChromeProfile(
-                    index: index,
+                    index: 0,
                     dir: dirKey,
                     name: name,
                     email: email,
+                    gaiaName: gaiaName,
+                    gaiaGivenName: gaiaGivenName,
                     avatarImage: avatar
                 )
                 foundProfiles.append(profile)
-                index += 1
-                
-                // Limit to top 8 profiles
-                if index > 8 { break }
             }
             
             if !foundProfiles.isEmpty {
                 self.browserBundleID = discoveredBundleID
+                
+                // Sort profiles to match Chrome's native menu order
+                let runningMenuItems = getProfilesMenuItems(bundleID: discoveredBundleID)
+                if !runningMenuItems.isEmpty {
+                    // When browser is running, sort strictly by appearance in the native Profiles menu
+                    foundProfiles.sort { p1, p2 in
+                        let idx1 = findMenuItemIndex(for: p1, in: runningMenuItems) ?? Int.max
+                        let idx2 = findMenuItemIndex(for: p2, in: runningMenuItems) ?? Int.max
+                        if idx1 != idx2 {
+                            return idx1 < idx2
+                        }
+                        return p1.expectedMenuTitle.localizedStandardCompare(p2.expectedMenuTitle) == .orderedAscending
+                    }
+                } else {
+                    // When browser is not running, sort alphabetically by expectedMenuTitle (matching Chromium AvatarMenu order)
+                    foundProfiles.sort { p1, p2 in
+                        p1.expectedMenuTitle.localizedStandardCompare(p2.expectedMenuTitle) == .orderedAscending
+                    }
+                }
+                
+                // Limit to top 8 profiles and assign 1-based sequential indices
+                let topProfiles = Array(foundProfiles.prefix(8))
+                foundProfiles = topProfiles.enumerated().map { (offset, p) in
+                    DiscoveredChromeProfile(
+                        index: offset + 1,
+                        dir: p.dir,
+                        name: p.name,
+                        email: p.email,
+                        gaiaName: p.gaiaName,
+                        gaiaGivenName: p.gaiaGivenName,
+                        avatarImage: p.avatarImage
+                    )
+                }
                 break
             }
         }
@@ -164,6 +211,8 @@ public final class ChromeProfileHelper: ObservableObject {
                     dir: "Default",
                     name: "Default Profile",
                     email: nil,
+                    gaiaName: nil,
+                    gaiaGivenName: nil,
                     avatarImage: AppDiscoveryService.shared.iconForApp(nameOrBundle: "Google Chrome")
                 )
             )
@@ -319,7 +368,117 @@ public final class ChromeProfileHelper: ObservableObject {
         return output
     }
     
+    public func findMenuItemIndex(for profile: DiscoveredChromeProfile, in menuItems: [AXUIElement]) -> Int? {
+        guard !menuItems.isEmpty else { return nil }
+        
+        let pNameLower = profile.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let expectedLower = profile.expectedMenuTitle.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let pEmailLower = profile.email?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let dirLower = profile.dir.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        
+        var titles: [String] = []
+        for item in menuItems {
+            var titleRef: CFTypeRef?
+            AXUIElementCopyAttributeValue(item, kAXTitleAttribute as CFString, &titleRef)
+            let title = (titleRef as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            titles.append(title)
+        }
+        
+        // Tier 1: Exact match with expectedMenuTitle (e.g. "Igor (Al11)", "Igor (GCP Free Trial)", "Igor", "Nastya")
+        for (idx, title) in titles.enumerated() {
+            if !title.isEmpty && title.lowercased() == expectedLower {
+                return idx
+            }
+        }
+        
+        // Tier 2: Exact match with profile name (e.g. "Nastya", "Personal")
+        for (idx, title) in titles.enumerated() {
+            if !title.isEmpty && title.lowercased() == pNameLower {
+                return idx
+            }
+        }
+        
+        // Tier 3: Disambiguated profile name in parentheses (e.g. title ends with or contains "(Al11)")
+        for (idx, title) in titles.enumerated() {
+            let tLower = title.lowercased()
+            if !pNameLower.isEmpty && (tLower.hasSuffix("(\(pNameLower))") || tLower.contains("(\(pNameLower))")) {
+                return idx
+            }
+        }
+        
+        // Tier 4: Email match if email exists and non-empty
+        if let emailLower = pEmailLower, !emailLower.isEmpty {
+            for (idx, title) in titles.enumerated() {
+                if title.lowercased().contains(emailLower) {
+                    return idx
+                }
+            }
+        }
+        
+        // Tier 5: Directory name match (e.g. "(Profile 1)")
+        for (idx, title) in titles.enumerated() {
+            if title.lowercased().contains("(\(dirLower))") {
+                return idx
+            }
+        }
+        
+        return nil
+    }
+    
+    public func findMenuItem(for profile: DiscoveredChromeProfile, in menuItems: [AXUIElement]) -> AXUIElement? {
+        if let idx = findMenuItemIndex(for: profile, in: menuItems), menuItems.indices.contains(idx) {
+            return menuItems[idx]
+        }
+        return nil
+    }
+    
+    public func profileMatchingMenuItemTitle(_ title: String, among profiles: [DiscoveredChromeProfile]) -> DiscoveredChromeProfile? {
+        let tClean = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !tClean.isEmpty else { return nil }
+        let tLower = tClean.lowercased()
+        
+        // Tier 1: Exact match with expectedMenuTitle
+        if let match = profiles.first(where: { $0.expectedMenuTitle.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == tLower }) {
+            return match
+        }
+        
+        // Tier 2: Exact match with profile name
+        if let match = profiles.first(where: { $0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == tLower }) {
+            return match
+        }
+        
+        // Tier 3: Disambiguated profile name in parentheses
+        if let match = profiles.first(where: {
+            let pLower = $0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            return !pLower.isEmpty && (tLower.hasSuffix("(\(pLower))") || tLower.contains("(\(pLower))"))
+        }) {
+            return match
+        }
+        
+        // Tier 4: Email match
+        if let match = profiles.first(where: {
+            if let e = $0.email?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), !e.isEmpty {
+                return tLower.contains(e)
+            }
+            return false
+        }) {
+            return match
+        }
+        
+        // Tier 5: Directory match
+        if let match = profiles.first(where: { tLower.contains("(\($0.dir.lowercased()))") }) {
+            return match
+        }
+        
+        return nil
+    }
+    
     public func focusProfile(index: Int) {
+        if let p = profiles.first(where: { $0.index == index }) {
+            focusProfile(dir: p.dir)
+            return
+        }
+        
         let bundleID = self.browserBundleID
         let menuItems = getProfilesMenuItems(bundleID: bundleID)
         let zeroBasedIndex = index - 1
@@ -328,7 +487,7 @@ public final class ChromeProfileHelper: ObservableObject {
             let targetItem = menuItems[zeroBasedIndex]
             var titleRef: CFTypeRef?
             AXUIElementCopyAttributeValue(targetItem, kAXTitleAttribute as CFString, &titleRef)
-            AppLogger.getLogger(category: .browser).info("focusProfile(index: \(index)): Selecting menu item '\(titleRef as? String ?? "", privacy: .public)'")
+            AppLogger.getLogger(category: .browser).info("focusProfile(index: \(index)): Fallback selecting menu item '\(titleRef as? String ?? "", privacy: .public)'")
             
             let res = AXUIElementPerformAction(targetItem, kAXPressAction as CFString)
             if res == .success {
@@ -343,12 +502,6 @@ public final class ChromeProfileHelper: ObservableObject {
             }
         }
         
-        // Cold start fallback if browser is not running or menu item not found
-        if let p = profiles.first(where: { $0.index == index }) {
-            launchBrowserColdStart(bundleID: bundleID, dir: p.dir)
-            return
-        }
-        
         if let first = profiles.first {
             launchBrowserColdStart(bundleID: bundleID, dir: first.dir)
         }
@@ -357,22 +510,25 @@ public final class ChromeProfileHelper: ObservableObject {
     public func focusProfile(dir: String) {
         let bundleID = self.browserBundleID
         
-        // Priority 1: Map profile directory to discovered profile index and select from native Profiles menu
         if let profile = profiles.first(where: { $0.dir == dir }) {
             let menuItems = getProfilesMenuItems(bundleID: bundleID)
-            let zeroBasedIndex = profile.index - 1
-            if menuItems.indices.contains(zeroBasedIndex) {
-                let targetItem = menuItems[zeroBasedIndex]
-                let res = AXUIElementPerformAction(targetItem, kAXPressAction as CFString)
-                if res == .success {
-                    let runningApps = NSWorkspace.shared.runningApplications
-                    runningApps.first(where: { $0.bundleIdentifier == bundleID })?.activate()
-                    let task = Process()
-                    task.launchPath = "/usr/bin/open"
-                    task.arguments = ["-b", bundleID]
-                    try? task.run()
-                    task.waitUntilExit()
-                    return
+            if !menuItems.isEmpty {
+                if let targetItem = findMenuItem(for: profile, in: menuItems) {
+                    var titleRef: CFTypeRef?
+                    AXUIElementCopyAttributeValue(targetItem, kAXTitleAttribute as CFString, &titleRef)
+                    AppLogger.getLogger(category: .browser).info("focusProfile(dir: \(dir)): Selecting matched menu item '\(titleRef as? String ?? "", privacy: .public)' for profile '\(profile.name, privacy: .public)'")
+                    
+                    let res = AXUIElementPerformAction(targetItem, kAXPressAction as CFString)
+                    if res == .success {
+                        let runningApps = NSWorkspace.shared.runningApplications
+                        runningApps.first(where: { $0.bundleIdentifier == bundleID })?.activate()
+                        let task = Process()
+                        task.launchPath = "/usr/bin/open"
+                        task.arguments = ["-b", bundleID]
+                        try? task.run()
+                        task.waitUntilExit()
+                        return
+                    }
                 }
             }
             
@@ -445,7 +601,15 @@ public final class ChromeProfileHelper: ObservableObject {
             var markRef: CFTypeRef?
             AXUIElementCopyAttributeValue(mi, "AXMenuItemMarkChar" as CFString, &markRef)
             if let m = markRef as? String, !m.isEmpty {
-                return idx + 1 // 1-based index
+                var titleRef: CFTypeRef?
+                AXUIElementCopyAttributeValue(mi, kAXTitleAttribute as CFString, &titleRef)
+                let title = titleRef as? String ?? ""
+                
+                if let matched = profileMatchingMenuItemTitle(title, among: profiles) {
+                    return matched.index
+                }
+                
+                return idx + 1 // 1-based index fallback
             }
         }
         return nil
@@ -491,9 +655,25 @@ public final class ChromeProfileHelper: ObservableObject {
     }
     
     public func detectActiveProfileDir(bundleID: String) -> String? {
-        if let activeIdx = detectActiveProfileIndex(bundleID: bundleID),
-           let p = profiles.first(where: { $0.index == activeIdx }) {
-            return p.dir
+        let menuItems = getProfilesMenuItems(bundleID: bundleID)
+        guard !menuItems.isEmpty else { return nil }
+        
+        for (idx, mi) in menuItems.enumerated() {
+            var markRef: CFTypeRef?
+            AXUIElementCopyAttributeValue(mi, "AXMenuItemMarkChar" as CFString, &markRef)
+            if let m = markRef as? String, !m.isEmpty {
+                var titleRef: CFTypeRef?
+                AXUIElementCopyAttributeValue(mi, kAXTitleAttribute as CFString, &titleRef)
+                let title = titleRef as? String ?? ""
+                
+                if let matched = profileMatchingMenuItemTitle(title, among: profiles) {
+                    return matched.dir
+                }
+                
+                if profiles.indices.contains(idx) {
+                    return profiles[idx].dir
+                }
+            }
         }
         return nil
     }

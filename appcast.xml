@@ -5,7 +5,25 @@
     <link>https://raw.githubusercontent.com/unacau/mac-productivity-suite/main/appcast.xml</link>
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
-                                                                <item>
+                                                                    <item>
+      <title>Version 2.4.23 (Build 28)</title>
+      <pubDate>Thu, 03 Sep 2026 14:30:43 +0200</pubDate>
+      <sparkle:version>28</sparkle:version>
+      <sparkle:shortVersionString>2.4.23</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<ul>
+        <li><strong>Accurate Chromium Profile Selection & Focus</strong>: Resolved an issue where selecting a browser profile in the HUD opened/focused the wrong profile window due to menu ordering differences. Implemented GAIA title disambiguation and precise native menu title matching.</li>
+        <li><strong>Synchronized Active Profile Tracking</strong>: Checkmark (✓) active profile tracking now accurately identifies the focused window across all profiles, eliminating HUD desynchronization.</li>
+        <li><strong>Pure Native Driverless Engine</strong>: 100% native Swift 6 engine with driverless Caps Lock Hyper Key mapping via hidutil and Carbon/CGEvent taps.</li>
+        <li><strong>Instant HUD Overlay Dismissal</strong>: Re-engineered dismissal lifecycle so the floating HUD vanishes the exact millisecond keys are released.</li>
+        <li><strong>Sparkle Auto-Updates</strong>: Integrated Sparkle 2.x with EdDSA signature verification.</li>
+      </ul>]]></description>
+      <enclosure url="https://github.com/unacau/mac-productivity-suite/releases/download/v2.4.23/MacProductivitySuite.dmg"
+                 type="application/octet-stream"
+                 sparkle:edSignature="7X/+DeB+8OIg49L7x90yf3DjE0AR5bRIfNQzncTm2IAneOV8zABsaoddDDGiobCYkf9j2ncgfOqYrlfbxk5aCw=="
+                 length="2124464" />
+    </item>
+    <item>
       <title>Version 2.4.22 (Build 27)</title>
       <pubDate>Thu, 03 Sep 2026 08:40:42 +0200</pubDate>
       <sparkle:version>27</sparkle:version>

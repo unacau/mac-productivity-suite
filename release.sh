@@ -66,10 +66,10 @@ new_item = f'''    <item>
       <sparkle:shortVersionString>{version}</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <description><![CDATA[<ul>
-        <li><strong>Pure Native Driverless Engine</strong>: Migrated to a 100% native Swift 6 engine with driverless Caps Lock Hyper Key mapping via hidutil and Carbon/CGEvent taps.</li>
-        <li><strong>Index-Based Chromium Profile Switching</strong>: Automates Chrome's native macOS "Profiles" menu bar item by position, cleanly supporting identical profile names (e.g. multiple "Igor" accounts), checkmark (✓) active tracking, with zero tab bloat and zero Automation permission prompts.</li>
+        <li><strong>Accurate Chromium Profile Selection & Focus</strong>: Resolved an issue where selecting a browser profile in the HUD opened/focused the wrong profile window due to menu ordering differences. Implemented GAIA title disambiguation and precise native menu title matching.</li>
+        <li><strong>Synchronized Active Profile Tracking</strong>: Checkmark (✓) active profile tracking now accurately identifies the focused window across all profiles, eliminating HUD desynchronization.</li>
+        <li><strong>Pure Native Driverless Engine</strong>: 100% native Swift 6 engine with driverless Caps Lock Hyper Key mapping via hidutil and Carbon/CGEvent taps.</li>
         <li><strong>Instant HUD Overlay Dismissal</strong>: Re-engineered dismissal lifecycle so the floating HUD vanishes the exact millisecond keys are released.</li>
-        <li><strong>Non-Blocking App Cold Starts</strong>: Delegated browser launches to <code>open</code> to eliminate main-thread hangs on cold start.</li>
         <li><strong>Sparkle Auto-Updates</strong>: Integrated Sparkle 2.x with EdDSA signature verification.</li>
       </ul>]]></description>
       <enclosure url="https://github.com/{repo}/releases/download/v{version}/MacProductivitySuite.dmg"
@@ -108,15 +108,20 @@ echo "✅ $APPCAST_FILE updated successfully."
 echo "[4/4] Publishing to GitHub..."
 if [ -z "${CI:-}" ]; then
     git add -A
-    git commit -m "release: v$VERSION with driverless Hyper Key, index-based Chromium switching, and instant HUD dismissal" || true
+    git commit -m "release: v$VERSION with accurate Chromium profile selection and focus synchronization" || true
     git tag -a "v$VERSION" -m "Release v$VERSION" || true
-    git push -u origin main || echo "⚠️  Git push failed. Ensure you have push access to the repository."
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+    git push -u origin "$CURRENT_BRANCH" || echo "⚠️  Git push failed. Ensure you have push access to the repository."
+    if [ "$CURRENT_BRANCH" != "main" ]; then
+        git push origin "$CURRENT_BRANCH:main" || echo "⚠️  Git push to main failed."
+    fi
     git push origin "v$VERSION" || echo "⚠️  Git push tag failed."
 
     if command -v gh >/dev/null 2>&1; then
         gh release create "v$VERSION" "$DMG_FILE" "$PKG_FILE" --title "v$VERSION" --notes "### Release v$VERSION
+- **Accurate Chromium Profile Selection & Focus**: Resolved an issue where selecting a browser profile in the HUD opened/focused the wrong profile window due to menu ordering differences. Implemented GAIA title disambiguation and precise native menu title matching.
+- **Synchronized Active Profile Tracking**: Checkmark (\`✓\`) active profile tracking now accurately identifies the focused window across all profiles, eliminating HUD desynchronization.
 - **Pure Native Driverless Engine**: 100% native Swift 6 engine with driverless Caps Lock Hyper Key mapping via macOS \`hidutil\` and Carbon/CGEvent taps.
-- **Index-Based Chromium Profile Switching**: Automates Chrome's native macOS \"Profiles\" menu bar item by position, cleanly supporting identical profile names (e.g. multiple \"Igor\" accounts), checkmark (\`✓\`) active tracking, zero tab bloat, and zero Automation permission prompts.
 - **Instant HUD Overlay Dismissal**: Re-engineered dismissal lifecycle so the floating HUD vanishes the exact millisecond keys are released.
 - **Non-Blocking App Cold Starts**: Delegated browser launches to \`/usr/bin/open\` to eliminate main-thread hangs on cold start.
 - **Sparkle Auto-Updates**: Integrated Sparkle 2.x with EdDSA signature verification and offline PKG bundle packaging." || echo "Release v$VERSION might already exist."
