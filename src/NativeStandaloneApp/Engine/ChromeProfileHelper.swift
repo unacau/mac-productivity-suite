@@ -349,6 +349,7 @@ public final class ChromeProfileHelper: ObservableObject {
     private func focusProfileWindowViaAccessibility(bundleID: String, profile: DiscoveredChromeProfile) -> Bool {
         let runningApps = NSWorkspace.shared.runningApplications
         guard let chrome = runningApps.first(where: { $0.bundleIdentifier == bundleID }) else {
+            AppLogger.getLogger(category: .browser).error("focusProfile: Browser with bundleID \(bundleID) is not running.")
             return false
         }
         
@@ -356,32 +357,46 @@ public final class ChromeProfileHelper: ObservableObject {
         var windowsRef: CFTypeRef?
         guard AXUIElementCopyAttributeValue(appRef, kAXWindowsAttribute as CFString, &windowsRef) == .success,
               let windows = windowsRef as? [AXUIElement] else {
+            AppLogger.getLogger(category: .browser).error("focusProfile: Failed to copy kAXWindowsAttribute (Accessibility permissions missing?)")
             return false
         }
         
         let pName = profile.name.trimmingCharacters(in: .whitespacesAndNewlines)
         let pEmail = profile.email?.trimmingCharacters(in: .whitespacesAndNewlines)
         
+        AppLogger.getLogger(category: .browser).info("focusProfile: Searching \(windows.count) windows for profile Name='\(pName)', Dir='\(profile.dir)', Email='\(pEmail ?? "nil")'")
+        
         for win in windows {
             var titleRef: CFTypeRef?
             AXUIElementCopyAttributeValue(win, kAXTitleAttribute as CFString, &titleRef)
             guard let rawTitle = titleRef as? String, !rawTitle.isEmpty else { continue }
             
-            // Chrome window titles end with "- <Browser Name> - <Profile Name>"
-            // e.g. "New Tab - Google Chrome - Nastya" or "Docs - Google Chrome - Igor (Al11)"
             let matchesName = (!pName.isEmpty && (rawTitle.hasSuffix("- \(pName)") || rawTitle.contains(" - \(pName)")))
             let matchesEmail = (pEmail != nil && !pEmail!.isEmpty && rawTitle.contains(pEmail!))
             let matchesDir = (!profile.dir.isEmpty && (rawTitle.hasSuffix("- \(profile.dir)") || rawTitle.contains(" - \(profile.dir)")))
             
+            AppLogger.getLogger(category: .browser).info("focusProfile: Eval window '\(rawTitle)' -> matchesName:\(matchesName), matchesEmail:\(matchesEmail), matchesDir:\(matchesDir)")
+            
             if matchesName || matchesEmail || matchesDir {
                 let res = AXUIElementPerformAction(win, kAXRaiseAction as CFString)
+                AppLogger.getLogger(category: .browser).info("focusProfile: Match found! kAXRaiseAction result: \(res.rawValue)")
                 if res == .success {
+                    // Try to force the app to the front using NSRunningApplication
                     chrome.activate()
+                    
+                    // Fallback to AppleScript activation to bypass macOS 14 focus stealing prevention
+                    let script = "tell application \"System Events\" to set frontmost of process id \(chrome.processIdentifier) to true"
+                    var error: NSDictionary?
+                    if let appleScript = NSAppleScript(source: script) {
+                        appleScript.executeAndReturnError(&error)
+                    }
+                    
                     return true
                 }
             }
         }
         
+        AppLogger.getLogger(category: .browser).info("focusProfile: No matching window found for profile '\(pName)'. Falling back to binary invocation.")
         return false
     }
     
