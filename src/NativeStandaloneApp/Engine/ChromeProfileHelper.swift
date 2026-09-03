@@ -362,50 +362,39 @@ public final class ChromeProfileHelper: ObservableObject {
         }
         
         let pName = profile.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let pEmail = profile.email?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let escapedName = pName.replacingOccurrences(of: "\"", with: "\\\"")
         
-        AppLogger.getLogger(category: .browser).info("focusProfile: Searching \(windows.count) windows for profile Name='\(pName)', Dir='\(profile.dir)', Email='\(pEmail ?? "nil")'")
+        AppLogger.getLogger(category: .browser).info("focusProfile: Delegating window raise to System Events AppleScript for '\(pName)'...")
         
-        for win in windows {
-            var titleRef: CFTypeRef?
-            AXUIElementCopyAttributeValue(win, kAXTitleAttribute as CFString, &titleRef)
-            guard let rawTitle = titleRef as? String, !rawTitle.isEmpty else { continue }
-            
-            let matchesName = (!pName.isEmpty && (rawTitle.hasSuffix("- \(pName)") || rawTitle.contains(" - \(pName)")))
-            let matchesEmail = (pEmail != nil && !pEmail!.isEmpty && rawTitle.contains(pEmail!))
-            let matchesDir = (!profile.dir.isEmpty && (rawTitle.hasSuffix("- \(profile.dir)") || rawTitle.contains(" - \(profile.dir)")))
-            
-            AppLogger.getLogger(category: .browser).info("focusProfile: Eval window '\(rawTitle)' -> matchesName:\(matchesName), matchesEmail:\(matchesEmail), matchesDir:\(matchesDir)")
-            
-            if matchesName || matchesEmail || matchesDir {
-                AppLogger.getLogger(category: .browser).info("focusProfile: Match found! Preparing to raise and activate.")
-                
-                // 1. Un-minimize if necessary
-                var isMinimized: CFTypeRef?
-                if AXUIElementCopyAttributeValue(win, kAXMinimizedAttribute as CFString, &isMinimized) == .success,
-                   let min = isMinimized as? Bool, min {
-                    AXUIElementSetAttributeValue(win, kAXMinimizedAttribute as CFString, false as CFTypeRef)
-                }
-                
-                // 2. Make it the main window of the application
-                AXUIElementSetAttributeValue(win, kAXMainAttribute as CFString, true as CFTypeRef)
-                
-                // 3. Force the application to the foreground using System Events (bypasses macOS 14 focus stealing prevention)
-                let script = "tell application \"System Events\" to set frontmost of process id \(chrome.processIdentifier) to true"
-                var error: NSDictionary?
-                if let appleScript = NSAppleScript(source: script) {
-                    appleScript.executeAndReturnError(&error)
-                }
-                
-                // 4. Raise the specific window to the top of the app's window stack
-                let res = AXUIElementPerformAction(win, kAXRaiseAction as CFString)
-                AppLogger.getLogger(category: .browser).info("focusProfile: kAXRaiseAction result: \(res.rawValue)")
-                
+        let script = """
+        tell application "System Events"
+            tell process "\(chrome.localizedName ?? "Google Chrome")"
+                set frontmost to true
+                repeat with w in windows
+                    set wName to name of w
+                    if wName ends with "-\(escapedName)" or wName ends with "- \(escapedName)" or wName contains " - \(escapedName)" then
+                        if value of attribute "AXMinimized" of w is true then
+                            set value of attribute "AXMinimized" of w to false
+                        end if
+                        perform action "AXRaise" of w
+                        return true
+                    end if
+                end repeat
+            end tell
+        end tell
+        return false
+        """
+        
+        var error: NSDictionary?
+        if let appleScript = NSAppleScript(source: script) {
+            let result = appleScript.executeAndReturnError(&error)
+            AppLogger.getLogger(category: .browser).info("focusProfile: AppleScript result: \(result.booleanValue), Error: \(error?.description ?? "none")")
+            if result.booleanValue {
                 return true
             }
         }
         
-        AppLogger.getLogger(category: .browser).info("focusProfile: No matching window found for profile '\(pName)'. Falling back to binary invocation.")
+        AppLogger.getLogger(category: .browser).info("focusProfile: AppleScript failed to find/raise window. Falling back to binary invocation.")
         return false
     }
     
