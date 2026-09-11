@@ -37,5 +37,11 @@ verify:
 	@./verify_pkg.sh dist/MacProductivitySuite-Native.pkg
 	@ls -lh dist/*.pkg
 
+chrome-app:
+	@./build_chrome_quick_access.sh
+
+test-chrome:
+	@swift test --filter ChromeQuickAccessTests
+
 clean:
 	@rm -rf dist

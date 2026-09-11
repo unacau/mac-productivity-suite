@@ -28,6 +28,22 @@ let package = Package(
                 .linkedFramework("Sparkle")
             ]
         ),
+        .target(
+            name: "ChromeQuickAccess",
+            dependencies: [],
+            path: "src/ChromeQuickAccess",
+            exclude: ["main.swift"],
+            swiftSettings: [
+                .unsafeFlags(["-parse-as-library"])
+            ],
+            linkerSettings: [
+                .linkedFramework("Cocoa"),
+                .linkedFramework("AppKit"),
+                .linkedFramework("SwiftUI"),
+                .linkedFramework("ApplicationServices"),
+                .linkedFramework("CoreGraphics")
+            ]
+        ),
         .testTarget(
             name: "MacProductivitySuiteTests",
             dependencies: [
@@ -35,10 +51,18 @@ let package = Package(
                 .product(name: "Testing", package: "swift-testing")
             ],
             path: "tests",
-            exclude: ["run_tests.sh"],
+            exclude: ["run_tests.sh", "ChromeQuickAccessTests"],
             swiftSettings: [
                 .unsafeFlags(["-F", "Frameworks"])
             ]
+        ),
+        .testTarget(
+            name: "ChromeQuickAccessTests",
+            dependencies: [
+                "ChromeQuickAccess",
+                .product(name: "Testing", package: "swift-testing")
+            ],
+            path: "tests/ChromeQuickAccessTests"
         )
     ]
 )

@@ -1,0 +1,291 @@
+import Foundation
+import CoreGraphics
+import AppKit
+import Cocoa
+import os
+
+// MARK: - HID Mapping Service
+public enum HIDMappingService {
+    public static let hidCapsLock: UInt64 = 0x700000039
+    public static let hidF18: UInt64 = 0x70000006D
+    
+    @discardableResult
+    public static func applyCapsLockToF18() -> Bool {
+        let json = "{\"UserKeyMapping\":[{\"HIDKeyboardModifierMappingSrc\":\(hidCapsLock),\"HIDKeyboardModifierMappingDst\":\(hidF18)}]}"
+        let task = Process()
+        task.launchPath = "/usr/bin/hidutil"
+        task.arguments = ["property", "--set", json]
+        do {
+            try task.run()
+            task.waitUntilExit()
+            Logger(subsystem: "com.unacau.chromequickaccess", category: "hid").info("Applied Caps Lock -> F18 mapping via hidutil.")
+            return task.terminationStatus == 0
+        } catch {
+            Logger(subsystem: "com.unacau.chromequickaccess", category: "hid").error("Failed to set hidutil mapping: \(error.localizedDescription)")
+            return false
+        }
+    }
+    
+    @discardableResult
+    public static func restoreDefaultMapping() -> Bool {
+        let task = Process()
+        task.launchPath = "/usr/bin/hidutil"
+        task.arguments = ["property", "--set", "{\"UserKeyMapping\":[]}"]
+        do {
+            try task.run()
+            task.waitUntilExit()
+            Logger(subsystem: "com.unacau.chromequickaccess", category: "hid").info("Restored default HID key mapping.")
+            return task.terminationStatus == 0
+        } catch {
+            Logger(subsystem: "com.unacau.chromequickaccess", category: "hid").error("Failed to restore hidutil mapping: \(error.localizedDescription)")
+            return false
+        }
+    }
+}
+
+// MARK: - CapsLock Engine (Dual-Role & Shortcuts)
+@MainActor
+public final class CapsLockEngine: @unchecked Sendable {
+    public static let shared = CapsLockEngine()
+    
+    public static let f18KeyCode: Int64 = Int64(KeyCodes.kVK_F18) // 79 (0x4F)
+    public static let escKeyCode: CGKeyCode = CGKeyCode(KeyCodes.kVK_Escape) // 53 (0x35)
+    public static let capsLockKeyCode: Int64 = Int64(KeyCodes.kVK_CapsLock) // 57 (0x39)
+    public static let syntheticMarker: Int64 = 0x43514150 // "CQAP"
+    
+    private var eventTapPort: CFMachPort?
+    private var runLoopSource: CFRunLoopSource?
+    private var isStarted = false
+    
+    public var isCapsHeld: Bool = false
+    public var capsUsedAsModifier: Bool = false
+    public var escapeOnTapEnabled: Bool = true
+    
+    /// Callbacks for actions
+    public var onChromeTrigger: (@MainActor () -> Void)?
+    public var onProfileTrigger: (@MainActor (Int) -> Void)?
+    
+    private let logger = Logger(subsystem: "com.unacau.chromequickaccess", category: "engine")
+    
+    public init() {
+        setupWakeNotification()
+    }
+    
+    public func start() {
+        guard !isStarted else { return }
+        
+        // 1. Accessibility check
+        guard AXIsProcessTrusted() else {
+            logger.warning("Accessibility permission missing. Global event tap cannot be registered.")
+            return
+        }
+        
+        // 2. Remap Caps Lock -> F18 at driver level
+        HIDMappingService.applyCapsLockToF18()
+        
+        // 3. Register CoreGraphics Head-Insert Event Tap
+        let eventMask: CGEventMask = (
+            (1 << CGEventType.keyDown.rawValue) |
+            (1 << CGEventType.keyUp.rawValue) |
+            (1 << CGEventType.flagsChanged.rawValue)
+        )
+        
+        let selfPtr = Unmanaged.passUnretained(self).toOpaque()
+        guard let tap = CGEvent.tapCreate(
+            tap: .cghidEventTap,
+            place: .headInsertEventTap,
+            options: .defaultTap,
+            eventsOfInterest: eventMask,
+            callback: { proxy, type, event, refcon in
+                guard let refcon = refcon else { return Unmanaged.passUnretained(event) }
+                let engine = Unmanaged<CapsLockEngine>.fromOpaque(refcon).takeUnretainedValue()
+                return engine.handleEvent(proxy: proxy, type: type, event: event)
+            },
+            userInfo: selfPtr
+        ) else {
+            logger.error("Failed to create CGEventTap for CapsLockEngine.")
+            Task { @MainActor in
+                let alert = NSAlert()
+                alert.messageText = "Accessibility Bug Detected"
+                alert.informativeText = "macOS granted Accessibility permissions, but denied the event tap. This happens when an app is recompiled and macOS caches the previous cdhash.\n\nPlease remove Chrome Quick Access from System Settings > Privacy & Security > Accessibility and add it back."
+                alert.alertStyle = .critical
+                alert.runModal()
+            }
+            return
+        }
+        
+        eventTapPort = tap
+        let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
+        runLoopSource = source
+        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+        CGEvent.tapEnable(tap: tap, enable: true)
+        isStarted = true
+        
+        logger.info("CapsLockEngine event tap started successfully.")
+    }
+    
+    public func stop() {
+        if let tap = eventTapPort {
+            CGEvent.tapEnable(tap: tap, enable: false)
+            if let source = runLoopSource {
+                CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes)
+            }
+            eventTapPort = nil
+            runLoopSource = nil
+        }
+        HIDMappingService.restoreDefaultMapping()
+        isStarted = false
+        isCapsHeld = false
+        capsUsedAsModifier = false
+    }
+    
+    private func setupWakeNotification() {
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                guard let self = self else { return }
+                self.logger.info("System woke from sleep: Re-applying HID Caps Lock mapping.")
+                HIDMappingService.applyCapsLockToF18()
+                if let port = self.eventTapPort {
+                    CGEvent.tapEnable(tap: port, enable: true)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Event Tap Processing
+    public func handleEvent(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
+        // Auto-recover tap if disabled by system load
+        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+            if let port = eventTapPort {
+                CGEvent.tapEnable(tap: port, enable: true)
+            }
+            return Unmanaged.passUnretained(event)
+        }
+        
+        // Ignore synthetic events generated by our own engine to prevent loops
+        if event.getIntegerValueField(.eventSourceUserData) == Self.syntheticMarker {
+            return Unmanaged.passUnretained(event)
+        }
+        
+        let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
+        
+        // 1. F18 KeyDown: Caps Lock held down (remapped by hidutil)
+        if type == .keyDown && keyCode == Self.f18KeyCode {
+            if !isCapsHeld {
+                isCapsHeld = true
+                capsUsedAsModifier = false
+            }
+            return nil // Swallow F18 down
+        }
+        
+        // 2. F18 KeyUp: Caps Lock released
+        if type == .keyUp && keyCode == Self.f18KeyCode {
+            let wasUsed = capsUsedAsModifier
+            isCapsHeld = false
+            capsUsedAsModifier = false
+            
+            // Dual-role check: If released alone, emit Escape!
+            if !wasUsed && escapeOnTapEnabled {
+                postSyntheticEscape()
+            }
+            return nil // Swallow F18 up
+        }
+        
+        // 3. Fallback for unremapped Caps Lock (flagsChanged on keycode 57)
+        if type == .flagsChanged && keyCode == Self.capsLockKeyCode {
+            let isDown = event.flags.contains(.maskAlphaShift)
+            if isDown {
+                isCapsHeld = true
+                capsUsedAsModifier = false
+            } else {
+                let wasUsed = capsUsedAsModifier
+                isCapsHeld = false
+                capsUsedAsModifier = false
+                if !wasUsed && escapeOnTapEnabled {
+                    postSyntheticEscape()
+                }
+            }
+            return nil
+        }
+        
+        // 4. Fallback check for external Hyper modifiers (Cmd + Opt + Ctrl + Shift)
+        let hyperFlagsMask: CGEventFlags = [.maskCommand, .maskAlternate, .maskControl, .maskShift]
+        let isHyperModifiers = event.flags.contains(hyperFlagsMask)
+        if type == .flagsChanged {
+            if isHyperModifiers {
+                if !isCapsHeld {
+                    isCapsHeld = true
+                    capsUsedAsModifier = false
+                }
+            } else if isCapsHeld {
+                isCapsHeld = false
+                capsUsedAsModifier = false
+            }
+        }
+        
+        // 5. Intercept key combinations when Caps Lock is held
+        if isCapsHeld || isHyperModifiers {
+            if type == .keyDown {
+                // Ignore key autorepeat
+                if event.getIntegerValueField(.keyboardEventAutorepeat) != 0 {
+                    return nil
+                }
+                
+                // Check for 'C' (focus Chrome)
+                if UInt32(keyCode) == KeyCodes.kVK_ANSI_C {
+                    capsUsedAsModifier = true
+                    onChromeTrigger?()
+                    return nil // Swallow 'C'
+                }
+                
+                // Check for '1'..'8' (focus specific profile)
+                if let char = KeyCodes.character(for: UInt32(keyCode)),
+                   let digit = Int(char), digit >= 1 && digit <= 8 {
+                    capsUsedAsModifier = true
+                    onProfileTrigger?(digit)
+                    return nil // Swallow number key
+                }
+                
+                // Other keys: passthrough with Hyper flags
+                capsUsedAsModifier = true
+                let hyperFlags: CGEventFlags = [.maskCommand, .maskAlternate, .maskControl, .maskShift]
+                event.flags = CGEventFlags(rawValue: event.flags.rawValue | hyperFlags.rawValue)
+                return Unmanaged.passUnretained(event)
+            } else if type == .keyUp {
+                // Swallow keyUp for 'c' and '1'..'8' so no stray events are sent
+                if UInt32(keyCode) == KeyCodes.kVK_ANSI_C {
+                    return nil
+                }
+                if let char = KeyCodes.character(for: UInt32(keyCode)),
+                   let digit = Int(char), digit >= 1 && digit <= 8 {
+                    return nil
+                }
+                
+                let hyperFlags: CGEventFlags = [.maskCommand, .maskAlternate, .maskControl, .maskShift]
+                event.flags = CGEventFlags(rawValue: event.flags.rawValue | hyperFlags.rawValue)
+                return Unmanaged.passUnretained(event)
+            }
+        }
+        
+        return Unmanaged.passUnretained(event)
+    }
+    
+    public func postSyntheticEscape() {
+        let src = CGEventSource(stateID: .hidSystemState)
+        guard let down = CGEvent(keyboardEventSource: src, virtualKey: Self.escKeyCode, keyDown: true),
+              let up = CGEvent(keyboardEventSource: src, virtualKey: Self.escKeyCode, keyDown: false) else {
+            return
+        }
+        
+        down.setIntegerValueField(.eventSourceUserData, value: Self.syntheticMarker)
+        up.setIntegerValueField(.eventSourceUserData, value: Self.syntheticMarker)
+        
+        down.post(tap: .cghidEventTap)
+        up.post(tap: .cghidEventTap)
+        logger.debug("Posted synthetic Escape key event.")
+    }
+}

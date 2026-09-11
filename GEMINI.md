@@ -103,3 +103,5 @@
 - **Operations & Releases**: Consult `.agents/skills/mac-productivity-ops/SKILL.md`, `release.sh`, `build_full_pkg.sh`, `build_native_app.sh`, and `appcast.xml`.
 - **Diagnostics & Monitoring**: Run `make health`, `make monitor`, or `make diagnostics` (`scripts/monitor_telemetry.sh`).
 - **Hammerspoon / Karabiner**: Load `hammerspoon/` and `karabiner/`.
+- **Simplified Chrome Quick-Access Native (Next Gen)**: Consult `docs/SIMPLIFIED_CHROME_QUICK_ACCESS_SPEC.md` and `CLAUDE.md`. Key source modules to extract: `src/NativeStandaloneApp/Engine/HyperKeyEngine.swift` (Caps-Lock -> F18 hidutil + CGEventTap dual-role Escape) and `src/NativeStandaloneApp/Engine/ChromeProfileHelper.swift` (Local State parsing + native macOS Accessibility menu bar profile switcher).
+

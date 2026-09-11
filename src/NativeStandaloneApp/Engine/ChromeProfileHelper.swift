@@ -541,7 +541,6 @@ public final class ChromeProfileHelper: ObservableObject {
                         let runningApps = NSWorkspace.shared.runningApplications
                         if let chromeApp = runningApps.first(where: { $0.bundleIdentifier == bundleID }) {
                             chromeApp.activate()
-                            unminimizeWindowsIfNeeded(for: chromeApp.processIdentifier)
                         }
                         let task = Process()
                         task.launchPath = "/usr/bin/open"
@@ -570,19 +569,7 @@ public final class ChromeProfileHelper: ObservableObject {
     }
     
     public func unminimizeWindowsIfNeeded(for pid: pid_t) {
-        let appRef = AXUIElementCreateApplication(pid)
-        var windowsRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(appRef, kAXWindowsAttribute as CFString, &windowsRef) == .success,
-              let windows = windowsRef as? [AXUIElement] else { return }
-        
-        for win in windows {
-            var isMinimizedRef: CFTypeRef?
-            if AXUIElementCopyAttributeValue(win, kAXMinimizedAttribute as CFString, &isMinimizedRef) == .success,
-               let isMin = isMinimizedRef as? Bool, isMin {
-                AXUIElementSetAttributeValue(win, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
-            }
-            AXUIElementPerformAction(win, kAXRaiseAction as CFString)
-        }
+        // No-op: Minimized windows must strictly remain in the Dock.
     }
     
     private func launchBrowserColdStart(bundleID: String, dir: String) {
