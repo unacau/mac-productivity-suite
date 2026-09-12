@@ -55,7 +55,7 @@ public final class CapsLockEngine: @unchecked Sendable {
     
     private var eventTapPort: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
-    private var isStarted = false
+    public private(set) var isStarted: Bool = false
     
     public var isCapsHeld: Bool = false
     public var isExternalHyperHeld: Bool = false

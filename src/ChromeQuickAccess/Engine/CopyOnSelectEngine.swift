@@ -19,7 +19,18 @@ public final class CopyOnSelectEngine: @unchecked Sendable {
     private var globalMouseDownMonitor: Any?
     private var globalMouseUpMonitor: Any?
     private var mouseDownLocation: CGPoint?
+    private var pendingCopyTask: Task<Void, Never>?
     public private(set) var isStarted: Bool = false
+    
+    public var hasPendingCopy: Bool {
+        guard let task = pendingCopyTask else { return false }
+        return !task.isCancelled
+    }
+    
+    public func cancelPendingCopy() {
+        pendingCopyTask?.cancel()
+        pendingCopyTask = nil
+    }
     
     private let logger = Logger(subsystem: "com.unacau.chromequickaccess", category: "copy-on-select")
     
@@ -66,6 +77,7 @@ public final class CopyOnSelectEngine: @unchecked Sendable {
     }
     
     public func stop() {
+        cancelPendingCopy()
         if let tap = eventTapPort {
             CGEvent.tapEnable(tap: tap, enable: false)
             if let source = runLoopSource {
@@ -90,8 +102,9 @@ public final class CopyOnSelectEngine: @unchecked Sendable {
     private func installNSEventMonitors() {
         guard globalMouseDownMonitor == nil else { return }
         globalMouseDownMonitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDown) { [weak self] _ in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 guard let engine = self, engine.isEnabled else { return }
+                engine.cancelPendingCopy()
                 let flags = NSEvent.modifierFlags
                 if flags.contains(.command) || flags.contains(.control) {
                     engine.mouseDownLocation = nil
@@ -101,7 +114,7 @@ public final class CopyOnSelectEngine: @unchecked Sendable {
             }
         }
         globalMouseUpMonitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseUp) { [weak self] event in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 guard let engine = self, engine.isEnabled else { return }
                 let flags = event.modifierFlags
                 if flags.contains(.command) || flags.contains(.control) {
@@ -135,11 +148,13 @@ public final class CopyOnSelectEngine: @unchecked Sendable {
         
         // Ignore drags with Command or Control held (e.g. Cmd-drag windows, Ctrl-drag Xcode outlets)
         if event.flags.contains(.maskCommand) || event.flags.contains(.maskControl) {
+            cancelPendingCopy()
             mouseDownLocation = nil
             return
         }
         
         if type == .leftMouseDown {
+            cancelPendingCopy()
             mouseDownLocation = event.location
         } else if type == .leftMouseUp {
             guard let start = mouseDownLocation else { return }
@@ -162,12 +177,14 @@ public final class CopyOnSelectEngine: @unchecked Sendable {
         return dx > dragThreshold || dy > dragThreshold
     }
     
-    private func scheduleCopy() {
+    public func scheduleCopy() {
+        cancelPendingCopy()
         let delay = copyDelayMs
-        Task { @MainActor in
+        pendingCopyTask = Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: delay * 1_000_000)
-            guard self.isEnabled && self.isStarted else { return }
-            self.postCopyKeystroke()
+            guard !Task.isCancelled else { return }
+            guard let engine = self, engine.isEnabled && engine.isStarted else { return }
+            engine.postCopyKeystroke()
         }
     }
     

@@ -560,4 +560,69 @@ struct ChromeQuickAccessUnitTests {
         engine.handleTapEvent(type: .tapDisabledByUserInput, event: dummy)
         #expect(engine.isEnabled == true)
     }
+    
+    @Test @MainActor
+    func testCopyOnSelectPendingCopyCancellation() async throws {
+        let engine = CopyOnSelectEngine()
+        var copyKeystrokes = 0
+        engine.onCopyKeystrokePosted = {
+            copyKeystrokes += 1
+        }
+        engine.copyDelayMs = 40 // short delay for test
+        
+        // 1. Trigger a double-click to schedule a copy
+        let doubleClickUp = CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: CGPoint(x: 100, y: 100), mouseButton: .left)!
+        doubleClickUp.setIntegerValueField(.mouseEventClickState, value: 2)
+        
+        let dummyDown = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint(x: 100, y: 100), mouseButton: .left)!
+        engine.handleTapEvent(type: .leftMouseDown, event: dummyDown)
+        engine.handleTapEvent(type: .leftMouseUp, event: doubleClickUp)
+        
+        #expect(engine.hasPendingCopy == true)
+        
+        // 2. User immediately clicks down somewhere else (e.g. to deselect or click button)
+        let deselectDown = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint(x: 200, y: 200), mouseButton: .left)!
+        engine.handleTapEvent(type: .leftMouseDown, event: deselectDown)
+        
+        // The pending copy must be cancelled!
+        #expect(engine.hasPendingCopy == false)
+        
+        // Wait longer than copyDelayMs to confirm keystroke was NEVER posted
+        try await Task.sleep(nanoseconds: 80_000_000)
+        #expect(copyKeystrokes == 0)
+    }
+    
+    @Test @MainActor
+    func testCapsLockEngineIsStartedState() {
+        let engine = CapsLockEngine()
+        #expect(engine.isStarted == false)
+        #expect(engine.isCapsHeld == false)
+        #expect(engine.capsUsedAsModifier == false)
+    }
+    
+    @Test @MainActor
+    func testChromeProfileLocalizedMenuMatching() {
+        #expect(ChromeProfileEngine.isProfileMenuTitle("Profiles") == true)
+        #expect(ChromeProfileEngine.isProfileMenuTitle("Profile") == true)
+        #expect(ChromeProfileEngine.isProfileMenuTitle("Profils") == true)     // French
+        #expect(ChromeProfileEngine.isProfileMenuTitle("Perfiles") == true)    // Spanish
+        #expect(ChromeProfileEngine.isProfileMenuTitle("Профили") == true)    // Russian
+        #expect(ChromeProfileEngine.isProfileMenuTitle("Perfis") == true)      // Portuguese
+        #expect(ChromeProfileEngine.isProfileMenuTitle("Profili") == true)     // Italian
+        #expect(ChromeProfileEngine.isProfileMenuTitle("个人资料") == true)     // Chinese
+        #expect(ChromeProfileEngine.isProfileMenuTitle("プロファイル") == true)  // Japanese
+        
+        // Negative checks
+        #expect(ChromeProfileEngine.isProfileMenuTitle("File") == false)
+        #expect(ChromeProfileEngine.isProfileMenuTitle("Edit") == false)
+        #expect(ChromeProfileEngine.isProfileMenuTitle("Window") == false)
+        #expect(ChromeProfileEngine.isProfileMenuTitle("History") == false)
+    }
+    
+    @Test @MainActor
+    func testMinimalHUDWindowIsPanel() {
+        let window = MinimalHUDWindow.shared
+        #expect(window.isFloatingPanel == true)
+        #expect(window.level == .floating)
+    }
 }

@@ -132,12 +132,7 @@ public struct AntigravityAvatarView: View {
 public struct MinimalHUDView: View {
     @ObservedObject var state = ChromeSwitcherState.shared
     
-    public init(profile: ChromeProfile? = nil) {
-        if let profile = profile, state.profiles.isEmpty {
-            state.profiles = [profile]
-            state.selectedIndex = 0
-        }
-    }
+    public init() {}
     
     private var cardWidth: CGFloat {
         let count = state.mode == .chrome ? state.profiles.count : state.antigravityItems.count
@@ -223,7 +218,7 @@ public struct MinimalHUDView: View {
         .background(
             ZStack {
                 VisualEffectBlur(material: .hudWindow, blendingMode: .behindWindow)
-                Color(red: 45/255, green: 44/255, blue: 49/255)
+                Color(red: 45/255, green: 44/255, blue: 49/255).opacity(0.82)
             }
             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         )
@@ -251,7 +246,7 @@ struct VisualEffectBlur: NSViewRepresentable {
 
 // MARK: - Minimal HUD Window
 @MainActor
-public final class MinimalHUDWindow: NSWindow {
+public final class MinimalHUDWindow: NSPanel {
     public static let shared = MinimalHUDWindow()
     
     public init() {
@@ -261,6 +256,8 @@ public final class MinimalHUDWindow: NSWindow {
             backing: .buffered,
             defer: false
         )
+        self.isFloatingPanel = true
+        self.becomesKeyOnlyIfNeeded = true
         self.isOpaque = false
         self.backgroundColor = .clear
         self.level = .floating

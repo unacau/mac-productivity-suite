@@ -305,6 +305,14 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     @objc private func handleRefreshProfiles() {
+        if AXIsProcessTrusted() {
+            if !CapsLockEngine.shared.isStarted {
+                CapsLockEngine.shared.start()
+            }
+            if !CopyOnSelectEngine.shared.isStarted && CopyOnSelectEngine.shared.isEnabled {
+                CopyOnSelectEngine.shared.start()
+            }
+        }
         ChromeProfileEngine.shared.refreshProfiles()
         AntigravityEngine.shared.refreshItems()
         updateMenu()

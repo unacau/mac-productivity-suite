@@ -89,7 +89,9 @@ public final class ChromeProfileEngine: ObservableObject {
         cachedAvatars.removeAll()
         let fileManager = FileManager.default
         let chromeAppPath = "/Applications/Google Chrome.app"
-        self.isChromeInstalled = fileManager.fileExists(atPath: chromeAppPath)
+        self.isChromeInstalled = fileManager.fileExists(atPath: chromeAppPath) ||
+            fileManager.fileExists(atPath: "\(NSHomeDirectory())/Applications/Google Chrome.app") ||
+            NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.google.Chrome") != nil
         
         var foundProfiles: [ChromeProfile] = []
         var discoveredBundleID = "com.google.Chrome"
@@ -356,12 +358,14 @@ public final class ChromeProfileEngine: ObservableObject {
         let appElement = AXUIElementCreateApplication(chromeApp.processIdentifier)
         var menuBarRef: CFTypeRef?
         guard AXUIElementCopyAttributeValue(appElement, kAXMenuBarAttribute as CFString, &menuBarRef) == .success,
-              let menuBar = menuBarRef as! AXUIElement? else {
+              let menuBar = menuBarRef,
+              CFGetTypeID(menuBar) == AXUIElementGetTypeID() else {
             return []
         }
+        let menuBarElement = menuBar as! AXUIElement
         
         var menuBarItemsRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(menuBar, kAXChildrenAttribute as CFString, &menuBarItemsRef) == .success,
+        guard AXUIElementCopyAttributeValue(menuBarElement, kAXChildrenAttribute as CFString, &menuBarItemsRef) == .success,
               let menuBarItems = menuBarItemsRef as? [AXUIElement] else {
             return []
         }
@@ -370,7 +374,7 @@ public final class ChromeProfileEngine: ObservableObject {
             var titleRef: CFTypeRef?
             AXUIElementCopyAttributeValue(item, kAXTitleAttribute as CFString, &titleRef)
             let title = (titleRef as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-            if title == "Profiles" || title == "Profile" {
+            if Self.isProfileMenuTitle(title) {
                 var childrenRef: CFTypeRef?
                 if AXUIElementCopyAttributeValue(item, kAXChildrenAttribute as CFString, &childrenRef) == .success,
                    let subMenus = childrenRef as? [AXUIElement], let subMenu = subMenus.first {
@@ -384,6 +388,16 @@ public final class ChromeProfileEngine: ObservableObject {
         }
         
         return []
+    }
+    
+    public static func isProfileMenuTitle(_ title: String) -> Bool {
+        let clean = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lower = clean.lowercased()
+        return lower == "profiles" || lower == "profile" ||
+               lower == "profils" || lower == "perfiles" ||
+               lower == "профили" || lower == "профиль" ||
+               lower == "perfis" || lower == "profili" ||
+               clean == "个人资料" || clean == "プロファイル"
     }
     
     private func findMenuItem(for profile: ChromeProfile, in menuItems: [AXUIElement]) -> AXUIElement? {
