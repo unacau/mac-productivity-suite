@@ -52,8 +52,7 @@ jobs:
           
           | Metric | Status |
           | :--- | :--- |
-          | **Unit & Integration Tests** | ✅ Passed |
-          | **Universal Binary (`arm64` + `x86_64`)** | ✅ Built (`dist/MacProductivitySuite.dmg`) |
-          | **Version Alignment** | ✅ `$(cat VERSION.txt 2>/dev/null || echo 'N/A')` (Build `$(cat BUILD.txt 2>/dev/null || echo 'N/A')`) |
-          | **Sparkle Feed Integrity** | ✅ Verified |
+          | **Unit Tests** | ✅ Passed |
+          | **Universal Binary (`arm64` + `x86_64`)** | ✅ Built (`dist/ChromeQuickAccess.dmg`) |
+          | **Version Alignment** | ✅ $(cat VERSION.txt 2>/dev/null || echo 'N/A') (Build $(cat BUILD.txt 2>/dev/null || echo 'N/A')) |
           EOF

@@ -3,139 +3,36 @@ set -euo pipefail
 
 VERSION=$(cat VERSION.txt)
 BUILD=$(cat BUILD.txt)
-APP_NAME="Mac Productivity Suite"
-DMG_FILE="dist/MacProductivitySuite.dmg"
-PKG_FILE="dist/MacProductivitySuite-Full.pkg"
-APPCAST_FILE="appcast.xml"
+APP_NAME="Chrome Quick Access"
+DMG_FILE="dist/ChromeQuickAccess.dmg"
 REPO="unacau/mac-productivity-suite"
 
 echo "=================================================="
 echo " Preparing Release v$VERSION (Build $BUILD)       "
+echo " App: $APP_NAME                                   "
 echo "=================================================="
 
-# 1. Build the Apps
-echo "[1/4] Building Applications and Installers..."
+# 1. Build Native Application & DMG
+echo "[1/3] Building Universal Application & DMG..."
 ./build_native_app.sh
-./build_full_pkg.sh
 
-# 2. Sign DMG with Sparkle
-echo "[2/4] Signing DMG with Sparkle EdDSA..."
-if [ -s "sparkle_private.key" ]; then
-    SIGNATURE_OUTPUT=$(Frameworks/bin/sign_update -f sparkle_private.key "$DMG_FILE")
-    ED_SIG=$(echo "$SIGNATURE_OUTPUT" | grep -o 'sparkle:edSignature="[^"]*"' | cut -d'"' -f2)
-    LENGTH=$(echo "$SIGNATURE_OUTPUT" | grep -o 'length="[^"]*"' | cut -d'"' -f2)
-elif [ -z "${CI:-}" ]; then
-    SIGNATURE_OUTPUT=$(Frameworks/bin/sign_update "$DMG_FILE" 2>/dev/null || true)
-    ED_SIG=$(echo "$SIGNATURE_OUTPUT" | grep -o 'sparkle:edSignature="[^"]*"' | cut -d'"' -f2)
-    LENGTH=$(echo "$SIGNATURE_OUTPUT" | grep -o 'length="[^"]*"' | cut -d'"' -f2)
-    if [ -z "$LENGTH" ]; then
-        LENGTH=$(wc -c < "$DMG_FILE" | tr -d ' ')
-    fi
+# 2. Verify Health
+echo "[2/3] Running Health & Quality Check..."
+./scripts/health_check.sh
+
+# 3. Publish / Tag Release
+echo "[3/3] Creating Release Assets..."
+if command -v gh >/dev/null 2>&1; then
+    echo "Creating GitHub Release v$VERSION..."
+    gh release create "v$VERSION" "$DMG_FILE" \
+        --title "v$VERSION - Chrome Quick Access & Productivity Suite" \
+        --notes "Release v$VERSION (Build $BUILD) of Chrome Quick Access featuring driverless Caps-Lock remapping, multi-profile Chrome cycling, Antigravity switcher, and universal Copy-on-Select." \
+        --repo "$REPO" || echo "ℹ️ gh release command skipped or already exists."
 else
-    echo "ℹ️  Running in CI without key; calculating payload length."
-    ED_SIG=""
-    LENGTH=$(wc -c < "$DMG_FILE" | tr -d ' ')
-fi
-echo "✅ Packaging info generated (Length: $LENGTH)."
-
-# 3. Update Appcast
-echo "[3/4] Updating Appcast..."
-export APPCAST_FILE="$APPCAST_FILE"
-export VERSION="$VERSION"
-export BUILD="$BUILD"
-export PUB_DATE="$(date -R)"
-export REPO="$REPO"
-export ED_SIG="$ED_SIG"
-export LENGTH="$LENGTH"
-
-python3 - << 'PYEOF'
-import os
-
-appcast_file = os.environ['APPCAST_FILE']
-version = os.environ['VERSION']
-build = os.environ['BUILD']
-pub_date = os.environ['PUB_DATE']
-repo = os.environ['REPO']
-ed_sig = os.environ['ED_SIG']
-length = os.environ['LENGTH']
-
-new_item = f'''    <item>
-      <title>Version {version} (Build {build})</title>
-      <pubDate>{pub_date}</pubDate>
-      <sparkle:version>{build}</sparkle:version>
-      <sparkle:shortVersionString>{version}</sparkle:shortVersionString>
-      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description><![CDATA[<ul>
-        <li><strong>Comprehensive Profile Switching Resilience (11 Edge Cases)</strong>: Hardened Chromium profile selection against duplicate account display names, identical GAIA given names, decomposed Unicode accents, and whitespace padding via canonical Unicode normalization and email-disambiguated title matching.</li>
-        <li><strong>Minimized Window Recovery</strong>: Automatically detects and un-minimizes profile windows from the macOS Dock upon selection via Accessibility window queries.</li>
-        <li><strong>Defensive Parsing & Deleted Profile Fallback</strong>: Resilient to malformed Local State JSON and deleted profiles, falling back smoothly to CLI cold-starts without hanging or crashing.</li>
-        <li><strong>Direct Quick-Tap Hotkey Launch</strong>: Fixed single-tap Hyper + [1..9] activation when the Hyper key is released quickly.</li>
-        <li><strong>Fixed HUD Profile Numbering</strong>: Explicit Chrome profiles in custom bindings are assigned strictly sequential visual indices (1, 2, 3...) matching card order.</li>
-        <li><strong>Pure Native Driverless Engine</strong>: 100% native Swift 6 engine with driverless Caps Lock Hyper Key mapping via hidutil and Carbon/CGEvent taps.</li>
-        <li><strong>Sparkle Auto-Updates</strong>: Integrated Sparkle 2.x with EdDSA signature verification.</li>
-      </ul>]]></description>
-      <enclosure url="https://github.com/{repo}/releases/download/v{version}/MacProductivitySuite.dmg"
-                 type="application/octet-stream"
-                 sparkle:edSignature="{ed_sig}"
-                 length="{length}" />
-    </item>'''
-
-if os.path.exists(appcast_file):
-    with open(appcast_file, 'r', encoding='utf-8') as f:
-        content = f.read()
-    if '<item>' in content:
-        updated_content = content.replace('<item>', new_item + '\n    <item>', 1)
-    else:
-        updated_content = content.replace('</channel>', new_item + '\n  </channel>', 1)
-else:
-    updated_content = f'''<?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle"  xmlns:dc="http://purl.org/dc/elements/1.1/">
-  <channel>
-    <title>Mac Productivity Suite Changelog</title>
-    <link>https://raw.githubusercontent.com/{repo}/main/appcast.xml</link>
-    <description>Most recent changes with links to updates.</description>
-    <language>en</language>
-{new_item}
-  </channel>
-</rss>
-'''
-
-with open(appcast_file, 'w', encoding='utf-8') as f:
-    f.write(updated_content)
-PYEOF
-
-echo "✅ $APPCAST_FILE updated successfully."
-
-# 4. Git Push & GitHub Release
-echo "[4/4] Publishing to GitHub..."
-if [ -z "${CI:-}" ]; then
-    git add -A
-    git commit -m "release: v$VERSION with 11 Chromium profile edge cases and minimized window recovery" || true
-    git tag -a "v$VERSION" -m "Release v$VERSION" || true
-    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-    git push -u origin "$CURRENT_BRANCH" || echo "⚠️  Git push failed. Ensure you have push access to the repository."
-    if [ "$CURRENT_BRANCH" != "main" ]; then
-        git push origin "$CURRENT_BRANCH:main" || echo "⚠️  Git push to main failed."
-    fi
-    git push origin "v$VERSION" || echo "⚠️  Git push tag failed."
-
-    if command -v gh >/dev/null 2>&1; then
-        gh release create "v$VERSION" "$DMG_FILE" "$PKG_FILE" --title "v$VERSION" --notes "### Release v$VERSION
-- **Comprehensive Profile Switching Resilience (11 Edge Cases)**: Hardened Chromium profile selection against duplicate account display names, identical GAIA given names, decomposed Unicode accents, and whitespace padding via canonical Unicode normalization and email-disambiguated title matching.
-- **Minimized Window Recovery**: Automatically detects and un-minimizes profile windows from the macOS Dock upon selection via Accessibility window queries.
-- **Defensive Parsing & Deleted Profile Fallback**: Resilient to malformed Local State JSON and deleted profiles, falling back smoothly to CLI cold-starts without hanging or crashing.
-- **Direct Quick-Tap Hotkey Launch**: Fixed single-tap Hyper + [1..9] activation when the Hyper key is released quickly.
-- **Fixed HUD Profile Numbering**: Explicit Chrome profiles in custom bindings are assigned strictly sequential visual indices (1, 2, 3...) matching card order.
-- **Pure Native Driverless Engine**: 100% native Swift 6 engine with driverless Caps Lock Hyper Key mapping via macOS \`hidutil\` and Carbon/CGEvent taps.
-- **Instant HUD Overlay Dismissal**: Re-engineered dismissal lifecycle so the floating HUD vanishes the exact millisecond keys are released.
-- **Sparkle Auto-Updates**: Integrated Sparkle 2.x with EdDSA signature verification and offline PKG bundle packaging." || echo "Release v$VERSION might already exist."
-    else
-        echo "⚠️  GitHub CLI (gh) not installed. Skip creating GitHub Release."
-    fi
-else
-    echo "Running inside CI environment, skipping local git commit and push."
+    echo "ℹ️ GitHub CLI (gh) not installed. DMG is available at $DMG_FILE."
 fi
 
 echo "=================================================="
-echo " Release Complete!                                "
+echo " ✅ Release v$VERSION Built Successfully!"
+echo " Artifact: $DMG_FILE"
 echo "=================================================="

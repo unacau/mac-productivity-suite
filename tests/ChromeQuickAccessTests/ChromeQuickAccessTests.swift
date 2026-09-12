@@ -315,4 +315,249 @@ struct ChromeQuickAccessUnitTests {
         engine.stop()
         #expect(engine.isStarted == false)
     }
+    
+    @Test @MainActor
+    func testProfileEffectiveNameFallbackHierarchy() {
+        let p1 = ChromeProfile(index: 1, dir: "Profile 1", name: "", gaiaName: "Igor Corporate")
+        #expect(p1.effectiveName == "Igor Corporate")
+        
+        let p2 = ChromeProfile(index: 2, dir: "Profile 2", name: "   ", email: "support@almosteleven.com")
+        #expect(p2.effectiveName == "support@almosteleven.com")
+        
+        let p3 = ChromeProfile(index: 3, dir: "Profile 3", name: "")
+        #expect(p3.effectiveName == "Profile 3")
+        
+        let pDefault = ChromeProfile(index: 4, dir: "Default", name: "")
+        #expect(pDefault.effectiveName == "Personal")
+    }
+    
+    @Test @MainActor
+    func testProfileExpectedMenuTitleAndDisambiguation() {
+        let pDefault = ChromeProfile(
+            index: 1,
+            dir: "Default",
+            name: "Igor",
+            email: "igor@gmail.com",
+            gaiaName: "Igor Ekishev",
+            gaiaGivenName: "Igor"
+        )
+        let pWork = ChromeProfile(
+            index: 2,
+            dir: "Profile 1",
+            name: "Work",
+            email: "igor@company.com",
+            gaiaName: "Igor Ekishev",
+            gaiaGivenName: "Igor"
+        )
+        
+        #expect(pDefault.expectedMenuTitle == "Igor")
+        #expect(pWork.expectedMenuTitle == "Igor (Work)")
+    }
+    
+    @Test @MainActor
+    func testProfileWhitespaceAndUnicodeCanonicalEquivalence() {
+        let pWhitespace = ChromeProfile(index: 1, dir: "Profile 1", name: "   Staging Server   ")
+        #expect(pWhitespace.effectiveName == "Staging Server")
+        
+        let pEmoji = ChromeProfile(index: 2, dir: "Profile 2", name: "Dev 🚀 [2026]")
+        #expect(pEmoji.effectiveName == "Dev 🚀 [2026]")
+    }
+    
+    @Test @MainActor
+    func testCorruptedLocalStateJsonFallback() throws {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        
+        let localStateUrl = tempDir.appendingPathComponent("Local State")
+        try "{ this is not valid json! }".write(to: localStateUrl, atomically: true, encoding: .utf8)
+        
+        ChromeProfileEngine.localStatePathOverride = localStateUrl.path
+        defer { ChromeProfileEngine.localStatePathOverride = nil }
+        
+        let engine = ChromeProfileEngine()
+        #expect(engine.profiles.count == 1)
+        #expect(engine.profiles.first?.dir == "Default")
+        #expect(engine.profiles.first?.name == "Default Profile")
+    }
+    
+    @Test @MainActor
+    func testActiveProfileDirWhenChromeNotRunning() {
+        let engine = ChromeProfileEngine.shared
+        // With a dummy bundle ID that is definitely not running
+        engine.browserBundleID = "com.nonexistent.browser.test"
+        #expect(engine.getActiveProfileDir() == nil)
+        #expect(engine.getProfilesMenuItems(bundleID: "com.nonexistent.browser.test").isEmpty)
+        // Restore standard bundle ID
+        engine.browserBundleID = "com.google.Chrome"
+    }
+    
+    @Test @MainActor
+    func testCapsLockHoldingWithShiftFlagsDoesNotPrematurelyRelease() {
+        let engine = CapsLockEngine()
+        let proxy = unsafeBitCast(1, to: CGEventTapProxy.self)
+        
+        var modifierReleasedCalled = false
+        engine.onModifierReleased = {
+            modifierReleasedCalled = true
+        }
+        
+        // 1. User holds CapsLock (F18 KeyDown)
+        let f18Down = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(KeyCodes.kVK_F18), keyDown: true)!
+        let resDown = engine.handleEvent(proxy: proxy, type: .keyDown, event: f18Down)
+        #expect(resDown == nil) // F18 down swallowed
+        #expect(engine.isCapsHeld == true)
+        #expect(engine.capsUsedAsModifier == false)
+        
+        // 2. User presses Shift while holding CapsLock (e.g. preparing for Shift-Tab navigation)
+        let shiftEvent = CGEvent(keyboardEventSource: nil, virtualKey: 0x38, keyDown: true)!
+        shiftEvent.flags = [.maskShift]
+        let resShift = engine.handleEvent(proxy: proxy, type: .flagsChanged, event: shiftEvent)
+        #expect(resShift != nil) // Shift passthrough
+        
+        // CRITICAL BUG VERIFICATION: Shift MUST NOT cause premature modifier release!
+        #expect(engine.isCapsHeld == true)
+        #expect(modifierReleasedCalled == false)
+        
+        // 3. User releases CapsLock (F18 KeyUp)
+        let f18Up = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(KeyCodes.kVK_F18), keyDown: false)!
+        let resUp = engine.handleEvent(proxy: proxy, type: .keyUp, event: f18Up)
+        #expect(resUp == nil) // F18 up swallowed
+        #expect(engine.isCapsHeld == false)
+    }
+    
+    @Test @MainActor
+    func testCapsLockChromeTriggerAndModifierReleased() {
+        let engine = CapsLockEngine()
+        let proxy = unsafeBitCast(1, to: CGEventTapProxy.self)
+        
+        var chromeTriggered = false
+        var modifierReleased = false
+        engine.onChromeTrigger = { chromeTriggered = true }
+        engine.onModifierReleased = { modifierReleased = true }
+        
+        // Hold F18
+        let f18Down = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(KeyCodes.kVK_F18), keyDown: true)!
+        _ = engine.handleEvent(proxy: proxy, type: .keyDown, event: f18Down)
+        #expect(engine.isCapsHeld == true)
+        
+        // Press 'C'
+        let cDown = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(KeyCodes.kVK_ANSI_C), keyDown: true)!
+        let resC = engine.handleEvent(proxy: proxy, type: .keyDown, event: cDown)
+        #expect(resC == nil) // 'C' swallowed
+        #expect(chromeTriggered == true)
+        #expect(engine.capsUsedAsModifier == true)
+        
+        // Release F18
+        let f18Up = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(KeyCodes.kVK_F18), keyDown: false)!
+        _ = engine.handleEvent(proxy: proxy, type: .keyUp, event: f18Up)
+        #expect(modifierReleased == true)
+        #expect(engine.isCapsHeld == false)
+    }
+    
+    @Test @MainActor
+    func testCapsLockAntigravityTrigger() {
+        let engine = CapsLockEngine()
+        let proxy = unsafeBitCast(1, to: CGEventTapProxy.self)
+        
+        var antigravityTriggered = false
+        engine.onAntigravityTrigger = { antigravityTriggered = true }
+        
+        // Hold F18
+        let f18Down = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(KeyCodes.kVK_F18), keyDown: true)!
+        _ = engine.handleEvent(proxy: proxy, type: .keyDown, event: f18Down)
+        
+        // Press 'A'
+        let aDown = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(KeyCodes.kVK_ANSI_A), keyDown: true)!
+        let resA = engine.handleEvent(proxy: proxy, type: .keyDown, event: aDown)
+        #expect(resA == nil) // 'A' swallowed
+        #expect(antigravityTriggered == true)
+        #expect(engine.capsUsedAsModifier == true)
+    }
+    
+    @Test @MainActor
+    func testCapsLockProfileDigitAndNavigationTriggers() {
+        let engine = CapsLockEngine()
+        let proxy = unsafeBitCast(1, to: CGEventTapProxy.self)
+        
+        var selectedDigit = 0
+        var navLeftCalled = false
+        var navRightCalled = false
+        var cancelCalled = false
+        
+        engine.onProfileTrigger = { digit in selectedDigit = digit }
+        engine.onNavigateLeft = { navLeftCalled = true }
+        engine.onNavigateRight = { navRightCalled = true }
+        engine.onCancelTrigger = { cancelCalled = true }
+        
+        // Hold F18
+        let f18Down = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(KeyCodes.kVK_F18), keyDown: true)!
+        _ = engine.handleEvent(proxy: proxy, type: .keyDown, event: f18Down)
+        
+        // Press '3'
+        let digit3Down = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(KeyCodes.kVK_ANSI_3), keyDown: true)!
+        let resDigit = engine.handleEvent(proxy: proxy, type: .keyDown, event: digit3Down)
+        #expect(resDigit == nil)
+        #expect(selectedDigit == 3)
+        
+        // Press Right Arrow -> Navigate Right
+        let rightDown = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(KeyCodes.kVK_RightArrow), keyDown: true)!
+        let resRight = engine.handleEvent(proxy: proxy, type: .keyDown, event: rightDown)
+        #expect(resRight == nil)
+        #expect(navRightCalled == true)
+        
+        // Press Left Arrow -> Navigate Left
+        let leftDown = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(KeyCodes.kVK_LeftArrow), keyDown: true)!
+        let resLeft = engine.handleEvent(proxy: proxy, type: .keyDown, event: leftDown)
+        #expect(resLeft == nil)
+        #expect(navLeftCalled == true)
+        
+        // Press Escape -> Cancel HUD
+        let escDown = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(KeyCodes.kVK_Escape), keyDown: true)!
+        let resEsc = engine.handleEvent(proxy: proxy, type: .keyDown, event: escDown)
+        #expect(resEsc == nil)
+        #expect(cancelCalled == true)
+    }
+    
+    @Test @MainActor
+    func testCopyOnSelectIgnoresCommandOrControlDrags() {
+        let engine = CopyOnSelectEngine()
+        
+        var copyPosted = false
+        engine.onCopyKeystrokePosted = { copyPosted = true }
+        
+        // MouseDown with Command modifier held (e.g. moving background window)
+        let cmdDown = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint(x: 100, y: 100), mouseButton: .left)!
+        cmdDown.flags = [.maskCommand]
+        engine.handleTapEvent(type: .leftMouseDown, event: cmdDown)
+        
+        // MouseUp with Command modifier held
+        let cmdUp = CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: CGPoint(x: 300, y: 300), mouseButton: .left)!
+        cmdUp.flags = [.maskCommand]
+        engine.handleTapEvent(type: .leftMouseUp, event: cmdUp)
+        
+        #expect(copyPosted == false)
+        
+        // MouseDown with Control modifier held (e.g. connecting Xcode IBOutlet)
+        let ctrlDown = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint(x: 100, y: 100), mouseButton: .left)!
+        ctrlDown.flags = [.maskControl]
+        engine.handleTapEvent(type: .leftMouseDown, event: ctrlDown)
+        
+        let ctrlUp = CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: CGPoint(x: 300, y: 300), mouseButton: .left)!
+        ctrlUp.flags = [.maskControl]
+        engine.handleTapEvent(type: .leftMouseUp, event: ctrlUp)
+        
+        #expect(copyPosted == false)
+    }
+    
+    @Test @MainActor
+    func testCopyOnSelectTapDisablementRecovery() {
+        let engine = CopyOnSelectEngine()
+        let dummy = CGEvent(source: nil)!
+        
+        // Must handle disabled by timeout without throwing or crashing
+        engine.handleTapEvent(type: .tapDisabledByTimeout, event: dummy)
+        engine.handleTapEvent(type: .tapDisabledByUserInput, event: dummy)
+        #expect(engine.isEnabled == true)
+    }
 }

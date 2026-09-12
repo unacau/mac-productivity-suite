@@ -1,10 +1,8 @@
 {
-  "app_name": "Mac Productivity Suite",
+  "app_name": "Chrome Quick Access",
   "github_repo": "unacau/mac-productivity-suite",
-  "bundle_name": "Mac Productivity Suite.app",
-  "dmg_name": "MacProductivitySuite.dmg",
+  "bundle_name": "Chrome Quick Access.app",
+  "dmg_name": "ChromeQuickAccess.dmg",
   "git_branch": "main",
-  "min_system_version": "14.0",
-  "appcast_file": "appcast.xml",
-  "derived_data_prefixes": ["MacProductivitySuite-"]
+  "min_system_version": "14.0"
 }

@@ -9,14 +9,14 @@ fi
 BUMP_TYPE=$1
 VERSION_FILE="VERSION.txt"
 BUILD_FILE="BUILD.txt"
-PLIST_FILE="src/NativeStandaloneApp/Info.plist"
+PLIST_FILE="src/ChromeQuickAccess/Info.plist"
 
 if [ ! -f "$VERSION_FILE" ]; then
-    echo "2.1.0" > "$VERSION_FILE"
+    echo "1.0.0" > "$VERSION_FILE"
 fi
 
 if [ ! -f "$BUILD_FILE" ]; then
-    echo "2" > "$BUILD_FILE"
+    echo "1" > "$BUILD_FILE"
 fi
 
 CURRENT_VERSION=$(cat "$VERSION_FILE")

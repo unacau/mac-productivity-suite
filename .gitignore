@@ -14,8 +14,6 @@ build/
 *.dmg
 *.zip
 *.app/
-!Frameworks/**
-Frameworks/*.app/
 *.dSYM/
 *.o
 *.swiftdoc
@@ -37,7 +35,6 @@ binaries/
 # User-specific runtime configurations & backups
 *.backup_*
 *.backup
-.hammerspoon/config.json
 
 # IDE & Editor Settings
 .vscode/

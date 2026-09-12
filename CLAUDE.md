@@ -1,24 +1,39 @@
-# Project: Mac Productivity Suite (Chrome Quick-Access Native)
+# Project: Chrome Quick Access (v1.0.0)
 
 ## Tech Stack & Runtime
 - **Platform**: macOS 14.0+ (Sonoma, Sequoia, Tahoe).
 - **Toolchain**: Swift 6+ (Strict Concurrency, `@MainActor`, `Sendable`), Swift Package Manager (SPM).
-- **Core Frameworks**: AppKit, CoreGraphics (`CGEventTap`), ApplicationServices (Accessibility `AXUIElement`), IOHID (`hidutil`).
-- **Zero Heavy Runtime Dependencies**: No Karabiner daemon, no Hammerspoon runtime required for core switching.
+- **Core Frameworks**: AppKit, CoreGraphics (`CGEventTap`), ApplicationServices (Accessibility `AXUIElement`), IOHID (`hidutil`), SwiftUI.
+- **Zero Heavy Runtime Dependencies**: No Karabiner daemon, no Hammerspoon runtime.
 
-## Commands
-- Run Tests: `swift test` or `./tests/run_tests.sh`
-- Build Native App: `make native` or `./build_native_app.sh`
-- Health Check: `make health` or `./scripts/health_check.sh`
-- Stream System Logs: `./scripts/monitor_telemetry.sh stream`
+## Key Build & Verification Commands
+- **Run Tests**: `make test` or `swift test` or `./tests/run_tests.sh`
+- **Build Native App**: `make native` or `./build_native_app.sh`
+- **Health Check**: `make health` or `./scripts/health_check.sh`
+- **Install App**: `make install` or `./install.sh`
+- **Stream System Logs**: `make monitor` or `./scripts/monitor_telemetry.sh stream`
+- **Telemetry Summary**: `make diagnostics` or `./scripts/monitor_telemetry.sh summary 1h`
 
-## Next-Generation Objective (Simplified Chrome Quick-Access)
-A focused native standalone application featuring a single function:
-- **Caps-Lock Key**: Remapped via `hidutil` to F18 (`0x70000006D`). Dual-role behavior: tap alone emits `Escape` (`0x35`), held acts as modifier.
-- **Caps-Lock + C**: Instant focus/activation of Google Chrome (or last active profile).
-- **Caps-Lock + 1..4** (or `Caps-Lock + C + 1..4`): Direct switch to Chrome profile 1, 2, 3, or 4.
-- **Profile Discovery**: Dynamically parses `~/Library/Application Support/Google/Chrome/Local State` (`profile.info_cache`). No hardcoded usernames or profile paths.
-- **Window Activation**: Driven via macOS Accessibility Menu Bar (`kAXMenuBarAttribute` -> `Profiles` menu item) to prevent duplicate tabs and avoid intrusive AppleScript prompts.
+## Architecture & Subsystems
+1. **Caps-Lock Engine (`src/ChromeQuickAccess/Engine/CapsLockEngine.swift`)**:
+   - Hardware remapping via `hidutil property --set` (Caps Lock `0x700000039` -> F18 `0x70000006D`).
+   - Head-insert `CGEventTap` (.cghidEventTap):
+     - Tapped alone emits synthetic `Escape` (`0x35`).
+     - Held down acts as modifier and routes `C`, `A`, digits `1`..`8`, Arrow keys, and `Tab`.
+2. **Chrome Profile Engine (`src/ChromeQuickAccess/Engine/ChromeProfileEngine.swift`)**:
+   - Parses Chromium `Local State` (`profile.info_cache`) dynamically.
+   - Profile switching via macOS Accessibility menu bar (`kAXMenuBarAttribute` -> `Profiles` menu item).
+   - Window raising via `kAXRaiseAction` and `kAXMainAttribute`.
+   - Fallback cold start via `/usr/bin/open -b <bundleID> --args --profile-directory='<dir>'`.
+3. **Antigravity Engine (`src/ChromeQuickAccess/Engine/AntigravityEngine.swift`)**:
+   - Discovers Antigravity and Antigravity IDE bundles/paths.
+   - Activates frontmost app or toggles to partner app on `Caps-Lock + A`.
+4. **Copy-on-Select Engine (`src/ChromeQuickAccess/Engine/CopyOnSelectEngine.swift`)**:
+   - Pure native drag detection (>10pt) and multi-click (double/triple) text selection copying.
+   - Synthesizes `Cmd+C` with loop-prevention marker.
+5. **HUD Window (`src/ChromeQuickAccess/Views/MinimalHUDWindow.swift`)**:
+   - Non-activating, floating bezel overlay showing app icon and profile/app avatars.
+   - Always dismissed immediately before window server transitions (`launchOrFocusTarget`).
 
 ## Key Code Conventions & Guardrails
 - **Accessibility & Event Taps**:
@@ -30,14 +45,7 @@ A focused native standalone application featuring a single function:
   - NEVER call `.waitUntilExit()` directly on long-running GUI application binaries (delegate to `/usr/bin/open` or `NSWorkspace.openApplication`).
 - **Profile Switching**:
   - Never match Chromium windows by profile name or title substrings.
-  - Automate strictly via native menu bar item positions or exact index matching, unminimizing target windows using `kAXWindowsAttribute` and `kAXMinimizedAttribute`.
+  - Automate strictly via native menu bar item positions or exact index matching.
 - **Testing**:
-  - Unit tests live in `tests/SwiftUnitTests.swift`.
-  - Integration tests live in `tests/IntegrationTests/`.
-  - Always isolate config and file system paths using temporary test directories (`MPS_TEST_CONFIG_DIR`).
+  - Unit tests live in `tests/ChromeQuickAccessTests/ChromeQuickAccessTests.swift`.
   - Never execute real GUI processes or synchronous AppleScript in headless tests.
-
-## Curated Source References
-- Event Tap & Caps-Lock Hardware Remap: `src/NativeStandaloneApp/Engine/HyperKeyEngine.swift`
-- Chrome Local State & Accessibility Switcher: `src/NativeStandaloneApp/Engine/ChromeProfileHelper.swift`
-- Full Architecture Spec for Simplified Version: `docs/SIMPLIFIED_CHROME_QUICK_ACCESS_SPEC.md`

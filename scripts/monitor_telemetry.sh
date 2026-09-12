@@ -2,13 +2,13 @@
 set -euo pipefail
 
 # ==============================================================================
-# Mac Productivity Suite - Native Telemetry & Log Ingestion Utility
+# Chrome Quick Access - Native Telemetry & Log Ingestion Utility
 # Directly queries and streams macOS Unified Logging System (os_log)
 # ==============================================================================
 
-SUBSYSTEM="com.macproductivity.suite"
-BUNDLE_ID="com.unacau.macproductivitysuite"
-PREDICATE="subsystem == \"${SUBSYSTEM}\" or process == \"MacProductivitySuite\""
+SUBSYSTEM="com.unacau.chromequickaccess"
+BUNDLE_ID="com.unacau.chromequickaccess"
+PREDICATE="subsystem == \"${SUBSYSTEM}\" or process == \"ChromeQuickAccess\""
 
 usage() {
     cat << EOF

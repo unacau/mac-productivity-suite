@@ -2,37 +2,30 @@
 set -euo pipefail
 
 echo "=================================================="
-echo " Installing Mac Productivity Suite (v2.0 Universal)"
+echo " Installing Chrome Quick Access (v1.0.0)          "
 echo "=================================================="
 
-# Define directories
-HAMMERSPOON_DIR="$HOME/.hammerspoon"
-CONFIG_DIR="$HOME/.config/mac-productivity-suite"
-KARABINER_DIR="$HOME/.config/karabiner/assets/complex_modifications"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+APP_NAME="Chrome Quick Access"
+APP_BUNDLE="${REPO_DIR}/dist/${APP_NAME}.app"
+TARGET_APP="/Applications/${APP_NAME}.app"
 
-echo "[*] Creating target directories..."
-mkdir -p "$HAMMERSPOON_DIR"
-mkdir -p "$CONFIG_DIR"
-mkdir -p "$KARABINER_DIR"
-
-echo "[*] Installing Hammerspoon scripts..."
-cp -R "$REPO_DIR/hammerspoon/"* "$HAMMERSPOON_DIR/"
-
-echo "[*] Installing Karabiner-Elements configuration..."
-cp "$REPO_DIR/karabiner/hyper-key-mapping.json" "$KARABINER_DIR/"
-
-if [ -d "$REPO_DIR/dist/Mac Productivity Suite.app" ]; then
-    echo "[*] Installing Native Standalone App to /Applications..."
-    rm -rf "/Applications/Mac Productivity Suite.app"
-    cp -R "$REPO_DIR/dist/Mac Productivity Suite.app" "/Applications/"
+if [ ! -d "${APP_BUNDLE}" ]; then
+    echo "[*] Building application bundle first..."
+    "${REPO_DIR}/build_native_app.sh"
 fi
 
-echo "[*] Universal dynamic configuration initialized."
+echo "[*] Installing to /Applications..."
+rm -rf "${TARGET_APP}"
+cp -R "${APP_BUNDLE}" "/Applications/"
+
 echo "=================================================="
-echo " Installation Complete!                           "
+echo " ✅ Installation Complete!                        "
+echo " App installed to: ${TARGET_APP}"
 echo "=================================================="
 echo "Next Steps:"
-echo " 1. Launch 'Mac Productivity Suite.app' from Applications."
-echo " 2. Click the ⌘ icon in your Menu Bar to customize shortcuts or auto-detect your installed apps."
-echo " 3. If using Hammerspoon mode, open Hammerspoon and click 'Reload Config'."
+echo " 1. Launch '${APP_NAME}.app' from Applications."
+echo " 2. Ensure Accessibility permission is enabled in System Settings."
+echo " 3. Use Caps-Lock + C to switch Chrome profiles."
+echo " 4. Use Caps-Lock + A to switch Antigravity apps."
+echo " 5. Select text to automatically copy to clipboard."

@@ -58,6 +58,7 @@ public final class CapsLockEngine: @unchecked Sendable {
     private var isStarted = false
     
     public var isCapsHeld: Bool = false
+    public var isExternalHyperHeld: Bool = false
     public var capsUsedAsModifier: Bool = false
     public var escapeOnTapEnabled: Bool = true
     
@@ -141,6 +142,7 @@ public final class CapsLockEngine: @unchecked Sendable {
         HIDMappingService.restoreDefaultMapping()
         isStarted = false
         isCapsHeld = false
+        isExternalHyperHeld = false
         capsUsedAsModifier = false
     }
     
@@ -223,15 +225,15 @@ public final class CapsLockEngine: @unchecked Sendable {
         // 4. Fallback check for external Hyper modifiers (Cmd + Opt + Ctrl + Shift)
         let hyperFlagsMask: CGEventFlags = [.maskCommand, .maskAlternate, .maskControl, .maskShift]
         let isHyperModifiers = event.flags.contains(hyperFlagsMask)
-        if type == .flagsChanged {
+        if type == .flagsChanged && keyCode != Self.capsLockKeyCode {
             if isHyperModifiers {
-                if !isCapsHeld {
-                    isCapsHeld = true
+                if !isExternalHyperHeld {
+                    isExternalHyperHeld = true
                     capsUsedAsModifier = false
                 }
-            } else if isCapsHeld {
+            } else if isExternalHyperHeld {
                 let wasUsed = capsUsedAsModifier
-                isCapsHeld = false
+                isExternalHyperHeld = false
                 capsUsedAsModifier = false
                 if wasUsed {
                     onModifierReleased?()
@@ -241,8 +243,8 @@ public final class CapsLockEngine: @unchecked Sendable {
             }
         }
         
-        // 5. Intercept key combinations when Caps Lock is held
-        if isCapsHeld || isHyperModifiers {
+        // 5. Intercept key combinations when Caps Lock or external Hyper is held
+        if isCapsHeld || isExternalHyperHeld || isHyperModifiers {
             if type == .keyDown {
                 // Ignore key autorepeat
                 if event.getIntegerValueField(.keyboardEventAutorepeat) != 0 {

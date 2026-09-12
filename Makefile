@@ -1,21 +1,11 @@
-.PHONY: all native full test verify clean bump-major bump-minor bump-patch health monitor diagnostics
+.PHONY: all build native test health monitor diagnostics clean bump-major bump-minor bump-patch install
 
-all: native full test verify
+all: native test health
 
-bump-major:
-	@./bump_version.sh major
-
-bump-minor:
-	@./bump_version.sh minor
-
-bump-patch:
-	@./bump_version.sh patch
+build: native
 
 native:
 	@./build_native_app.sh
-
-full:
-	@./build_full_pkg.sh
 
 test:
 	@./tests/run_tests.sh
@@ -29,19 +19,17 @@ monitor:
 diagnostics:
 	@./scripts/monitor_telemetry.sh summary 1h
 
-verify:
-	@echo "=================================================="
-	@echo " Verifying All Distributables                     "
-	@echo "=================================================="
-	@./verify_pkg.sh dist/MacProductivitySuite-Full.pkg
-	@./verify_pkg.sh dist/MacProductivitySuite-Native.pkg
-	@ls -lh dist/*.pkg
+bump-major:
+	@./bump_version.sh major
 
-chrome-app:
-	@./build_chrome_quick_access.sh
+bump-minor:
+	@./bump_version.sh minor
 
-test-chrome:
-	@swift test --filter ChromeQuickAccessTests
+bump-patch:
+	@./bump_version.sh patch
+
+install:
+	@./install.sh
 
 clean:
-	@rm -rf dist
+	@rm -rf dist .build

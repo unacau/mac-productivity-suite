@@ -28,6 +28,11 @@ public final class CopyOnSelectEngine: @unchecked Sendable {
     public func start() {
         guard !isStarted else { return }
         
+        guard AXIsProcessTrusted() else {
+            logger.warning("Accessibility permission missing. CopyOnSelectEngine tap cannot be registered.")
+            return
+        }
+        
         let eventMask: CGEventMask = (
             (1 << CGEventType.leftMouseDown.rawValue) |
             (1 << CGEventType.leftMouseUp.rawValue)
@@ -85,25 +90,55 @@ public final class CopyOnSelectEngine: @unchecked Sendable {
     private func installNSEventMonitors() {
         guard globalMouseDownMonitor == nil else { return }
         globalMouseDownMonitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDown) { [weak self] _ in
-            guard let engine = self, engine.isEnabled else { return }
-            engine.mouseDownLocation = NSEvent.mouseLocation
+            Task { @MainActor in
+                guard let engine = self, engine.isEnabled else { return }
+                let flags = NSEvent.modifierFlags
+                if flags.contains(.command) || flags.contains(.control) {
+                    engine.mouseDownLocation = nil
+                    return
+                }
+                engine.mouseDownLocation = NSEvent.mouseLocation
+            }
         }
         globalMouseUpMonitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseUp) { [weak self] event in
-            guard let engine = self, engine.isEnabled else { return }
-            let start = engine.mouseDownLocation ?? NSEvent.mouseLocation
-            let end = NSEvent.mouseLocation
-            engine.mouseDownLocation = nil
-            let clicks = event.clickCount
-            if engine.shouldTriggerCopy(start: start, end: end, clickCount: clicks) {
-                engine.scheduleCopy()
+            Task { @MainActor in
+                guard let engine = self, engine.isEnabled else { return }
+                let flags = event.modifierFlags
+                if flags.contains(.command) || flags.contains(.control) {
+                    engine.mouseDownLocation = nil
+                    return
+                }
+                let start = engine.mouseDownLocation ?? NSEvent.mouseLocation
+                engine.mouseDownLocation = nil
+                let end = NSEvent.mouseLocation
+                let clicks = event.clickCount
+                if engine.shouldTriggerCopy(start: start, end: end, clickCount: clicks) {
+                    engine.scheduleCopy()
+                }
             }
         }
         isStarted = true
         logger.info("CopyOnSelectEngine started with NSEvent global monitors.")
     }
     
-    private func handleTapEvent(type: CGEventType, event: CGEvent) {
+    public func handleTapEvent(type: CGEventType, event: CGEvent) {
+        // Auto-recover tap if disabled by system timeout or user input
+        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+            if let port = eventTapPort {
+                CGEvent.tapEnable(tap: port, enable: true)
+                logger.info("Auto-recovered disabled event tap in CopyOnSelectEngine.")
+            }
+            return
+        }
+        
         guard isEnabled else { return }
+        
+        // Ignore drags with Command or Control held (e.g. Cmd-drag windows, Ctrl-drag Xcode outlets)
+        if event.flags.contains(.maskCommand) || event.flags.contains(.maskControl) {
+            mouseDownLocation = nil
+            return
+        }
+        
         if type == .leftMouseDown {
             mouseDownLocation = event.location
         } else if type == .leftMouseUp {
@@ -131,6 +166,7 @@ public final class CopyOnSelectEngine: @unchecked Sendable {
         let delay = copyDelayMs
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: delay * 1_000_000)
+            guard self.isEnabled && self.isStarted else { return }
             self.postCopyKeystroke()
         }
     }
