@@ -62,28 +62,28 @@ public struct ProfileAvatarView: View {
         ZStack {
             if isSelected {
                 Circle()
-                    .stroke(Color(red: 130/255, green: 200/255, blue: 250/255), lineWidth: 2.5)
-                    .frame(width: 31, height: 31)
+                    .stroke(Color(red: 130/255, green: 200/255, blue: 250/255), lineWidth: 2.2)
+                    .frame(width: 27, height: 27)
             }
             
             if let avatar = profile.avatarImage {
                 Image(nsImage: avatar)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    .frame(width: 25, height: 25)
+                    .frame(width: 21, height: 21)
                     .clipShape(Circle())
             } else {
                 Circle()
                     .fill(Color(red: 175/255, green: 110/255, blue: 230/255))
-                    .frame(width: 25, height: 25)
+                    .frame(width: 21, height: 21)
                     .overlay(
                         Text(String(profile.effectiveName.prefix(1)).uppercased())
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.system(size: 9.5, weight: .bold))
                             .foregroundColor(.white)
                     )
             }
         }
-        .frame(width: 32, height: 32)
+        .frame(width: 28, height: 28)
     }
 }
 
@@ -99,34 +99,34 @@ public struct MinimalHUDView: View {
     }
     
     private var cardWidth: CGFloat {
-        max(176, CGFloat(state.profiles.count) * 36 + 20)
+        max(148, CGFloat(state.profiles.count) * 32 + 16)
     }
     
     public var body: some View {
         VStack(spacing: 0) {
             // Inner Blue Card
             VStack(spacing: 0) {
-                Spacer().frame(height: 24)
+                Spacer().frame(height: 18)
                 
                 // 1. Chrome App Icon
                 Image(nsImage: ChromeAppIconHelper.chromeIcon())
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 68, height: 68)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .frame(width: 56, height: 56)
+                    .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
                 
-                Spacer().frame(height: 14)
+                Spacer().frame(height: 11)
                 
                 // 2. App Name Label
                 Text("Google Chrome")
-                    .font(.system(size: 15.5, weight: .bold))
+                    .font(.system(size: 13.5, weight: .bold))
                     .foregroundColor(.white)
                     .lineLimit(1)
                 
-                Spacer().frame(height: 14)
+                Spacer().frame(height: 11)
                 
                 // 3. Profiles Avatar Row
-                HStack(spacing: 5) {
+                HStack(spacing: 4) {
                     ForEach(Array(state.profiles.enumerated()), id: \.element.id) { idx, profile in
                         ProfileAvatarView(
                             profile: profile,
@@ -135,26 +135,26 @@ public struct MinimalHUDView: View {
                     }
                 }
                 
-                Spacer().frame(height: 24)
+                Spacer().frame(height: 18)
             }
             .frame(width: cardWidth)
             .background(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(Color(red: 64/255, green: 108/255, blue: 171/255))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(Color(red: 130/255, green: 189/255, blue: 248/255), lineWidth: 2.2)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color(red: 130/255, green: 189/255, blue: 248/255), lineWidth: 1.8)
             )
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 16)
+        .padding(.horizontal, 11)
+        .padding(.vertical, 12)
         .background(
             ZStack {
                 VisualEffectBlur(material: .hudWindow, blendingMode: .behindWindow)
                 Color(red: 45/255, green: 44/255, blue: 49/255)
             }
-            .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
         )
     }
 }
@@ -185,7 +185,7 @@ public final class MinimalHUDWindow: NSWindow {
     
     public init() {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 204, height: 236),
+            contentRect: NSRect(x: 0, y: 0, width: 170, height: 196),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -211,8 +211,8 @@ public final class MinimalHUDWindow: NSWindow {
         if let screen = NSScreen.main {
             let screenRect = screen.visibleFrame
             let fittingSize = hostingView.fittingSize
-            let width = max(190, fittingSize.width)
-            let height = max(220, fittingSize.height)
+            let width = max(160, fittingSize.width)
+            let height = max(185, fittingSize.height)
             let x = screenRect.midX - (width / 2)
             let y = screenRect.midY - (height / 2)
             self.setFrame(NSRect(x: x, y: y, width: width, height: height), display: true)
