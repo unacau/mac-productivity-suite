@@ -232,4 +232,87 @@ struct ChromeQuickAccessUnitTests {
         AntigravityEngine.mockFrontmostBundleID = "com.apple.finder"
         #expect(engine.getActiveAppIndex() == nil)
     }
+    
+    @Test @MainActor
+    func testCopyOnSelectDefaultParameters() {
+        let engine = CopyOnSelectEngine()
+        #expect(engine.isEnabled == true)
+        #expect(engine.dragThreshold == 10.0)
+        #expect(engine.copyDelayMs == 150)
+    }
+    
+    @Test @MainActor
+    func testCopyOnSelectDragDistanceTrigger() {
+        let engine = CopyOnSelectEngine()
+        
+        // Horizontal drag exceeding threshold (dx = 15 > 10)
+        #expect(engine.shouldTriggerCopy(start: CGPoint(x: 100, y: 100), end: CGPoint(x: 115, y: 100), clickCount: 1) == true)
+        
+        // Vertical drag exceeding threshold (dy = 12 > 10)
+        #expect(engine.shouldTriggerCopy(start: CGPoint(x: 100, y: 100), end: CGPoint(x: 100, y: 112), clickCount: 1) == true)
+        
+        // Negative direction drag exceeding threshold (dx = 15 > 10)
+        #expect(engine.shouldTriggerCopy(start: CGPoint(x: 100, y: 100), end: CGPoint(x: 85, y: 100), clickCount: 1) == true)
+        
+        // Sub-threshold movement (dx = 5 <= 10, dy = 5 <= 10)
+        #expect(engine.shouldTriggerCopy(start: CGPoint(x: 100, y: 100), end: CGPoint(x: 105, y: 105), clickCount: 1) == false)
+    }
+    
+    @Test @MainActor
+    func testCopyOnSelectMultiClickTrigger() {
+        let engine = CopyOnSelectEngine()
+        
+        // Double-click at same position (word selection)
+        #expect(engine.shouldTriggerCopy(start: CGPoint(x: 100, y: 100), end: CGPoint(x: 100, y: 100), clickCount: 2) == true)
+        
+        // Triple-click at same position (paragraph selection)
+        #expect(engine.shouldTriggerCopy(start: CGPoint(x: 100, y: 100), end: CGPoint(x: 100, y: 100), clickCount: 3) == true)
+    }
+    
+    @Test @MainActor
+    func testCopyOnSelectSingleClickNoTrigger() {
+        let engine = CopyOnSelectEngine()
+        
+        // Normal single click with zero displacement
+        #expect(engine.shouldTriggerCopy(start: CGPoint(x: 250, y: 300), end: CGPoint(x: 250, y: 300), clickCount: 1) == false)
+    }
+    
+    @Test @MainActor
+    func testCopyOnSelectDisabledState() {
+        let engine = CopyOnSelectEngine()
+        engine.isEnabled = false
+        
+        // Exceeding drag threshold must be ignored when disabled
+        #expect(engine.shouldTriggerCopy(start: CGPoint(x: 100, y: 100), end: CGPoint(x: 200, y: 200), clickCount: 1) == false)
+        
+        // Multi-click must be ignored when disabled
+        #expect(engine.shouldTriggerCopy(start: CGPoint(x: 100, y: 100), end: CGPoint(x: 100, y: 100), clickCount: 2) == false)
+    }
+    
+    @Test @MainActor
+    func testCopyOnSelectPostKeystrokeCallback() {
+        let engine = CopyOnSelectEngine()
+        var callbackFired = false
+        engine.onCopyKeystrokePosted = {
+            callbackFired = true
+        }
+        
+        engine.postCopyKeystroke()
+        #expect(callbackFired == true)
+    }
+    
+    @Test @MainActor
+    func testCopyOnSelectLifecycleAndToggle() {
+        let engine = CopyOnSelectEngine()
+        #expect(engine.isEnabled == true)
+        
+        engine.isEnabled.toggle()
+        #expect(engine.isEnabled == false)
+        
+        engine.isEnabled.toggle()
+        #expect(engine.isEnabled == true)
+        
+        engine.stop()
+        #expect(engine.isStarted == false)
+    }
 }

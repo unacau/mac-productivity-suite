@@ -19,7 +19,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         // 3. Start Caps Lock Engine & Event Tap
         CapsLockEngine.shared.start()
         
-        // 4. Check Accessibility
+        // 4. Start Copy-on-Select Engine
+        CopyOnSelectEngine.shared.start()
+        
+        // 5. Check Accessibility
         if !AXIsProcessTrusted() {
             promptForAccessibilityPermissions()
         }
@@ -28,6 +31,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     public func applicationWillTerminate(_ notification: Notification) {
         logger.info("Terminating Chrome Quick Access: cleaning up event taps and restoring HID mapping.")
         CapsLockEngine.shared.stop()
+        CopyOnSelectEngine.shared.stop()
     }
     
     private enum ActiveSwitcherMode {
@@ -210,6 +214,15 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         capsStatusItem.isEnabled = false
         menu.addItem(capsStatusItem)
         
+        let copyStatusTitle = CopyOnSelectEngine.shared.isEnabled ? "Copy-on-Select: Active ✓" : "Copy-on-Select: Disabled"
+        let copyStatusItem = NSMenuItem(
+            title: copyStatusTitle,
+            action: #selector(handleToggleCopyOnSelect),
+            keyEquivalent: ""
+        )
+        copyStatusItem.target = self
+        menu.addItem(copyStatusItem)
+        
         menu.addItem(NSMenuItem.separator())
         
         let profilesHeader = NSMenuItem(title: "Discovered Profiles:", action: nil, keyEquivalent: "")
@@ -294,6 +307,16 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func handleRefreshProfiles() {
         ChromeProfileEngine.shared.refreshProfiles()
         AntigravityEngine.shared.refreshItems()
+        updateMenu()
+    }
+    
+    @objc private func handleToggleCopyOnSelect() {
+        CopyOnSelectEngine.shared.isEnabled.toggle()
+        if CopyOnSelectEngine.shared.isEnabled {
+            CopyOnSelectEngine.shared.start()
+        } else {
+            CopyOnSelectEngine.shared.stop()
+        }
         updateMenu()
     }
     
