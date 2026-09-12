@@ -85,4 +85,73 @@ struct ChromeQuickAccessUnitTests {
         #expect(HIDMappingService.hidCapsLock == 0x700000039)
         #expect(HIDMappingService.hidF18 == 0x70000006D)
     }
+    
+    @Test @MainActor
+    func testKeyCodesExtended() {
+        #expect(KeyCodes.kVK_LeftArrow == 0x7B)
+        #expect(KeyCodes.kVK_RightArrow == 0x7C)
+        #expect(KeyCodes.kVK_DownArrow == 0x7D)
+        #expect(KeyCodes.kVK_UpArrow == 0x7E)
+        #expect(KeyCodes.kVK_Tab == 0x30)
+    }
+    
+    @Test @MainActor
+    func testSwitcherCyclingAndSelection() {
+        let state = ChromeSwitcherState()
+        let sampleProfiles = [
+            ChromeProfile(index: 1, dir: "Default", name: "Personal"),
+            ChromeProfile(index: 2, dir: "Profile 1", name: "Work"),
+            ChromeProfile(index: 3, dir: "Profile 2", name: "Side Project"),
+            ChromeProfile(index: 4, dir: "Profile 3", name: "Gaming")
+        ]
+        
+        state.profiles = sampleProfiles
+        state.selectedIndex = 0
+        #expect(state.selectedProfile?.effectiveName == "Personal")
+        
+        // Cycle forward (like pressing C)
+        state.selectNext()
+        #expect(state.selectedIndex == 1)
+        #expect(state.selectedProfile?.effectiveName == "Work")
+        
+        state.selectNext()
+        #expect(state.selectedIndex == 2)
+        #expect(state.selectedProfile?.effectiveName == "Side Project")
+        
+        state.selectNext()
+        #expect(state.selectedIndex == 3)
+        #expect(state.selectedProfile?.effectiveName == "Gaming")
+        
+        // Wrap-around forward
+        state.selectNext()
+        #expect(state.selectedIndex == 0)
+        #expect(state.selectedProfile?.effectiveName == "Personal")
+        
+        // Cycle backward (like Left Arrow / Shift+Tab)
+        state.selectPrevious()
+        #expect(state.selectedIndex == 3)
+        #expect(state.selectedProfile?.effectiveName == "Gaming")
+        
+        state.selectPrevious()
+        #expect(state.selectedIndex == 2)
+        #expect(state.selectedProfile?.effectiveName == "Side Project")
+        
+        // Direct jump via number key (e.g. index 2 = Side Project)
+        state.selectIndex(1)
+        #expect(state.selectedIndex == 1)
+        #expect(state.selectedProfile?.effectiveName == "Work")
+        
+        // Boundary clamping
+        state.selectIndex(99)
+        #expect(state.selectedIndex == 3)
+        state.selectIndex(-5)
+        #expect(state.selectedIndex == 0)
+    }
+    
+    @Test @MainActor
+    func testChromeAppIconHelper() {
+        let icon = ChromeAppIconHelper.chromeIcon()
+        #expect(icon.size.width > 0)
+        #expect(icon.size.height > 0)
+    }
 }

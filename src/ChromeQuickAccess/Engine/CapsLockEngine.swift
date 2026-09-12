@@ -64,6 +64,10 @@ public final class CapsLockEngine: @unchecked Sendable {
     /// Callbacks for actions
     public var onChromeTrigger: (@MainActor () -> Void)?
     public var onProfileTrigger: (@MainActor (Int) -> Void)?
+    public var onModifierReleased: (@MainActor () -> Void)?
+    public var onCancelTrigger: (@MainActor () -> Void)?
+    public var onNavigateLeft: (@MainActor () -> Void)?
+    public var onNavigateRight: (@MainActor () -> Void)?
     
     private let logger = Logger(subsystem: "com.unacau.chromequickaccess", category: "engine")
     
@@ -188,8 +192,9 @@ public final class CapsLockEngine: @unchecked Sendable {
             isCapsHeld = false
             capsUsedAsModifier = false
             
-            // Dual-role check: If released alone, emit Escape!
-            if !wasUsed && escapeOnTapEnabled {
+            if wasUsed {
+                onModifierReleased?()
+            } else if escapeOnTapEnabled {
                 postSyntheticEscape()
             }
             return nil // Swallow F18 up
@@ -205,7 +210,9 @@ public final class CapsLockEngine: @unchecked Sendable {
                 let wasUsed = capsUsedAsModifier
                 isCapsHeld = false
                 capsUsedAsModifier = false
-                if !wasUsed && escapeOnTapEnabled {
+                if wasUsed {
+                    onModifierReleased?()
+                } else if escapeOnTapEnabled {
                     postSyntheticEscape()
                 }
             }
@@ -222,8 +229,14 @@ public final class CapsLockEngine: @unchecked Sendable {
                     capsUsedAsModifier = false
                 }
             } else if isCapsHeld {
+                let wasUsed = capsUsedAsModifier
                 isCapsHeld = false
                 capsUsedAsModifier = false
+                if wasUsed {
+                    onModifierReleased?()
+                } else if escapeOnTapEnabled {
+                    postSyntheticEscape()
+                }
             }
         }
         
@@ -235,19 +248,53 @@ public final class CapsLockEngine: @unchecked Sendable {
                     return nil
                 }
                 
-                // Check for 'C' (focus Chrome)
-                if UInt32(keyCode) == KeyCodes.kVK_ANSI_C {
+                let uKeyCode = UInt32(keyCode)
+                
+                // Check for 'C' (focus / cycle Chrome profiles)
+                if uKeyCode == KeyCodes.kVK_ANSI_C {
                     capsUsedAsModifier = true
                     onChromeTrigger?()
                     return nil // Swallow 'C'
                 }
                 
                 // Check for '1'..'8' (focus specific profile)
-                if let char = KeyCodes.character(for: UInt32(keyCode)),
+                if let char = KeyCodes.character(for: uKeyCode),
                    let digit = Int(char), digit >= 1 && digit <= 8 {
                     capsUsedAsModifier = true
                     onProfileTrigger?(digit)
                     return nil // Swallow number key
+                }
+                
+                // Check for Escape (cancel HUD)
+                if uKeyCode == KeyCodes.kVK_Escape {
+                    capsUsedAsModifier = true
+                    onCancelTrigger?()
+                    return nil // Swallow Escape
+                }
+                
+                // Check for Left / Up Arrow (previous profile)
+                if uKeyCode == KeyCodes.kVK_LeftArrow || uKeyCode == KeyCodes.kVK_UpArrow {
+                    capsUsedAsModifier = true
+                    onNavigateLeft?()
+                    return nil
+                }
+                
+                // Check for Right / Down Arrow (next profile)
+                if uKeyCode == KeyCodes.kVK_RightArrow || uKeyCode == KeyCodes.kVK_DownArrow {
+                    capsUsedAsModifier = true
+                    onNavigateRight?()
+                    return nil
+                }
+                
+                // Check for Tab / Shift-Tab
+                if uKeyCode == KeyCodes.kVK_Tab {
+                    capsUsedAsModifier = true
+                    if event.flags.contains(.maskShift) {
+                        onNavigateLeft?()
+                    } else {
+                        onNavigateRight?()
+                    }
+                    return nil
                 }
                 
                 // Other keys: passthrough with Hyper flags
@@ -256,11 +303,18 @@ public final class CapsLockEngine: @unchecked Sendable {
                 event.flags = CGEventFlags(rawValue: event.flags.rawValue | hyperFlags.rawValue)
                 return Unmanaged.passUnretained(event)
             } else if type == .keyUp {
-                // Swallow keyUp for 'c' and '1'..'8' so no stray events are sent
-                if UInt32(keyCode) == KeyCodes.kVK_ANSI_C {
+                // Swallow keyUp for intercepted keys so no stray events are sent
+                let uKeyCode = UInt32(keyCode)
+                if uKeyCode == KeyCodes.kVK_ANSI_C ||
+                   uKeyCode == KeyCodes.kVK_Escape ||
+                   uKeyCode == KeyCodes.kVK_Tab ||
+                   uKeyCode == KeyCodes.kVK_LeftArrow ||
+                   uKeyCode == KeyCodes.kVK_RightArrow ||
+                   uKeyCode == KeyCodes.kVK_DownArrow ||
+                   uKeyCode == KeyCodes.kVK_UpArrow {
                     return nil
                 }
-                if let char = KeyCodes.character(for: UInt32(keyCode)),
+                if let char = KeyCodes.character(for: uKeyCode),
                    let digit = Int(char), digit >= 1 && digit <= 8 {
                     return nil
                 }

@@ -17,6 +17,11 @@ public enum KeyCodes {
     public static let kVK_Escape: UInt32 = 0x35
     public static let kVK_F18: UInt32 = 0x4F // 79
     public static let kVK_CapsLock: UInt32 = 0x39 // 57
+    public static let kVK_Tab: UInt32 = 0x30
+    public static let kVK_LeftArrow: UInt32 = 0x7B
+    public static let kVK_RightArrow: UInt32 = 0x7C
+    public static let kVK_DownArrow: UInt32 = 0x7D
+    public static let kVK_UpArrow: UInt32 = 0x7E
     
     /// Map keycode to character string
     public static func character(for keyCode: UInt32) -> String? {

@@ -30,27 +30,89 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         CapsLockEngine.shared.stop()
     }
     
+    private var isCyclingHUDActive = false
+    
     private func setupEngineCallbacks() {
         let profileEngine = ChromeProfileEngine.shared
+        let capsEngine = CapsLockEngine.shared
         
-        CapsLockEngine.shared.onChromeTrigger = { [weak self] in
+        capsEngine.onChromeTrigger = { [weak self] in
             guard let self = self else { return }
-            self.logger.info("Caps-Lock + C triggered: activating Chrome.")
+            self.logger.info("Caps-Lock + C triggered.")
             
-            // Show HUD for first/active profile
-            if let first = profileEngine.profiles.first {
-                MinimalHUDWindow.shared.show(for: first)
+            let profiles = profileEngine.profiles
+            guard !profiles.isEmpty else {
+                profileEngine.focusChrome()
+                return
             }
-            profileEngine.focusChrome()
+            
+            if !self.isCyclingHUDActive {
+                self.isCyclingHUDActive = true
+                
+                let frontApp = NSWorkspace.shared.frontmostApplication
+                let isChromeFront = frontApp?.bundleIdentifier == profileEngine.browserBundleID
+                
+                let activeDir = profileEngine.getActiveProfileDir()
+                let currentIdx = profiles.firstIndex(where: { $0.dir == activeDir }) ?? 0
+                
+                let initialIdx: Int
+                if isChromeFront {
+                    initialIdx = (currentIdx + 1) % profiles.count
+                } else {
+                    initialIdx = currentIdx
+                }
+                
+                MinimalHUDWindow.shared.show(profiles: profiles, selectedIndex: initialIdx)
+            } else {
+                MinimalHUDWindow.shared.selectNext()
+            }
         }
         
-        CapsLockEngine.shared.onProfileTrigger = { [weak self] index in
+        capsEngine.onProfileTrigger = { [weak self] digit in
             guard let self = self else { return }
-            self.logger.info("Caps-Lock + \(index) triggered: switching to profile index \(index).")
+            self.logger.info("Caps-Lock + \(digit) triggered.")
+            let profiles = profileEngine.profiles
+            guard !profiles.isEmpty else { return }
             
-            if let profile = profileEngine.profiles.first(where: { $0.index == index }) {
-                MinimalHUDWindow.shared.show(for: profile)
-                profileEngine.focusProfile(dir: profile.dir)
+            let targetIdx = max(0, min(digit - 1, profiles.count - 1))
+            if !self.isCyclingHUDActive {
+                self.isCyclingHUDActive = true
+                MinimalHUDWindow.shared.show(profiles: profiles, selectedIndex: targetIdx)
+            } else {
+                MinimalHUDWindow.shared.updateSelection(to: targetIdx)
+            }
+        }
+        
+        capsEngine.onNavigateLeft = { [weak self] in
+            guard let self = self, self.isCyclingHUDActive else { return }
+            MinimalHUDWindow.shared.selectPrevious()
+        }
+        
+        capsEngine.onNavigateRight = { [weak self] in
+            guard let self = self, self.isCyclingHUDActive else { return }
+            MinimalHUDWindow.shared.selectNext()
+        }
+        
+        capsEngine.onCancelTrigger = { [weak self] in
+            guard let self = self else { return }
+            self.logger.info("Escape pressed: cancelling switcher HUD.")
+            self.isCyclingHUDActive = false
+            MinimalHUDWindow.shared.hideImmediate()
+        }
+        
+        capsEngine.onModifierReleased = { [weak self] in
+            guard let self = self else { return }
+            guard self.isCyclingHUDActive else { return }
+            
+            self.isCyclingHUDActive = false
+            let targetProfile = ChromeSwitcherState.shared.selectedProfile
+            
+            // RULE 9: ALWAYS hide HUD before triggering application focus!
+            MinimalHUDWindow.shared.hideImmediate()
+            
+            if let target = targetProfile {
+                self.logger.info("Caps-Lock released: switching to profile '\(target.effectiveName)' (\(target.dir)).")
+                profileEngine.focusProfile(dir: target.dir)
             } else {
                 profileEngine.focusChrome()
             }
