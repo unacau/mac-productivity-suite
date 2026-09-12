@@ -26,6 +26,7 @@ public enum KeyCodes {
     /// Map keycode to character string
     public static func character(for keyCode: UInt32) -> String? {
         switch keyCode {
+        case kVK_ANSI_A: return "a"
         case kVK_ANSI_C: return "c"
         case kVK_ANSI_1: return "1"
         case kVK_ANSI_2: return "2"

@@ -63,6 +63,7 @@ public final class CapsLockEngine: @unchecked Sendable {
     
     /// Callbacks for actions
     public var onChromeTrigger: (@MainActor () -> Void)?
+    public var onAntigravityTrigger: (@MainActor () -> Void)?
     public var onProfileTrigger: (@MainActor (Int) -> Void)?
     public var onModifierReleased: (@MainActor () -> Void)?
     public var onCancelTrigger: (@MainActor () -> Void)?
@@ -257,6 +258,13 @@ public final class CapsLockEngine: @unchecked Sendable {
                     return nil // Swallow 'C'
                 }
                 
+                // Check for 'A' (focus / cycle Antigravity & Antigravity IDE)
+                if uKeyCode == KeyCodes.kVK_ANSI_A {
+                    capsUsedAsModifier = true
+                    onAntigravityTrigger?()
+                    return nil // Swallow 'A'
+                }
+                
                 // Check for '1'..'8' (focus specific profile)
                 if let char = KeyCodes.character(for: uKeyCode),
                    let digit = Int(char), digit >= 1 && digit <= 8 {
@@ -306,6 +314,7 @@ public final class CapsLockEngine: @unchecked Sendable {
                 // Swallow keyUp for intercepted keys so no stray events are sent
                 let uKeyCode = UInt32(keyCode)
                 if uKeyCode == KeyCodes.kVK_ANSI_C ||
+                   uKeyCode == KeyCodes.kVK_ANSI_A ||
                    uKeyCode == KeyCodes.kVK_Escape ||
                    uKeyCode == KeyCodes.kVK_Tab ||
                    uKeyCode == KeyCodes.kVK_LeftArrow ||

@@ -20,6 +20,7 @@ SOURCES=(
     "src/ChromeQuickAccess/Engine/KeyCodes.swift"
     "src/ChromeQuickAccess/Engine/CapsLockEngine.swift"
     "src/ChromeQuickAccess/Engine/ChromeProfileEngine.swift"
+    "src/ChromeQuickAccess/Engine/AntigravityEngine.swift"
     "src/ChromeQuickAccess/Views/MinimalHUDWindow.swift"
     "src/ChromeQuickAccess/AppDelegate.swift"
     "src/ChromeQuickAccess/main.swift"

@@ -30,10 +30,18 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         CapsLockEngine.shared.stop()
     }
     
+    private enum ActiveSwitcherMode {
+        case none
+        case chrome
+        case antigravity
+    }
+    
     private var isCyclingHUDActive = false
+    private var activeMode: ActiveSwitcherMode = .none
     
     private func setupEngineCallbacks() {
         let profileEngine = ChromeProfileEngine.shared
+        let antigravityEngine = AntigravityEngine.shared
         let capsEngine = CapsLockEngine.shared
         
         capsEngine.onChromeTrigger = { [weak self] in
@@ -46,8 +54,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
             
-            if !self.isCyclingHUDActive {
+            if !self.isCyclingHUDActive || self.activeMode != .chrome {
                 self.isCyclingHUDActive = true
+                self.activeMode = .chrome
                 
                 let frontApp = NSWorkspace.shared.frontmostApplication
                 let isChromeFront = frontApp?.bundleIdentifier == profileEngine.browserBundleID
@@ -68,18 +77,58 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         
+        capsEngine.onAntigravityTrigger = { [weak self] in
+            guard let self = self else { return }
+            self.logger.info("Caps-Lock + A triggered.")
+            
+            let items = antigravityEngine.items
+            guard !items.isEmpty else { return }
+            
+            if !self.isCyclingHUDActive || self.activeMode != .antigravity {
+                self.isCyclingHUDActive = true
+                self.activeMode = .antigravity
+                
+                let frontIdx = antigravityEngine.getActiveAppIndex()
+                let initialIdx: Int
+                if let current = frontIdx {
+                    // Toggle to the other Antigravity app when one is frontmost
+                    initialIdx = (current + 1) % items.count
+                } else {
+                    // Activate last active Antigravity app
+                    initialIdx = max(0, min(antigravityEngine.lastActiveIndex, items.count - 1))
+                }
+                
+                MinimalHUDWindow.shared.showAntigravity(items: items, selectedIndex: initialIdx)
+            } else {
+                MinimalHUDWindow.shared.selectNext()
+            }
+        }
+        
         capsEngine.onProfileTrigger = { [weak self] digit in
             guard let self = self else { return }
             self.logger.info("Caps-Lock + \(digit) triggered.")
-            let profiles = profileEngine.profiles
-            guard !profiles.isEmpty else { return }
             
-            let targetIdx = max(0, min(digit - 1, profiles.count - 1))
-            if !self.isCyclingHUDActive {
-                self.isCyclingHUDActive = true
-                MinimalHUDWindow.shared.show(profiles: profiles, selectedIndex: targetIdx)
+            if self.activeMode == .antigravity {
+                let items = antigravityEngine.items
+                guard !items.isEmpty else { return }
+                let targetIdx = max(0, min(digit - 1, items.count - 1))
+                if !self.isCyclingHUDActive {
+                    self.isCyclingHUDActive = true
+                    MinimalHUDWindow.shared.showAntigravity(items: items, selectedIndex: targetIdx)
+                } else {
+                    MinimalHUDWindow.shared.updateSelection(to: targetIdx)
+                }
             } else {
-                MinimalHUDWindow.shared.updateSelection(to: targetIdx)
+                let profiles = profileEngine.profiles
+                guard !profiles.isEmpty else { return }
+                let targetIdx = max(0, min(digit - 1, profiles.count - 1))
+                if !self.isCyclingHUDActive {
+                    self.isCyclingHUDActive = true
+                    self.activeMode = .chrome
+                    MinimalHUDWindow.shared.show(profiles: profiles, selectedIndex: targetIdx)
+                } else {
+                    MinimalHUDWindow.shared.updateSelection(to: targetIdx)
+                }
             }
         }
         
@@ -97,6 +146,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self = self else { return }
             self.logger.info("Escape pressed: cancelling switcher HUD.")
             self.isCyclingHUDActive = false
+            self.activeMode = .none
             MinimalHUDWindow.shared.hideImmediate()
         }
         
@@ -104,17 +154,26 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self = self else { return }
             guard self.isCyclingHUDActive else { return }
             
+            let mode = self.activeMode
             self.isCyclingHUDActive = false
-            let targetProfile = ChromeSwitcherState.shared.selectedProfile
+            self.activeMode = .none
             
             // RULE 9: ALWAYS hide HUD before triggering application focus!
             MinimalHUDWindow.shared.hideImmediate()
             
-            if let target = targetProfile {
-                self.logger.info("Caps-Lock released: switching to profile '\(target.effectiveName)' (\(target.dir)).")
-                profileEngine.focusProfile(dir: target.dir)
+            if mode == .antigravity {
+                if let target = ChromeSwitcherState.shared.selectedAntigravityItem {
+                    self.logger.info("Caps-Lock released: switching to Antigravity app '\(target.name)' (\(target.bundleID)).")
+                    antigravityEngine.focusItem(bundleID: target.bundleID)
+                }
             } else {
-                profileEngine.focusChrome()
+                let targetProfile = ChromeSwitcherState.shared.selectedProfile
+                if let target = targetProfile {
+                    self.logger.info("Caps-Lock released: switching to profile '\(target.effectiveName)' (\(target.dir)).")
+                    profileEngine.focusProfile(dir: target.dir)
+                } else {
+                    profileEngine.focusChrome()
+                }
             }
         }
     }
@@ -178,7 +237,30 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         
         menu.addItem(NSMenuItem.separator())
         
-        let refreshItem = NSMenuItem(title: "Refresh Profiles", action: #selector(handleRefreshProfiles), keyEquivalent: "r")
+        let antigravityHeader = NSMenuItem(title: "Antigravity (Caps-Lock + A):", action: nil, keyEquivalent: "")
+        antigravityHeader.isEnabled = false
+        menu.addItem(antigravityHeader)
+        
+        let antiItems = AntigravityEngine.shared.items
+        for item in antiItems {
+            let menuItem = NSMenuItem(
+                title: "\(item.index): \(item.name)",
+                action: #selector(handleAntigravityClick(_:)),
+                keyEquivalent: ""
+            )
+            menuItem.target = self
+            menuItem.representedObject = item.bundleID
+            let small = NSImage(size: NSSize(width: 16, height: 16))
+            small.lockFocus()
+            item.icon.draw(in: NSRect(x: 0, y: 0, width: 16, height: 16))
+            small.unlockFocus()
+            menuItem.image = small
+            menu.addItem(menuItem)
+        }
+        
+        menu.addItem(NSMenuItem.separator())
+        
+        let refreshItem = NSMenuItem(title: "Refresh Profiles & Apps", action: #selector(handleRefreshProfiles), keyEquivalent: "r")
         refreshItem.target = self
         menu.addItem(refreshItem)
         
@@ -192,7 +274,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         
         menu.addItem(NSMenuItem.separator())
         
-        let quitItem = NSMenuItem(title: "Quit Chrome Quick Access", action: #selector(handleQuit), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: "Quit Quick Access", action: #selector(handleQuit), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
         
@@ -204,8 +286,14 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         ChromeProfileEngine.shared.focusProfile(dir: dir)
     }
     
+    @objc private func handleAntigravityClick(_ sender: NSMenuItem) {
+        guard let bundleID = sender.representedObject as? String else { return }
+        AntigravityEngine.shared.focusItem(bundleID: bundleID)
+    }
+    
     @objc private func handleRefreshProfiles() {
         ChromeProfileEngine.shared.refreshProfiles()
+        AntigravityEngine.shared.refreshItems()
         updateMenu()
     }
     

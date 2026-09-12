@@ -196,6 +196,10 @@ public final class AppDiscoveryService: ObservableObject {
             return found.isEmpty ? [candidates.first ?? ""] : found
         }
         
+        // 0. AI & Development (a) - Antigravity & Antigravity IDE
+        let antigravity = resolveCandidates(["Antigravity", "Antigravity IDE"])
+        if !antigravity.isEmpty { bindings["a"] = antigravity }
+        
         // 1. Files & Canvas (f) - Finder and Freeform
         let files = resolveCandidates(["Finder", "Freeform"])
         if !files.isEmpty { bindings["f"] = files }

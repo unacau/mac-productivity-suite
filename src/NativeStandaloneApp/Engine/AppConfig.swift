@@ -62,6 +62,7 @@ public struct AppConfig: Codable, Equatable {
         AppConfig(
             version: currentAppVersion,
             bindings: [
+                "a": ["Antigravity", "Antigravity IDE"],
                 "f": ["Finder", "Freeform"],
                 "t": ["Telegram", "iTerm2", "iTerm", "Terminal"],
                 "p": ["Photos", "Passwords", "Preview"],
