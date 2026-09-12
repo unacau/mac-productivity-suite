@@ -62,28 +62,28 @@ public struct ProfileAvatarView: View {
         ZStack {
             if isSelected {
                 Circle()
-                    .stroke(Color(red: 0.49, green: 0.82, blue: 0.96), lineWidth: 2.2)
-                    .frame(width: 32, height: 32)
+                    .stroke(Color(red: 130/255, green: 200/255, blue: 250/255), lineWidth: 2.5)
+                    .frame(width: 31, height: 31)
             }
             
             if let avatar = profile.avatarImage {
                 Image(nsImage: avatar)
                     .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 26, height: 26)
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 25, height: 25)
                     .clipShape(Circle())
             } else {
                 Circle()
-                    .fill(Color(red: 0.58, green: 0.30, blue: 0.88))
-                    .frame(width: 26, height: 26)
+                    .fill(Color(red: 175/255, green: 110/255, blue: 230/255))
+                    .frame(width: 25, height: 25)
                     .overlay(
                         Text(String(profile.effectiveName.prefix(1)).uppercased())
-                            .font(.system(size: 13, weight: .bold))
+                            .font(.system(size: 11, weight: .bold))
                             .foregroundColor(.white)
                     )
             }
         }
-        .frame(width: 34, height: 34)
+        .frame(width: 32, height: 32)
     }
 }
 
@@ -98,25 +98,35 @@ public struct MinimalHUDView: View {
         }
     }
     
+    private var cardWidth: CGFloat {
+        max(176, CGFloat(state.profiles.count) * 36 + 20)
+    }
+    
     public var body: some View {
         VStack(spacing: 0) {
             // Inner Blue Card
-            VStack(spacing: 8) {
+            VStack(spacing: 0) {
+                Spacer().frame(height: 24)
+                
                 // 1. Chrome App Icon
                 Image(nsImage: ChromeAppIconHelper.chromeIcon())
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 52, height: 52)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .frame(width: 68, height: 68)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                
+                Spacer().frame(height: 14)
                 
                 // 2. App Name Label
                 Text("Google Chrome")
-                    .font(.system(size: 13.5, weight: .bold))
+                    .font(.system(size: 15.5, weight: .bold))
                     .foregroundColor(.white)
                     .lineLimit(1)
                 
+                Spacer().frame(height: 14)
+                
                 // 3. Profiles Avatar Row
-                HStack(spacing: 6) {
+                HStack(spacing: 5) {
                     ForEach(Array(state.profiles.enumerated()), id: \.element.id) { idx, profile in
                         ProfileAvatarView(
                             profile: profile,
@@ -124,28 +134,27 @@ public struct MinimalHUDView: View {
                         )
                     }
                 }
-                .padding(.top, 2)
+                
+                Spacer().frame(height: 24)
             }
-            .padding(.vertical, 14)
-            .padding(.horizontal, 16)
+            .frame(width: cardWidth)
             .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color(red: 0.23, green: 0.42, blue: 0.67))
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(Color(red: 64/255, green: 108/255, blue: 171/255))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(Color(red: 0.48, green: 0.73, blue: 0.95), lineWidth: 1.5)
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(Color(red: 130/255, green: 189/255, blue: 248/255), lineWidth: 2.2)
             )
         }
-        .padding(10)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 16)
         .background(
-            VisualEffectBlur(material: .hudWindow, blendingMode: .behindWindow)
-                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-                .shadow(color: Color.black.opacity(0.4), radius: 16, x: 0, y: 8)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+            ZStack {
+                VisualEffectBlur(material: .hudWindow, blendingMode: .behindWindow)
+                Color(red: 45/255, green: 44/255, blue: 49/255)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
         )
     }
 }
@@ -176,7 +185,7 @@ public final class MinimalHUDWindow: NSWindow {
     
     public init() {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 200, height: 180),
+            contentRect: NSRect(x: 0, y: 0, width: 204, height: 236),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -184,6 +193,7 @@ public final class MinimalHUDWindow: NSWindow {
         self.isOpaque = false
         self.backgroundColor = .clear
         self.level = .floating
+        self.hasShadow = true
         self.ignoresMouseEvents = true
         self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         self.contentView = NSHostingView(rootView: MinimalHUDView())
@@ -201,11 +211,12 @@ public final class MinimalHUDWindow: NSWindow {
         if let screen = NSScreen.main {
             let screenRect = screen.visibleFrame
             let fittingSize = hostingView.fittingSize
-            let width = max(180, fittingSize.width)
-            let height = max(160, fittingSize.height)
+            let width = max(190, fittingSize.width)
+            let height = max(220, fittingSize.height)
             let x = screenRect.midX - (width / 2)
             let y = screenRect.midY - (height / 2)
             self.setFrame(NSRect(x: x, y: y, width: width, height: height), display: true)
+            self.invalidateShadow()
         }
         
         self.alphaValue = 1.0
