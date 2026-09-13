@@ -59,7 +59,6 @@ public final class ChromeProfileEngine: ObservableObject {
     public static let shared = ChromeProfileEngine()
     
     @Published public private(set) var profiles: [ChromeProfile] = []
-    @Published public private(set) var isChromeInstalled: Bool = false
     public var browserBundleID: String = "com.google.Chrome"
     
     /// Optional override for isolated unit testing
@@ -89,9 +88,6 @@ public final class ChromeProfileEngine: ObservableObject {
         cachedAvatars.removeAll()
         let fileManager = FileManager.default
         let chromeAppPath = "/Applications/Google Chrome.app"
-        self.isChromeInstalled = fileManager.fileExists(atPath: chromeAppPath) ||
-            fileManager.fileExists(atPath: "\(NSHomeDirectory())/Applications/Google Chrome.app") ||
-            NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.google.Chrome") != nil
         
         var foundProfiles: [ChromeProfile] = []
         var discoveredBundleID = "com.google.Chrome"
@@ -203,14 +199,6 @@ public final class ChromeProfileEngine: ObservableObject {
             }
         }
         return nil
-    }
-    
-    public func focusProfile(index: Int) {
-        if let target = profiles.first(where: { $0.index == index }) {
-            focusProfile(dir: target.dir)
-        } else if let first = profiles.first {
-            focusProfile(dir: first.dir)
-        }
     }
     
     public func focusProfile(dir: String) {

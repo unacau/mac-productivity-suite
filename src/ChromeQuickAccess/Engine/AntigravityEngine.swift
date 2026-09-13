@@ -143,13 +143,6 @@ public final class AntigravityEngine: ObservableObject, @unchecked Sendable {
         return items.firstIndex(where: { $0.bundleID == bundleID })
     }
     
-    /// Focus the item at given index
-    public func focusItem(index: Int) {
-        guard !items.isEmpty else { return }
-        let validIndex = max(0, min(index, items.count - 1))
-        focusItem(bundleID: items[validIndex].bundleID)
-    }
-    
     /// Focus the item with given bundle identifier
     public func focusItem(bundleID: String) {
         guard let item = items.first(where: { $0.bundleID == bundleID }) else {

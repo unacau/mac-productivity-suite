@@ -1,8 +1,0 @@
-{
-  "app_name": "Chrome Quick Access",
-  "github_repo": "unacau/mac-productivity-suite",
-  "bundle_name": "Chrome Quick Access.app",
-  "dmg_name": "ChromeQuickAccess.dmg",
-  "git_branch": "main",
-  "min_system_version": "14.0"
-}

@@ -1,7 +1,6 @@
 import Cocoa
 import AppKit
 import SwiftUI
-import UniformTypeIdentifiers
 
 // MARK: - Chrome App Icon Helper
 public enum ChromeAppIconHelper {
@@ -320,11 +319,6 @@ public final class MinimalHUDWindow: NSPanel {
     
     public func selectPrevious() {
         ChromeSwitcherState.shared.selectPrevious()
-    }
-    
-    /// Backward-compatibility helper
-    public func show(for profile: ChromeProfile) {
-        show(profiles: [profile], selectedIndex: 0)
     }
     
     public func hideImmediate() {

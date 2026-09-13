@@ -13,12 +13,6 @@
       "sourceType": "github",
       "skillPath": "skills/macos/SKILL.md",
       "computedHash": "294b31742ef3f87e13859714c402081845eaebd52e4691c716f5ed38c4013936"
-    },
-    "macos-release": {
-      "source": "fayazara/macos-app-skills",
-      "sourceType": "github",
-      "skillPath": "release/SKILL.md",
-      "computedHash": "b313d525a5b732d02b889ec3772594d5edbc327ddb7471827df3d9abf7e5a0f9"
     }
   }
 }
