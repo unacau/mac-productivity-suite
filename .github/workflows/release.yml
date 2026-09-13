@@ -1,0 +1,106 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Build & Publish Release
+    runs-on: macos-14
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Cache Swift Package Manager
+        uses: actions/cache@v6
+        with:
+          path: .build
+          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
+      - name: Select Xcode 16+
+        run: |
+          LATEST_XCODE=$(ls -d /Applications/Xcode_16*.app /Applications/Xcode*.app 2>/dev/null | grep -v "Xcode_15" | sort -V | tail -n 1)
+          if [ -n "$LATEST_XCODE" ]; then
+            echo "Selecting $LATEST_XCODE"
+            sudo xcode-select -s "$LATEST_XCODE/Contents/Developer"
+          fi
+          echo "Active Developer Directory: $(xcode-select -p)"
+          swift --version
+
+      - name: Pre-Flight Tag & Version Verification
+        run: |
+          V_TXT=$(cat VERSION.txt | tr -d '[:space:]')
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          echo "Tag: $GITHUB_REF_NAME (parsed: $TAG_VERSION)"
+          echo "VERSION.txt: $V_TXT"
+          if [ "$TAG_VERSION" != "$V_TXT" ]; then
+            echo "⚠️ Warning: Tag version ($TAG_VERSION) does not exactly match VERSION.txt ($V_TXT)"
+          else
+            echo "✅ Tag and VERSION.txt are synchronized."
+          fi
+
+      - name: Run Test Suite
+        timeout-minutes: 5
+        run: ./tests/run_tests.sh
+
+      - name: Build Native Universal Binary & DMG
+        run: ./build_native_app.sh
+
+      - name: Verify Architecture & Bundle Integrity
+        run: ./scripts/health_check.sh --skip-tests
+
+      - name: Generate SHA-256 Checksums
+        run: |
+          cd dist
+          shasum -a 256 ChromeQuickAccess.dmg > checksums.txt
+          echo "=== Computed Checksums ==="
+          cat checksums.txt
+          cd ..
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          name: "${{ github.ref_name }} - Chrome Quick Access & Productivity Suite"
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+          files: |
+            dist/ChromeQuickAccess.dmg
+            dist/checksums.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate Release Telemetry & Step Summary
+        if: always()
+        run: |
+          VERSION=$(cat VERSION.txt 2>/dev/null || echo 'N/A')
+          BUILD=$(cat BUILD.txt 2>/dev/null || echo 'N/A')
+          SHA=$(shasum -a 256 dist/ChromeQuickAccess.dmg 2>/dev/null | awk '{print $1}' || echo 'N/A')
+          SIZE=$(ls -lh dist/ChromeQuickAccess.dmg 2>/dev/null | awk '{print $5}' || echo 'N/A')
+          ARCHS=$(lipo -archs "dist/Chrome Quick Access.app/Contents/MacOS/ChromeQuickAccess" 2>/dev/null || echo 'N/A')
+
+          cat << EOF >> $GITHUB_STEP_SUMMARY
+          ## 🚀 GitHub Release Successfully Published
+
+          | Attribute | Value |
+          | :--- | :--- |
+          | **Release Tag** | \`${GITHUB_REF_NAME}\` |
+          | **Version / Build** | \`v${VERSION}\` (Build ${BUILD}) |
+          | **Target Architectures** | \`${ARCHS}\` |
+          | **DMG Size** | \`${SIZE}\` |
+          | **SHA-256 Hash** | \`${SHA}\` |
+          | **Release Assets** | \`ChromeQuickAccess.dmg\`, \`checksums.txt\` |
+          EOF

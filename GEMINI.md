@@ -20,9 +20,11 @@
   - `make monitor`: Real-time streaming from macOS Unified Logging (`os_log` subsystem `com.unacau.chromequickaccess`).
   - `make diagnostics`: Aggregated log level and category distribution summary over the last hour.
   - `./scripts/monitor_telemetry.sh errors 30m`: Filter errors and faults directly from system log stream.
+- **Validation & Quality Gates**: `make validate` (verifies version synchronization and shell script syntax).
 - **Build Native App**: `make native` or `./build_native_app.sh` (Produces universal Mach-O binary & DMG).
+- **Generate Checksums**: `make checksums` (Produces SHA-256 `dist/checksums.txt`).
 - **Local Installation**: `make install` or `./install.sh` (Installs native app to `/Applications`).
-- **Release Automation**: `./release.sh` (Builds native app + DMG and creates GitHub release).
+- **Release Automation**: `./release.sh --push` (creates git tag & triggers GitHub Actions cloud release pipeline) or `./release.sh --local` (local build + `gh release create`).
 
 ## Code Conventions & Standards
 - **Swift & SwiftUI**:

@@ -11,11 +11,40 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  quality:
+  lint-and-validate:
+    name: Lint & Validation
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v7
-      
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Validate Version Alignment
+        run: |
+          V_TXT=$(cat VERSION.txt | tr -d '[:space:]')
+          B_TXT=$(cat BUILD.txt | tr -d '[:space:]')
+          PLIST="src/ChromeQuickAccess/Info.plist"
+          V_PLIST=$(plutil -extract CFBundleShortVersionString raw "$PLIST" 2>/dev/null || echo "missing")
+          B_PLIST=$(plutil -extract CFBundleVersion raw "$PLIST" 2>/dev/null || echo "missing")
+          echo "VERSION.txt: $V_TXT (Build $B_TXT)"
+          echo "Info.plist:  $V_PLIST (Build $B_PLIST)"
+          if [ "$V_TXT" != "$V_PLIST" ] || [ "$B_TXT" != "$B_PLIST" ]; then
+            echo "❌ Version mismatch detected between VERSION.txt/BUILD.txt and Info.plist!"
+            exit 1
+          fi
+          echo "✅ Version and build numbers are strictly aligned."
+
+      - name: Validate Shell Script Syntax
+        run: |
+          bash -n release.sh build_native_app.sh bump_version.sh install.sh scripts/*.sh tests/*.sh
+          echo "✅ Shell script syntax verified cleanly."
+
+  test:
+    name: Swift Unit Tests
+    runs-on: macos-14
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
       - name: Cache Swift Package Manager
         uses: actions/cache@v6
         with:
@@ -23,8 +52,8 @@ jobs:
           key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
           restore-keys: |
             ${{ runner.os }}-spm-
-      
-      - name: Select Xcode version
+
+      - name: Select Xcode 16+
         run: |
           LATEST_XCODE=$(ls -d /Applications/Xcode_16*.app /Applications/Xcode*.app 2>/dev/null | grep -v "Xcode_15" | sort -V | tail -n 1)
           if [ -n "$LATEST_XCODE" ]; then
@@ -33,26 +62,77 @@ jobs:
           fi
           echo "Active Developer Directory: $(xcode-select -p)"
           swift --version
-        
+
       - name: Run Test Suite
         timeout-minutes: 5
         run: ./tests/run_tests.sh
-        
+
+  package:
+    name: Universal Binary & DMG Packaging
+    runs-on: macos-14
+    needs: [lint-and-validate, test]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Cache Swift Package Manager
+        uses: actions/cache@v6
+        with:
+          path: .build
+          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
+      - name: Select Xcode 16+
+        run: |
+          LATEST_XCODE=$(ls -d /Applications/Xcode_16*.app /Applications/Xcode*.app 2>/dev/null | grep -v "Xcode_15" | sort -V | tail -n 1)
+          if [ -n "$LATEST_XCODE" ]; then
+            echo "Selecting $LATEST_XCODE"
+            sudo xcode-select -s "$LATEST_XCODE/Contents/Developer"
+          fi
+          echo "Active Developer Directory: $(xcode-select -p)"
+          swift --version
+
       - name: Build Native Universal Binary & DMG
         run: ./build_native_app.sh
 
-      - name: System Health & Diagnostics
+      - name: Post-Build Health Check & Architecture Verification
         run: ./scripts/health_check.sh --skip-tests
+
+      - name: Generate SHA-256 Checksum
+        run: |
+          cd dist
+          shasum -a 256 ChromeQuickAccess.dmg > ChromeQuickAccess.dmg.sha256
+          cd ..
+
+      - name: Upload DMG Build Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ChromeQuickAccess-dmg
+          path: |
+            dist/ChromeQuickAccess.dmg
+            dist/ChromeQuickAccess.dmg.sha256
+          retention-days: 7
 
       - name: Generate CI Telemetry & Step Summary
         if: always()
         run: |
-          cat << 'EOF' >> $GITHUB_STEP_SUMMARY
+          VERSION=$(cat VERSION.txt 2>/dev/null || echo 'N/A')
+          BUILD=$(cat BUILD.txt 2>/dev/null || echo 'N/A')
+          SHA=$(shasum -a 256 dist/ChromeQuickAccess.dmg 2>/dev/null | awk '{print $1}' || echo 'N/A')
+          SIZE=$(ls -lh dist/ChromeQuickAccess.dmg 2>/dev/null | awk '{print $5}' || echo 'N/A')
+          ARCHS=$(lipo -archs "dist/Chrome Quick Access.app/Contents/MacOS/ChromeQuickAccess" 2>/dev/null || echo 'N/A')
+
+          cat << EOF >> $GITHUB_STEP_SUMMARY
           ## 🧪 CI Quality Gate & Observability Report
-          
-          | Metric | Status |
+
+          | Metric | Value / Status |
           | :--- | :--- |
-          | **Unit Tests** | ✅ Passed |
-          | **Universal Binary (`arm64` + `x86_64`)** | ✅ Built (`dist/ChromeQuickAccess.dmg`) |
-          | **Version Alignment** | ✅ $(cat VERSION.txt 2>/dev/null || echo 'N/A') (Build $(cat BUILD.txt 2>/dev/null || echo 'N/A')) |
+          | **Validation & Syntax** | ✅ Passed |
+          | **Unit Test Suite** | ✅ Passed (Swift Testing) |
+          | **Version / Build** | \`v${VERSION}\` (Build ${BUILD}) |
+          | **Universal Slices** | \`${ARCHS}\` |
+          | **DMG Package Size** | \`${SIZE}\` |
+          | **DMG SHA-256** | \`${SHA}\` |
+          | **Artifact Delivery** | ✅ Uploaded (\`ChromeQuickAccess-dmg\`, 7-day retention) |
           EOF

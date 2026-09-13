@@ -46,11 +46,35 @@ make test
 make install
 ```
 
-### Step 4: Release Execution
-When cutting an official release:
-1. Run `make test` and `make health`.
-2. Run `./release.sh`.
-3. Push the git tag (`git push origin vX.Y.Z`).
+### Step 4: Release Execution & Cloud Automation
+Chrome Quick Access supports automated cloud-native releases powered by GitHub Actions:
+
+**Recommended: Cloud-Native Release via Git Tag**
+1. Ensure the working tree is clean and version is bumped:
+   ```bash
+   make validate
+   make health
+   ```
+2. Trigger the automated cloud release pipeline:
+   ```bash
+   ./release.sh --push
+   # or manually:
+   # git tag -a v$(cat VERSION.txt) -m "Release v$(cat VERSION.txt)"
+   # git push origin v$(cat VERSION.txt)
+   ```
+   This triggers `.github/workflows/release.yml` on GitHub Actions, which compiles the universal binary, runs health checks, generates SHA-256 checksums (`checksums.txt`), and automatically publishes a GitHub Release with all assets attached.
+
+**Alternative: Local Fallback Release**
+If releasing locally without cloud CI:
+```bash
+./release.sh --local
+```
+
+### Step 5: CI/CD Quality Gates & Artifact Delivery
+The GitHub Actions CI pipeline (`.github/workflows/ci.yml`) runs on every pull request and push to `main` across three isolated stages:
+- **`lint-and-validate`**: Verifies version synchronization between `VERSION.txt`, `BUILD.txt`, and `Info.plist`, and lints all shell scripts.
+- **`test`**: Independent fast-fail gate running the Swift Testing unit suite in <30 seconds.
+- **`package`**: Compiles universal Mach-O binaries, packages the `.dmg` installer, computes SHA-256 hashes, and uploads downloadable artifacts (`ChromeQuickAccess-dmg`, 7-day retention) directly to the PR / workflow run.
 
 ---
 
