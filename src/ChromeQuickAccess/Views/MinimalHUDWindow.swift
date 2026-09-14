@@ -23,6 +23,9 @@ public enum ChromeAppIconHelper {
 public enum SwitcherMode: Equatable, Sendable {
     case chrome
     case antigravity
+    case terminal
+    case notes
+    case ide
 }
 
 // MARK: - Switcher HUD State
@@ -43,11 +46,15 @@ public final class ChromeSwitcherState: ObservableObject {
         return profiles[selectedIndex]
     }
     
-    public var selectedAntigravityItem: AntigravityItem? {
+    public var selectedAppItem: AntigravityItem? {
         guard !antigravityItems.isEmpty, selectedIndex >= 0, selectedIndex < antigravityItems.count else {
             return antigravityItems.first
         }
         return antigravityItems[selectedIndex]
+    }
+    
+    public var selectedAntigravityItem: AntigravityItem? {
+        selectedAppItem
     }
     
     public func selectNext() {
@@ -141,7 +148,7 @@ public struct MinimalHUDView: View {
     private var topIcon: NSImage {
         if state.mode == .chrome {
             return ChromeAppIconHelper.chromeIcon()
-        } else if let selected = state.selectedAntigravityItem {
+        } else if let selected = state.selectedAppItem {
             return selected.icon
         } else {
             return AntigravityEngine.shared.items.first?.icon ?? NSWorkspace.shared.icon(for: .application)
@@ -151,10 +158,16 @@ public struct MinimalHUDView: View {
     private var appTitle: String {
         if state.mode == .chrome {
             return "Google Chrome"
-        } else if let selected = state.selectedAntigravityItem {
+        } else if let selected = state.selectedAppItem {
             return selected.name
         } else {
-            return "Antigravity"
+            switch state.mode {
+            case .terminal: return "Terminal"
+            case .notes: return "Notes"
+            case .ide: return "IDE"
+            case .antigravity: return "Antigravity"
+            case .chrome: return "Google Chrome"
+            }
         }
     }
     
@@ -282,7 +295,11 @@ public final class MinimalHUDWindow: NSPanel {
     }
     
     public func showAntigravity(items: [AntigravityItem], selectedIndex: Int) {
-        ChromeSwitcherState.shared.mode = .antigravity
+        showAppGroup(mode: .antigravity, items: items, selectedIndex: selectedIndex)
+    }
+    
+    public func showAppGroup(mode: SwitcherMode, items: [AntigravityItem], selectedIndex: Int) {
+        ChromeSwitcherState.shared.mode = mode
         ChromeSwitcherState.shared.antigravityItems = items
         let validIndex = items.isEmpty ? 0 : max(0, min(selectedIndex, items.count - 1))
         ChromeSwitcherState.shared.selectedIndex = validIndex

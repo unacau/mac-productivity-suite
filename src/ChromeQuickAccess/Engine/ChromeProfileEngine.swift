@@ -61,6 +61,54 @@ public final class ChromeProfileEngine: ObservableObject {
     @Published public private(set) var profiles: [ChromeProfile] = []
     public var browserBundleID: String = "com.google.Chrome"
     
+    @Published public var selectedProfileDirs: [String] = [] {
+        didSet {
+            UserDefaults.standard.set(selectedProfileDirs, forKey: "SelectedBrowserProfileDirs")
+        }
+    }
+    
+    /// Returns the active selected profiles (up to 4), re-indexed 1...4 for hotkeys and HUD
+    public var selectedProfiles: [ChromeProfile] {
+        let selectedSet = Set(selectedProfileDirs)
+        let matched = profiles.filter { selectedSet.contains($0.dir) }
+        let chosen = matched.isEmpty ? Array(profiles.prefix(4)) : Array(matched.prefix(4))
+        return chosen.enumerated().map { (idx, p) in
+            ChromeProfile(
+                index: idx + 1,
+                dir: p.dir,
+                name: p.name,
+                email: p.email,
+                gaiaName: p.gaiaName,
+                gaiaGivenName: p.gaiaGivenName,
+                avatarImage: p.avatarImage
+            )
+        }
+    }
+    
+    public func isProfileSelected(dir: String) -> Bool {
+        selectedProfiles.contains(where: { $0.dir == dir })
+    }
+    
+    public func selectProfile(dir: String) {
+        if !selectedProfileDirs.contains(dir) {
+            if selectedProfileDirs.count < 4 {
+                selectedProfileDirs.append(dir)
+            } else {
+                selectedProfileDirs[3] = dir
+            }
+        }
+    }
+    
+    public func toggleProfileSelection(dir: String) {
+        if selectedProfileDirs.contains(dir) {
+            if selectedProfileDirs.count > 1 {
+                selectedProfileDirs.removeAll(where: { $0 == dir })
+            }
+        } else {
+            selectProfile(dir: dir)
+        }
+    }
+    
     /// Optional override for isolated unit testing
     public static var localStatePathOverride: String? = nil
     
@@ -87,7 +135,6 @@ public final class ChromeProfileEngine: ObservableObject {
     public func refreshProfiles() {
         cachedAvatars.removeAll()
         let fileManager = FileManager.default
-        let chromeAppPath = "/Applications/Google Chrome.app"
         
         var foundProfiles: [ChromeProfile] = []
         var discoveredBundleID = "com.google.Chrome"
@@ -164,7 +211,16 @@ public final class ChromeProfileEngine: ObservableObject {
         }
         
         self.profiles = foundProfiles
-        logger.info("Discovered \(foundProfiles.count) browser profiles.")
+        
+        let saved = UserDefaults.standard.stringArray(forKey: "SelectedBrowserProfileDirs") ?? []
+        let validSaved = saved.filter { s in foundProfiles.contains(where: { $0.dir == s }) }
+        if !validSaved.isEmpty {
+            self.selectedProfileDirs = Array(validSaved.prefix(4))
+        } else {
+            self.selectedProfileDirs = Array(foundProfiles.prefix(4).map { $0.dir })
+        }
+        
+        logger.info("Discovered \(foundProfiles.count) browser profiles. Selected: \(self.selectedProfiles.count)")
     }
     
     // MARK: - Profile Focus & Activation

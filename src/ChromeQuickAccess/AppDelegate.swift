@@ -34,105 +34,208 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         CopyOnSelectEngine.shared.stop()
     }
     
-    private enum ActiveSwitcherMode {
+    private enum ActiveSwitcherMode: Equatable {
         case none
         case chrome
+        case appLetter(Character)
         case antigravity
+        case terminal
+        case notes
+        case ide
     }
     
     private var isCyclingHUDActive = false
     private var activeMode: ActiveSwitcherMode = .none
     
+    private func handleSingleAppTrigger(
+        engine: AppGroupEngine,
+        mode: ActiveSwitcherMode,
+        switcherMode: SwitcherMode,
+        keyName: String
+    ) {
+        logger.info("Caps-Lock + \(keyName) triggered.")
+        guard let item = engine.selectedItem else { return }
+        
+        if !isCyclingHUDActive || activeMode != mode {
+            isCyclingHUDActive = true
+            activeMode = mode
+            MinimalHUDWindow.shared.showAppGroup(mode: switcherMode, items: [item], selectedIndex: 0)
+        }
+    }
+    
+    private func handleAppLetterTrigger(char: Character, items: [AntigravityItem]) {
+        logger.info("Caps-Lock + \(char) triggered for \(items.map { $0.name }).")
+        guard !items.isEmpty else { return }
+        
+        let targetMode = ActiveSwitcherMode.appLetter(char)
+        if !isCyclingHUDActive || activeMode != targetMode {
+            isCyclingHUDActive = true
+            activeMode = targetMode
+            
+            var initialIdx = 0
+            if items.count > 1 {
+                let frontBundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+                if let currentIdx = items.firstIndex(where: { $0.bundleID == frontBundleID }) {
+                    initialIdx = (currentIdx + 1) % items.count
+                }
+            }
+            
+            MinimalHUDWindow.shared.showAppGroup(mode: .antigravity, items: items, selectedIndex: initialIdx)
+        } else {
+            MinimalHUDWindow.shared.selectNext()
+        }
+    }
+    
+    private func focusApp(bundleID: String) {
+        AppGroupEngine.focusItem(bundleID: bundleID)
+    }
+    
+    private func handleChromeTrigger() {
+        let profileEngine = ChromeProfileEngine.shared
+        logger.info("Caps-Lock + C triggered.")
+        
+        let profiles = profileEngine.selectedProfiles
+        guard !profiles.isEmpty else {
+            profileEngine.focusChrome()
+            return
+        }
+        
+        if !self.isCyclingHUDActive || self.activeMode != .chrome {
+            self.isCyclingHUDActive = true
+            self.activeMode = .chrome
+            
+            let frontApp = NSWorkspace.shared.frontmostApplication
+            let isChromeFront = frontApp?.bundleIdentifier == profileEngine.browserBundleID
+            
+            let activeDir = profileEngine.getActiveProfileDir()
+            let currentIdx = profiles.firstIndex(where: { $0.dir == activeDir }) ?? 0
+            
+            let initialIdx: Int
+            if isChromeFront {
+                initialIdx = (currentIdx + 1) % profiles.count
+            } else {
+                initialIdx = currentIdx
+            }
+            
+            MinimalHUDWindow.shared.show(profiles: profiles, selectedIndex: initialIdx)
+        } else {
+            MinimalHUDWindow.shared.selectNext()
+        }
+    }
+    
+    /// Re-evaluates and binds dynamic hotkeys based strictly on the first letter of each selected application's name.
+    public func updateDynamicShortcuts() {
+        var letterToItems: [Character: [AntigravityItem]] = [:]
+        
+        let engines = [
+            AppGroupEngine.terminal,
+            AppGroupEngine.aiAgent,
+            AppGroupEngine.ide,
+            AppGroupEngine.notes
+        ]
+        
+        for engine in engines {
+            if let item = engine.selectedItem {
+                let char = engine.activeShortcutChar
+                if letterToItems[char] == nil {
+                    letterToItems[char] = []
+                }
+                if !letterToItems[char]!.contains(where: { $0.bundleID == item.bundleID }) {
+                    letterToItems[char]!.append(item)
+                }
+            }
+        }
+        
+        var triggers: [UInt32: @MainActor () -> Void] = [:]
+        
+        // 1. Chrome browser is 'C'
+        triggers[KeyCodes.kVK_ANSI_C] = { [weak self] in
+            self?.handleChromeTrigger()
+        }
+        
+        // 2. Register every letter's items
+        for (char, items) in letterToItems {
+            // 'C' is already handled by Chrome profile switcher
+            if char == "C" { continue }
+            
+            if let code = KeyCodes.keyCode(for: char) {
+                triggers[code] = { [weak self] in
+                    self?.handleAppLetterTrigger(char: char, items: items)
+                }
+            }
+        }
+        
+        CapsLockEngine.shared.dynamicKeyTriggers = triggers
+        logger.info("Dynamic app shortcuts updated: \(letterToItems.map { "\($0.key): \($0.value.map { $0.name })" })")
+    }
+    
     private func setupEngineCallbacks() {
         let profileEngine = ChromeProfileEngine.shared
-        let antigravityEngine = AntigravityEngine.shared
+        let aiAgentEngine = AppGroupEngine.aiAgent
+        let terminalEngine = AppGroupEngine.terminal
+        let notesEngine = AppGroupEngine.notes
+        let ideEngine = AppGroupEngine.ide
         let capsEngine = CapsLockEngine.shared
         
+        updateDynamicShortcuts()
+        
         capsEngine.onChromeTrigger = { [weak self] in
-            guard let self = self else { return }
-            self.logger.info("Caps-Lock + C triggered.")
-            
-            let profiles = profileEngine.profiles
-            guard !profiles.isEmpty else {
-                profileEngine.focusChrome()
-                return
-            }
-            
-            if !self.isCyclingHUDActive || self.activeMode != .chrome {
-                self.isCyclingHUDActive = true
-                self.activeMode = .chrome
-                
-                let frontApp = NSWorkspace.shared.frontmostApplication
-                let isChromeFront = frontApp?.bundleIdentifier == profileEngine.browserBundleID
-                
-                let activeDir = profileEngine.getActiveProfileDir()
-                let currentIdx = profiles.firstIndex(where: { $0.dir == activeDir }) ?? 0
-                
-                let initialIdx: Int
-                if isChromeFront {
-                    initialIdx = (currentIdx + 1) % profiles.count
-                } else {
-                    initialIdx = currentIdx
-                }
-                
-                MinimalHUDWindow.shared.show(profiles: profiles, selectedIndex: initialIdx)
-            } else {
-                MinimalHUDWindow.shared.selectNext()
-            }
+            self?.handleChromeTrigger()
         }
         
         capsEngine.onAntigravityTrigger = { [weak self] in
             guard let self = self else { return }
-            self.logger.info("Caps-Lock + A triggered.")
-            
-            let items = antigravityEngine.items
-            guard !items.isEmpty else { return }
-            
-            if !self.isCyclingHUDActive || self.activeMode != .antigravity {
-                self.isCyclingHUDActive = true
-                self.activeMode = .antigravity
-                
-                let frontIdx = antigravityEngine.getActiveAppIndex()
-                let initialIdx: Int
-                if let current = frontIdx {
-                    // Toggle to the other Antigravity app when one is frontmost
-                    initialIdx = (current + 1) % items.count
-                } else {
-                    // Activate last active Antigravity app
-                    initialIdx = max(0, min(antigravityEngine.lastActiveIndex, items.count - 1))
-                }
-                
-                MinimalHUDWindow.shared.showAntigravity(items: items, selectedIndex: initialIdx)
-            } else {
-                MinimalHUDWindow.shared.selectNext()
-            }
+            self.handleSingleAppTrigger(
+                engine: aiAgentEngine,
+                mode: .antigravity,
+                switcherMode: .antigravity,
+                keyName: String(aiAgentEngine.activeShortcutChar)
+            )
+        }
+        
+        capsEngine.onTerminalTrigger = { [weak self] in
+            guard let self = self else { return }
+            self.handleSingleAppTrigger(
+                engine: terminalEngine,
+                mode: .terminal,
+                switcherMode: .terminal,
+                keyName: String(terminalEngine.activeShortcutChar)
+            )
+        }
+        
+        capsEngine.onNotesTrigger = { [weak self] in
+            guard let self = self else { return }
+            self.handleSingleAppTrigger(
+                engine: notesEngine,
+                mode: .notes,
+                switcherMode: .notes,
+                keyName: String(notesEngine.activeShortcutChar)
+            )
+        }
+        
+        capsEngine.onIdeTrigger = { [weak self] in
+            guard let self = self else { return }
+            self.handleSingleAppTrigger(
+                engine: ideEngine,
+                mode: .ide,
+                switcherMode: .ide,
+                keyName: String(ideEngine.activeShortcutChar)
+            )
         }
         
         capsEngine.onProfileTrigger = { [weak self] digit in
             guard let self = self else { return }
             self.logger.info("Caps-Lock + \(digit) triggered.")
             
-            if self.activeMode == .antigravity {
-                let items = antigravityEngine.items
-                guard !items.isEmpty else { return }
-                let targetIdx = max(0, min(digit - 1, items.count - 1))
-                if !self.isCyclingHUDActive {
-                    self.isCyclingHUDActive = true
-                    MinimalHUDWindow.shared.showAntigravity(items: items, selectedIndex: targetIdx)
-                } else {
-                    MinimalHUDWindow.shared.updateSelection(to: targetIdx)
-                }
+            let profiles = profileEngine.selectedProfiles
+            guard !profiles.isEmpty else { return }
+            let targetIdx = max(0, min(digit - 1, profiles.count - 1))
+            if !self.isCyclingHUDActive {
+                self.isCyclingHUDActive = true
+                self.activeMode = .chrome
+                MinimalHUDWindow.shared.show(profiles: profiles, selectedIndex: targetIdx)
             } else {
-                let profiles = profileEngine.profiles
-                guard !profiles.isEmpty else { return }
-                let targetIdx = max(0, min(digit - 1, profiles.count - 1))
-                if !self.isCyclingHUDActive {
-                    self.isCyclingHUDActive = true
-                    self.activeMode = .chrome
-                    MinimalHUDWindow.shared.show(profiles: profiles, selectedIndex: targetIdx)
-                } else {
-                    MinimalHUDWindow.shared.updateSelection(to: targetIdx)
-                }
+                MinimalHUDWindow.shared.updateSelection(to: targetIdx)
             }
         }
         
@@ -165,12 +268,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             // RULE 9: ALWAYS hide HUD before triggering application focus!
             MinimalHUDWindow.shared.hideImmediate()
             
-            if mode == .antigravity {
-                if let target = ChromeSwitcherState.shared.selectedAntigravityItem {
-                    self.logger.info("Caps-Lock released: switching to Antigravity app '\(target.name)' (\(target.bundleID)).")
-                    antigravityEngine.focusItem(bundleID: target.bundleID)
-                }
-            } else {
+            switch mode {
+            case .chrome:
                 let targetProfile = ChromeSwitcherState.shared.selectedProfile
                 if let target = targetProfile {
                     self.logger.info("Caps-Lock released: switching to profile '\(target.effectiveName)' (\(target.dir)).")
@@ -178,6 +277,33 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                 } else {
                     profileEngine.focusChrome()
                 }
+            case .appLetter(let char):
+                if let target = ChromeSwitcherState.shared.selectedAppItem {
+                    self.logger.info("Caps-Lock released: switching to '\(target.name)' (\(target.bundleID)) for key \(char).")
+                    self.focusApp(bundleID: target.bundleID)
+                }
+            case .antigravity:
+                if let target = aiAgentEngine.selectedItem {
+                    self.logger.info("Caps-Lock released: switching to AI Agent '\(target.name)' (\(target.bundleID)).")
+                    aiAgentEngine.focusItem(bundleID: target.bundleID)
+                }
+            case .terminal:
+                if let target = terminalEngine.selectedItem {
+                    self.logger.info("Caps-Lock released: switching to Terminal app '\(target.name)' (\(target.bundleID)).")
+                    terminalEngine.focusItem(bundleID: target.bundleID)
+                }
+            case .notes:
+                if let target = notesEngine.selectedItem {
+                    self.logger.info("Caps-Lock released: switching to Notes app '\(target.name)' (\(target.bundleID)).")
+                    notesEngine.focusItem(bundleID: target.bundleID)
+                }
+            case .ide:
+                if let target = ideEngine.selectedItem {
+                    self.logger.info("Caps-Lock released: switching to IDE app '\(target.name)' (\(target.bundleID)).")
+                    ideEngine.focusItem(bundleID: target.bundleID)
+                }
+            case .none:
+                break
             }
         }
     }
@@ -197,23 +323,208 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     public func updateMenu() {
+        let menu = buildStatusMenu()
+        statusItem?.menu = menu
+    }
+    
+    private func makeAlignedMenuItem(
+        title: String,
+        keyEquivalent: String = "",
+        modifierMask: NSEvent.ModifierFlags = [],
+        isHeader: Bool = false,
+        icon: NSImage? = nil,
+        action: Selector? = nil,
+        target: AnyObject? = nil,
+        representedObject: Any? = nil
+    ) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: keyEquivalent)
+        item.keyEquivalentModifierMask = modifierMask
+        item.target = target
+        item.representedObject = representedObject
+        
+        if isHeader {
+            let attr = NSMutableAttributedString(string: title)
+            attr.addAttribute(.font, value: NSFont.boldSystemFont(ofSize: 13), range: NSRange(location: 0, length: (title as NSString).length))
+            item.attributedTitle = attr
+        }
+        
+        if let icon = icon {
+            let small = NSImage(size: NSSize(width: 16, height: 16))
+            small.lockFocus()
+            icon.draw(in: NSRect(x: 0, y: 0, width: 16, height: 16))
+            small.unlockFocus()
+            item.image = small
+        }
+        
+        return item
+    }
+    
+    @discardableResult
+    public func buildStatusMenu() -> NSMenu {
+        updateDynamicShortcuts()
         let menu = NSMenu()
         
-        let titleItem = NSMenuItem(title: "Chrome Quick Access", action: nil, keyEquivalent: "")
-        titleItem.attributedTitle = NSAttributedString(
-            string: "Chrome Quick Access",
-            attributes: [.font: NSFont.boldSystemFont(ofSize: 13)]
-        )
-        menu.addItem(titleItem)
+        let profileEngine = ChromeProfileEngine.shared
+        let selectedList = profileEngine.selectedProfiles
         
-        let capsStatusItem = NSMenuItem(
-            title: "Caps-Lock: Active (ESC on tap)",
+        // 1. Chrome section (caps lock + C)
+        let chromeIcon: NSImage
+        if let appIcon = NSWorkspace.shared.icon(forFile: "/Applications/Google Chrome.app") as NSImage? {
+            chromeIcon = appIcon
+        } else if let firstAvatar = profileEngine.profiles.first?.avatarImage {
+            chromeIcon = firstAvatar
+        } else {
+            chromeIcon = NSImage(systemSymbolName: "globe", accessibilityDescription: nil) ?? NSImage()
+        }
+        
+        let chromeHeader = makeAlignedMenuItem(
+            title: "Chrome (Caps-Lock + C)",
+            isHeader: true,
+            icon: chromeIcon,
             action: nil,
-            keyEquivalent: ""
+            target: nil
         )
-        capsStatusItem.isEnabled = false
-        menu.addItem(capsStatusItem)
+        chromeHeader.isEnabled = false
+        menu.addItem(chromeHeader)
         
+        if !selectedList.isEmpty {
+            for p in selectedList {
+                let pItem = makeAlignedMenuItem(
+                    title: p.effectiveName,
+                    keyEquivalent: "\(p.index)",
+                    icon: p.avatarImage,
+                    action: #selector(handleProfileClick(_:)),
+                    target: self,
+                    representedObject: p.dir
+                )
+                pItem.toolTip = "Slot #\(p.index): \(p.effectiveName). Click to switch, ⌥-click to deselect."
+                menu.addItem(pItem)
+            }
+        } else if let firstProfile = profileEngine.profiles.first {
+            let pItem = makeAlignedMenuItem(
+                title: firstProfile.effectiveName,
+                keyEquivalent: "1",
+                icon: firstProfile.avatarImage,
+                action: #selector(handleProfileClick(_:)),
+                target: self,
+                representedObject: firstProfile.dir
+            )
+            menu.addItem(pItem)
+        }
+        
+        menu.addItem(NSMenuItem.separator())
+        
+        // 2. Toolkit section (caps lock)
+        let toolkitIcon = NSImage(systemSymbolName: "wrench.and.screwdriver.fill", accessibilityDescription: nil) ?? NSImage()
+        let toolkitHeader = makeAlignedMenuItem(
+            title: "Toolkit (Caps-Lock)",
+            isHeader: true,
+            icon: toolkitIcon,
+            action: nil,
+            target: nil
+        )
+        toolkitHeader.isEnabled = false
+        menu.addItem(toolkitHeader)
+        
+        let toolkitConfigs: [(category: String, engine: AppGroupEngine)] = [
+            ("Terminal", AppGroupEngine.terminal),
+            ("IDE", AppGroupEngine.ide),
+            ("AI Agent", AppGroupEngine.aiAgent),
+            ("Notes", AppGroupEngine.notes)
+        ]
+        
+        for config in toolkitConfigs {
+            let engine = config.engine
+            if let item = engine.selectedItem {
+                let char = engine.activeShortcutChar
+                let rowItem = makeAlignedMenuItem(
+                    title: item.name,
+                    keyEquivalent: String(char).lowercased(),
+                    icon: item.icon,
+                    action: #selector(handleCoreAppClick(_:)),
+                    target: self,
+                    representedObject: item.bundleID
+                )
+                rowItem.toolTip = "\(config.category): \(item.name) (Caps-Lock + \(char)). Click to switch."
+                menu.addItem(rowItem)
+            }
+        }
+        
+        menu.addItem(NSMenuItem.separator())
+        
+        // 3. Change App submenu
+        let changeAppItem = NSMenuItem(title: "Change App", action: nil, keyEquivalent: "")
+        let changeAppSubmenu = NSMenu(title: "Change App")
+        
+        let transparentOffImage = NSImage(size: NSSize(width: 14, height: 14))
+        
+        // 3a. Chrome Profiles in Change App
+        let chromeCatHeader = NSMenuItem(title: "Chrome Profiles (up to 4):", action: nil, keyEquivalent: "")
+        chromeCatHeader.attributedTitle = NSAttributedString(
+            string: "Chrome Profiles (up to 4):",
+            attributes: [.font: NSFont.boldSystemFont(ofSize: 11)]
+        )
+        chromeCatHeader.isEnabled = false
+        changeAppSubmenu.addItem(chromeCatHeader)
+        
+        for p in profileEngine.profiles {
+            let isSelected = selectedList.contains(where: { $0.dir == p.dir })
+            let slot = selectedList.first(where: { $0.dir == p.dir })?.index
+            let pItem = makeAlignedMenuItem(
+                title: p.effectiveName,
+                keyEquivalent: slot != nil ? "\(slot!)" : "",
+                icon: p.avatarImage,
+                action: #selector(handleChangeProfileClick(_:)),
+                target: self,
+                representedObject: p.dir
+            )
+            pItem.state = isSelected ? .on : .off
+            if !isSelected {
+                pItem.offStateImage = transparentOffImage
+            }
+            pItem.toolTip = isSelected ? "Active slot #\(slot!). Click to deselect." : "Click to select into active slots."
+            changeAppSubmenu.addItem(pItem)
+        }
+        
+        // 3b. Toolkit categories in Change App
+        for config in toolkitConfigs {
+            changeAppSubmenu.addItem(NSMenuItem.separator())
+            
+            let catHeader = NSMenuItem(title: "\(config.category):", action: nil, keyEquivalent: "")
+            catHeader.attributedTitle = NSAttributedString(
+                string: "\(config.category):",
+                attributes: [.font: NSFont.boldSystemFont(ofSize: 11)]
+            )
+            catHeader.isEnabled = false
+            changeAppSubmenu.addItem(catHeader)
+            
+            let engine = config.engine
+            for item in engine.items {
+                let isSelected = engine.isSelected(bundleID: item.bundleID)
+                let char = Character((item.name.first(where: { $0.isLetter }) ?? "A").uppercased())
+                let menuItem = makeAlignedMenuItem(
+                    title: item.name,
+                    keyEquivalent: String(char).lowercased(),
+                    icon: item.icon,
+                    action: #selector(handleChangeAppItemClick(_:)),
+                    target: self,
+                    representedObject: "\(engine.category):\(item.bundleID)"
+                )
+                menuItem.state = isSelected ? .on : .off
+                if !isSelected {
+                    menuItem.offStateImage = transparentOffImage
+                }
+                menuItem.toolTip = "Set \(item.name) as active \(config.category) (Caps-Lock + \(char))."
+                changeAppSubmenu.addItem(menuItem)
+            }
+        }
+        
+        changeAppItem.submenu = changeAppSubmenu
+        menu.addItem(changeAppItem)
+        
+        menu.addItem(NSMenuItem.separator())
+        
+        // 4. Utility / options items
         let copyStatusTitle = CopyOnSelectEngine.shared.isEnabled ? "Copy-on-Select: Active ✓" : "Copy-on-Select: Disabled"
         let copyStatusItem = NSMenuItem(
             title: copyStatusTitle,
@@ -223,58 +534,13 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         copyStatusItem.target = self
         menu.addItem(copyStatusItem)
         
-        menu.addItem(NSMenuItem.separator())
-        
-        let profilesHeader = NSMenuItem(title: "Discovered Profiles:", action: nil, keyEquivalent: "")
-        profilesHeader.isEnabled = false
-        menu.addItem(profilesHeader)
-        
-        let profiles = ChromeProfileEngine.shared.profiles
-        for p in profiles {
-            let item = NSMenuItem(
-                title: "\(p.index): \(p.effectiveName)",
-                action: #selector(handleProfileClick(_:)),
-                keyEquivalent: "\(p.index)"
-            )
-            item.target = self
-            item.representedObject = p.dir
-            if let avatar = p.avatarImage {
-                let small = NSImage(size: NSSize(width: 16, height: 16))
-                small.lockFocus()
-                avatar.draw(in: NSRect(x: 0, y: 0, width: 16, height: 16))
-                small.unlockFocus()
-                item.image = small
-            }
-            menu.addItem(item)
-        }
-        
-        menu.addItem(NSMenuItem.separator())
-        
-        let antigravityHeader = NSMenuItem(title: "Antigravity (Caps-Lock + A):", action: nil, keyEquivalent: "")
-        antigravityHeader.isEnabled = false
-        menu.addItem(antigravityHeader)
-        
-        let antiItems = AntigravityEngine.shared.items
-        for item in antiItems {
-            let menuItem = NSMenuItem(
-                title: "\(item.index): \(item.name)",
-                action: #selector(handleAntigravityClick(_:)),
-                keyEquivalent: ""
-            )
-            menuItem.target = self
-            menuItem.representedObject = item.bundleID
-            let small = NSImage(size: NSSize(width: 16, height: 16))
-            small.lockFocus()
-            item.icon.draw(in: NSRect(x: 0, y: 0, width: 16, height: 16))
-            small.unlockFocus()
-            menuItem.image = small
-            menu.addItem(menuItem)
-        }
-        
-        menu.addItem(NSMenuItem.separator())
-        
-        let refreshItem = NSMenuItem(title: "Refresh Profiles & Apps", action: #selector(handleRefreshProfiles), keyEquivalent: "r")
-        refreshItem.target = self
+        let refreshItem = makeAlignedMenuItem(
+            title: "Refresh Profiles & Apps",
+            keyEquivalent: "r",
+            modifierMask: [.command],
+            action: #selector(handleRefreshProfiles),
+            target: self
+        )
         menu.addItem(refreshItem)
         
         let permItem = NSMenuItem(
@@ -287,21 +553,85 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         
         menu.addItem(NSMenuItem.separator())
         
-        let quitItem = NSMenuItem(title: "Quit Quick Access", action: #selector(handleQuit), keyEquivalent: "q")
-        quitItem.target = self
+        let quitItem = makeAlignedMenuItem(
+            title: "Quit Quick Access",
+            keyEquivalent: "q",
+            modifierMask: [.command],
+            action: #selector(handleQuit),
+            target: self
+        )
         menu.addItem(quitItem)
         
-        statusItem?.menu = menu
+        return menu
+    }
+    
+    @objc private func handleChangeProfileClick(_ sender: NSMenuItem) {
+        guard let dir = sender.representedObject as? String else { return }
+        ChromeProfileEngine.shared.toggleProfileSelection(dir: dir)
+        updateMenu()
     }
     
     @objc private func handleProfileClick(_ sender: NSMenuItem) {
         guard let dir = sender.representedObject as? String else { return }
-        ChromeProfileEngine.shared.focusProfile(dir: dir)
+        let isOptionClick = NSEvent.modifierFlags.contains(.option)
+        if isOptionClick {
+            ChromeProfileEngine.shared.toggleProfileSelection(dir: dir)
+        } else {
+            ChromeProfileEngine.shared.selectProfile(dir: dir)
+            ChromeProfileEngine.shared.focusProfile(dir: dir)
+        }
+        updateMenu()
+    }
+    
+    @objc private func handleCoreAppClick(_ sender: NSMenuItem) {
+        guard let bundleID = sender.representedObject as? String else { return }
+        self.focusApp(bundleID: bundleID)
+    }
+    
+    @objc private func handleChangeAppItemClick(_ sender: NSMenuItem) {
+        guard let repr = sender.representedObject as? String else { return }
+        let parts = repr.split(separator: ":", maxSplits: 1).map(String.init)
+        guard parts.count == 2 else { return }
+        let category = parts[0]
+        let bundleID = parts[1]
+        
+        let engines = [
+            AppGroupEngine.terminal,
+            AppGroupEngine.aiAgent,
+            AppGroupEngine.ide,
+            AppGroupEngine.notes
+        ]
+        
+        if let engine = engines.first(where: { $0.category == category }) {
+            engine.select(bundleID: bundleID)
+            engine.focusItem(bundleID: bundleID)
+            updateDynamicShortcuts()
+            updateMenu()
+        }
+    }
+    
+    @objc private func handleAppItemClick(_ sender: NSMenuItem) {
+        handleCoreAppClick(sender)
+    }
+    
+    @objc private func handleTerminalClick(_ sender: NSMenuItem) {
+        handleAppItemClick(sender)
+    }
+    
+    @objc private func handleAiAgentClick(_ sender: NSMenuItem) {
+        handleAppItemClick(sender)
     }
     
     @objc private func handleAntigravityClick(_ sender: NSMenuItem) {
-        guard let bundleID = sender.representedObject as? String else { return }
-        AntigravityEngine.shared.focusItem(bundleID: bundleID)
+        handleAppItemClick(sender)
+    }
+    
+    @objc private func handleIdeClick(_ sender: NSMenuItem) {
+        handleAppItemClick(sender)
+    }
+    
+    @objc private func handleNotesClick(_ sender: NSMenuItem) {
+        handleAppItemClick(sender)
     }
     
     @objc private func handleRefreshProfiles() {
@@ -315,6 +645,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         ChromeProfileEngine.shared.refreshProfiles()
         AntigravityEngine.shared.refreshItems()
+        AppGroupEngine.aiAgent.refreshItems()
+        AppGroupEngine.terminal.refreshItems()
+        AppGroupEngine.notes.refreshItems()
+        AppGroupEngine.ide.refreshItems()
         updateMenu()
     }
     

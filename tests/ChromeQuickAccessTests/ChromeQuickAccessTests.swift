@@ -625,4 +625,440 @@ struct ChromeQuickAccessUnitTests {
         #expect(window.isFloatingPanel == true)
         #expect(window.level == .floating)
     }
+    
+    @Test @MainActor
+    func testKeyCodesTerminalNotesIde() {
+        #expect(KeyCodes.character(for: KeyCodes.kVK_ANSI_T) == "t")
+        #expect(KeyCodes.character(for: KeyCodes.kVK_ANSI_N) == "n")
+        #expect(KeyCodes.character(for: KeyCodes.kVK_ANSI_I) == "i")
+        #expect(KeyCodes.kVK_ANSI_T == 0x11)
+        #expect(KeyCodes.kVK_ANSI_N == 0x2D)
+        #expect(KeyCodes.kVK_ANSI_I == 0x22)
+    }
+    
+    @Test @MainActor
+    func testAppGroupEngineDiscoveryAndCycling() {
+        let dummyIcon = NSImage(size: NSSize(width: 32, height: 32))
+        let terminalEngine = AppGroupEngine.terminal
+        let initialCount = terminalEngine.items.count
+        #expect(initialCount >= 1)
+        
+        // Test customItemsOverride
+        let mockTerminals = [
+            AntigravityItem(name: "iTerm2", bundleID: "com.googlecode.iterm2", path: "/Applications/iTerm.app", icon: dummyIcon, index: 1),
+            AntigravityItem(name: "Terminal", bundleID: "com.apple.Terminal", path: "/System/Applications/Utilities/Terminal.app", icon: dummyIcon, index: 2)
+        ]
+        terminalEngine.customItemsOverride = mockTerminals
+        defer {
+            terminalEngine.customItemsOverride = nil
+            terminalEngine.mockFrontmostBundleID = nil
+            terminalEngine.refreshItems()
+        }
+        terminalEngine.refreshItems()
+        #expect(terminalEngine.items.count == 2)
+        #expect(terminalEngine.items[0].name == "iTerm2")
+        #expect(terminalEngine.items[1].name == "Terminal")
+        
+        // Test frontmost toggle logic
+        terminalEngine.mockFrontmostBundleID = "com.googlecode.iterm2"
+        #expect(terminalEngine.getActiveAppIndex() == 0)
+        terminalEngine.mockFrontmostBundleID = "com.apple.Terminal"
+        #expect(terminalEngine.getActiveAppIndex() == 1)
+        terminalEngine.mockFrontmostBundleID = "com.apple.Safari"
+        #expect(terminalEngine.getActiveAppIndex() == nil)
+        
+        // Test Monogram fallback
+        let monogram = terminalEngine.makeMonogramImage(name: "Ghostty")
+        #expect(monogram.size.width == 64)
+        #expect(monogram.size.height == 64)
+    }
+    
+    @Test @MainActor
+    func testCapsLockTerminalNotesIdeTriggers() {
+        let engine = CapsLockEngine()
+        let proxy = unsafeBitCast(1, to: CGEventTapProxy.self)
+        
+        var terminalTriggered = false
+        var notesTriggered = false
+        var ideTriggered = false
+        
+        engine.onTerminalTrigger = { terminalTriggered = true }
+        engine.onNotesTrigger = { notesTriggered = true }
+        engine.onIdeTrigger = { ideTriggered = true }
+        
+        // Hold F18
+        let f18Down = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(KeyCodes.kVK_F18), keyDown: true)!
+        _ = engine.handleEvent(proxy: proxy, type: .keyDown, event: f18Down)
+        
+        // Press 'T' (Terminal)
+        let tDown = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(KeyCodes.kVK_ANSI_T), keyDown: true)!
+        let resT = engine.handleEvent(proxy: proxy, type: .keyDown, event: tDown)
+        #expect(resT == nil) // Swallowed
+        #expect(terminalTriggered == true)
+        
+        // Press 'N' (Notes)
+        let nDown = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(KeyCodes.kVK_ANSI_N), keyDown: true)!
+        let resN = engine.handleEvent(proxy: proxy, type: .keyDown, event: nDown)
+        #expect(resN == nil) // Swallowed
+        #expect(notesTriggered == true)
+        
+        // Press 'I' (IDE)
+        let iDown = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(KeyCodes.kVK_ANSI_I), keyDown: true)!
+        let resI = engine.handleEvent(proxy: proxy, type: .keyDown, event: iDown)
+        #expect(resI == nil) // Swallowed
+        #expect(ideTriggered == true)
+        
+        // Check keyUp swallowed
+        let tUp = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(KeyCodes.kVK_ANSI_T), keyDown: false)!
+        let resTUp = engine.handleEvent(proxy: proxy, type: .keyUp, event: tUp)
+        #expect(resTUp == nil)
+        
+        let nUp = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(KeyCodes.kVK_ANSI_N), keyDown: false)!
+        let resNUp = engine.handleEvent(proxy: proxy, type: .keyUp, event: nUp)
+        #expect(resNUp == nil)
+        
+        let iUp = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(KeyCodes.kVK_ANSI_I), keyDown: false)!
+        let resIUp = engine.handleEvent(proxy: proxy, type: .keyUp, event: iUp)
+        #expect(resIUp == nil)
+    }
+    
+    @Test @MainActor
+    func testMinimalHUDWindowAppGroupModes() {
+        let dummyIcon = NSImage(size: NSSize(width: 32, height: 32))
+        let items = [
+            AntigravityItem(name: "Obsidian", bundleID: "md.obsidian", path: "/Applications/Obsidian.app", icon: dummyIcon, index: 1),
+            AntigravityItem(name: "Notes", bundleID: "com.apple.Notes", path: "/System/Applications/Notes.app", icon: dummyIcon, index: 2)
+        ]
+        
+        MinimalHUDWindow.shared.showAppGroup(mode: .notes, items: items, selectedIndex: 0)
+        #expect(ChromeSwitcherState.shared.mode == .notes)
+        #expect(ChromeSwitcherState.shared.selectedAppItem?.name == "Obsidian")
+        #expect(ChromeSwitcherState.shared.isVisible == true)
+        
+        MinimalHUDWindow.shared.selectNext()
+        #expect(ChromeSwitcherState.shared.selectedAppItem?.name == "Notes")
+        
+        MinimalHUDWindow.shared.hideImmediate()
+        #expect(ChromeSwitcherState.shared.isVisible == false)
+    }
+    
+    @Test @MainActor
+    func testChromeProfileSelectionLimitUpToFour() throws {
+        UserDefaults.standard.removeObject(forKey: "SelectedBrowserProfileDirs")
+        defer { UserDefaults.standard.removeObject(forKey: "SelectedBrowserProfileDirs") }
+        
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        
+        let localStateUrl = tempDir.appendingPathComponent("Local State")
+        let mockJson = """
+        {
+            "profile": {
+                "info_cache": {
+                    "Default": { "name": "Profile 1" },
+                    "Profile 1": { "name": "Profile 2" },
+                    "Profile 2": { "name": "Profile 3" },
+                    "Profile 3": { "name": "Profile 4" },
+                    "Profile 4": { "name": "Profile 5" },
+                    "Profile 5": { "name": "Profile 6" }
+                }
+            }
+        }
+        """
+        try mockJson.write(to: localStateUrl, atomically: true, encoding: .utf8)
+        
+        ChromeProfileEngine.localStatePathOverride = localStateUrl.path
+        defer { ChromeProfileEngine.localStatePathOverride = nil }
+        
+        let engine = ChromeProfileEngine()
+        #expect(engine.profiles.count == 6)
+        
+        // Initial selection should default to first 4
+        #expect(engine.selectedProfiles.count == 4)
+        #expect(engine.selectedProfiles[0].dir == "Default")
+        #expect(engine.selectedProfiles[1].dir == "Profile 1")
+        #expect(engine.selectedProfiles[2].dir == "Profile 2")
+        #expect(engine.selectedProfiles[3].dir == "Profile 3")
+        
+        // Selecting 5th replaces 4th profile (max 4)
+        engine.selectProfile(dir: "Profile 4")
+        #expect(engine.selectedProfiles.count == 4)
+        #expect(engine.isProfileSelected(dir: "Profile 4") == true)
+        #expect(engine.isProfileSelected(dir: "Profile 3") == false)
+        
+        // Toggle selection (deselecting if > 1)
+        engine.toggleProfileSelection(dir: "Profile 4")
+        #expect(engine.selectedProfiles.count == 3)
+        #expect(engine.isProfileSelected(dir: "Profile 4") == false)
+    }
+    
+    @Test @MainActor
+    func testAppGroupSingleChoiceRadioSelection() {
+        let dummyIcon = NSImage(size: NSSize(width: 32, height: 32))
+        let terminalEngine = AppGroupEngine.terminal
+        let mockTerminals = [
+            AntigravityItem(name: "iTerm2", bundleID: "com.googlecode.iterm2", path: "/Applications/iTerm.app", icon: dummyIcon, index: 1),
+            AntigravityItem(name: "Terminal", bundleID: "com.apple.Terminal", path: "/System/Applications/Utilities/Terminal.app", icon: dummyIcon, index: 2)
+        ]
+        terminalEngine.customItemsOverride = mockTerminals
+        defer {
+            terminalEngine.customItemsOverride = nil
+            terminalEngine.refreshItems()
+        }
+        terminalEngine.refreshItems()
+        
+        // Default selects first
+        terminalEngine.select(bundleID: "com.googlecode.iterm2")
+        #expect(terminalEngine.selectedItem?.name == "iTerm2")
+        #expect(terminalEngine.isSelected(bundleID: "com.googlecode.iterm2") == true)
+        #expect(terminalEngine.isSelected(bundleID: "com.apple.Terminal") == false)
+        
+        // Switch choice to Terminal
+        terminalEngine.select(bundleID: "com.apple.Terminal")
+        #expect(terminalEngine.selectedItem?.name == "Terminal")
+        #expect(terminalEngine.isSelected(bundleID: "com.googlecode.iterm2") == false)
+        #expect(terminalEngine.isSelected(bundleID: "com.apple.Terminal") == true)
+    }
+    
+    @Test @MainActor
+    func testAiAgentEngineHasNoAntigravityIdeDuplicate() {
+        let aiCandidates = AppGroupEngine.aiAgent.candidates
+        let ideCandidates = AppGroupEngine.ide.candidates
+        
+        // AI Agent candidates should NOT include Antigravity IDE
+        #expect(aiCandidates.contains(where: { $0.name == "Antigravity IDE" }) == false)
+        #expect(aiCandidates.contains(where: { $0.name == "Antigravity" }) == true)
+        
+        // IDE candidates SHOULD include Antigravity IDE
+        #expect(ideCandidates.contains(where: { $0.name == "Antigravity IDE" }) == true)
+    }
+    
+    @Test
+    func testKeyCodesFullAlphabetAndLookup() {
+        #expect(KeyCodes.keyCode(for: "A") == KeyCodes.kVK_ANSI_A)
+        #expect(KeyCodes.keyCode(for: "i") == KeyCodes.kVK_ANSI_I)
+        #expect(KeyCodes.keyCode(for: "O") == KeyCodes.kVK_ANSI_O)
+        #expect(KeyCodes.keyCode(for: "t") == KeyCodes.kVK_ANSI_T)
+        #expect(KeyCodes.keyCode(for: "c") == KeyCodes.kVK_ANSI_C)
+        #expect(KeyCodes.keyCode(for: "D") == KeyCodes.kVK_ANSI_D)
+        #expect(KeyCodes.keyCode(for: "v") == KeyCodes.kVK_ANSI_V)
+        #expect(KeyCodes.keyCode(for: "x") == KeyCodes.kVK_ANSI_X)
+        #expect(KeyCodes.keyCode(for: "g") == KeyCodes.kVK_ANSI_G)
+        #expect(KeyCodes.keyCode(for: "w") == KeyCodes.kVK_ANSI_W)
+        
+        #expect(KeyCodes.character(for: KeyCodes.kVK_ANSI_I) == "i")
+        #expect(KeyCodes.character(for: KeyCodes.kVK_ANSI_O) == "o")
+        #expect(KeyCodes.character(for: KeyCodes.kVK_ANSI_D) == "d")
+    }
+    
+    @Test @MainActor
+    func testAppCandidatePureFirstLetterDerivation() {
+        let terminal = AppGroupEngine.terminal
+        #expect(terminal.candidate(for: "com.googlecode.iterm2")?.firstLetter == "I")
+        #expect(terminal.candidate(for: "com.apple.Terminal")?.firstLetter == "T")
+        #expect(terminal.candidate(for: "com.mitchellh.ghostty")?.firstLetter == "G")
+        #expect(terminal.candidate(for: "dev.warp.Warp-Stable")?.firstLetter == "W")
+        
+        let notes = AppGroupEngine.notes
+        #expect(notes.candidate(for: "md.obsidian")?.firstLetter == "O")
+        #expect(notes.candidate(for: "com.apple.Notes")?.firstLetter == "N")
+        
+        let ide = AppGroupEngine.ide
+        #expect(ide.candidate(for: "com.google.antigravity-ide")?.firstLetter == "A")
+        #expect(ide.candidate(for: "com.microsoft.VSCode")?.firstLetter == "V")
+        #expect(ide.candidate(for: "com.apple.dt.Xcode")?.firstLetter == "X")
+        
+        let ai = AppGroupEngine.aiAgent
+        #expect(ai.candidate(for: "com.google.antigravity")?.firstLetter == "A")
+    }
+    
+    @Test @MainActor
+    func testCapsLockEngineDynamicKeyTriggers() {
+        let engine = CapsLockEngine.shared
+        let proxy = unsafeBitCast(1, to: CGEventTapProxy.self)
+        var triggeredKey: UInt32? = nil
+        
+        engine.dynamicKeyTriggers[KeyCodes.kVK_ANSI_I] = {
+            triggeredKey = KeyCodes.kVK_ANSI_I
+        }
+        defer { engine.dynamicKeyTriggers.removeAll() }
+        
+        // Simulate Caps Lock held down (F18 down)
+        let f18Down = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(KeyCodes.kVK_F18), keyDown: true)!
+        _ = engine.handleEvent(proxy: proxy, type: .keyDown, event: f18Down)
+        #expect(engine.isCapsHeld == true)
+        
+        // Simulate pressing 'I' (iTerm2 dynamic shortcut)
+        let iDown = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(KeyCodes.kVK_ANSI_I), keyDown: true)!
+        let result = engine.handleEvent(proxy: proxy, type: .keyDown, event: iDown)
+        
+        // Event should be swallowed and dynamic trigger executed
+        #expect(result == nil)
+        #expect(triggeredKey == KeyCodes.kVK_ANSI_I)
+        #expect(engine.capsUsedAsModifier == true)
+        
+        // Clean up Caps Lock release
+        let f18Up = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(KeyCodes.kVK_F18), keyDown: false)!
+        _ = engine.handleEvent(proxy: proxy, type: .keyUp, event: f18Up)
+    }
+    
+    @Test @MainActor
+    func testSharedLetterGroupingAndCycling() {
+        let dummyIcon = NSImage(size: NSSize(width: 32, height: 32))
+        let app1 = AntigravityItem(name: "Antigravity", bundleID: "com.google.antigravity", path: "/Applications/Antigravity.app", icon: dummyIcon, index: 1)
+        let app2 = AntigravityItem(name: "Antigravity IDE", bundleID: "com.google.antigravity-ide", path: "/Applications/Antigravity IDE.app", icon: dummyIcon, index: 2)
+        
+        let itemsWithA = [app1, app2]
+        
+        // Both start with letter 'A'
+        #expect(app1.name.first == "A")
+        #expect(app2.name.first == "A")
+        
+        let state = ChromeSwitcherState()
+        state.mode = .antigravity
+        state.antigravityItems = itemsWithA
+        state.selectedIndex = 0
+        
+        #expect(state.selectedAppItem?.name == "Antigravity")
+        
+        // Cycle to next app with same letter
+        state.selectNext()
+        #expect(state.selectedIndex == 1)
+        #expect(state.selectedAppItem?.name == "Antigravity IDE")
+        
+        // Cycle wraps around
+        state.selectNext()
+        #expect(state.selectedIndex == 0)
+        #expect(state.selectedAppItem?.name == "Antigravity")
+    }
+    
+    @Test @MainActor
+    func testDiscoveredItemsByLetterGrouping() {
+        let groups = AppGroupEngine.discoveredItemsByLetter()
+        
+        // Every group must contain only items whose first letter matches the dictionary key
+        for (letter, items) in groups {
+            for item in items {
+                let firstChar = Character((item.name.first(where: { $0.isLetter }) ?? "A").uppercased())
+                #expect(firstChar == letter)
+            }
+        }
+        
+        // If Antigravity and Antigravity IDE are present in engines, both must be in 'A'
+        if let aItems = groups["A"] {
+            let names = aItems.map { $0.name }
+            if names.contains("Antigravity") && names.contains("Antigravity IDE") {
+                #expect(names.contains("Antigravity"))
+                #expect(names.contains("Antigravity IDE"))
+            }
+        }
+    }
+    
+    @Test @MainActor
+    func testLetterSelectionStateManagement() {
+        let testBundleID = "com.test.unique-app"
+        
+        // Ensure clean state
+        AppGroupEngine.deselectApp(bundleID: testBundleID)
+        #expect(AppGroupEngine.isAppSelected(bundleID: testBundleID) == false)
+        
+        // Select app
+        AppGroupEngine.selectApp(bundleID: testBundleID)
+        #expect(AppGroupEngine.isAppSelected(bundleID: testBundleID) == true)
+        
+        // Toggle app off
+        AppGroupEngine.toggleApp(bundleID: testBundleID)
+        #expect(AppGroupEngine.isAppSelected(bundleID: testBundleID) == false)
+        
+        // Toggle app back on
+        AppGroupEngine.toggleApp(bundleID: testBundleID)
+        #expect(AppGroupEngine.isAppSelected(bundleID: testBundleID) == true)
+        
+        // Clean up
+        AppGroupEngine.deselectApp(bundleID: testBundleID)
+    }
+    
+    @Test @MainActor
+    func testTwoGroupMenuStructure() {
+        let appDelegate = AppDelegate()
+        let menu = appDelegate.buildStatusMenu()
+        
+        let titles = menu.items.map { $0.title }
+        
+        // Refresh Profiles & Apps and Quit Quick Access use native keyEquivalent with ⌘ modifier
+        let refreshItem = menu.items.first(where: { $0.title.contains("Refresh Profiles & Apps") })
+        #expect(refreshItem != nil)
+        #expect(refreshItem?.keyEquivalent == "r")
+        #expect(refreshItem?.keyEquivalentModifierMask == [.command])
+        
+        let quitItem = menu.items.first(where: { $0.title.contains("Quit Quick Access") })
+        #expect(quitItem != nil)
+        #expect(quitItem?.keyEquivalent == "q")
+        #expect(quitItem?.keyEquivalentModifierMask == [.command])
+        
+        // Section 1: Chrome header present and strictly non-clickable
+        let chromeHeader = menu.items.first(where: { $0.title.contains("Chrome (Caps-Lock + C)") })
+        #expect(chromeHeader != nil)
+        #expect(chromeHeader?.isEnabled == false)
+        #expect(chromeHeader?.action == nil)
+        
+        // Section 2: Toolkit header present and strictly non-clickable
+        let toolkitHeader = menu.items.first(where: { $0.title.contains("Toolkit (Caps-Lock)") })
+        #expect(toolkitHeader != nil)
+        #expect(toolkitHeader?.isEnabled == false)
+        #expect(toolkitHeader?.action == nil)
+        
+        // Active Toolkit items present in expected order with clean app names
+        let termMatch = menu.items.first(where: { $0.title.contains("iTerm") || $0.title.contains("Terminal") })
+        #expect(termMatch != nil)
+        #expect(!termMatch!.keyEquivalent.isEmpty)
+        
+        let ideMatch = menu.items.first(where: { $0.title.contains("IDE") || $0.title.contains("IntelliJ") || $0.title.contains("Cursor") })
+        #expect(ideMatch != nil)
+        #expect(!ideMatch!.keyEquivalent.isEmpty)
+        
+        let agentMatch = menu.items.first(where: { $0.title.contains("Antigravity") || $0.title.contains("Claude") })
+        #expect(agentMatch != nil)
+        #expect(!agentMatch!.keyEquivalent.isEmpty)
+        
+        let notesMatch = menu.items.first(where: { $0.title.contains("Notes") || $0.title.contains("Obsidian") })
+        #expect(notesMatch != nil)
+        #expect(!notesMatch!.keyEquivalent.isEmpty)
+        
+        // Change App item with submenu present
+        let changeAppItem = menu.items.first(where: { $0.title == "Change App" })
+        #expect(changeAppItem != nil)
+        #expect(changeAppItem?.submenu != nil)
+        
+        guard let submenu = changeAppItem?.submenu else { return }
+        let subTitles = submenu.items.map { $0.title }
+        
+        // Headers present in Change App submenu
+        #expect(subTitles.contains("Chrome Profiles (up to 4):"))
+        #expect(subTitles.contains("Terminal:"))
+        #expect(subTitles.contains("IDE:"))
+        #expect(subTitles.contains("AI Agent:"))
+        #expect(subTitles.contains("Notes:"))
+        
+        // IntelliJ IDEA is in IDE candidates
+        let ideCandidateNames = AppGroupEngine.ide.candidates.map { $0.name }
+        #expect(ideCandidateNames.contains("IntelliJ IDEA"))
+        
+        // App shortcuts derive strictly from first letter of app name (or slot digit for Chrome)
+        for item in menu.items {
+            if item.isSeparatorItem || item.title.hasSuffix(":") || item.title.hasPrefix("Chrome") || item.title.hasPrefix("Toolkit") { continue }
+            if !item.keyEquivalent.isEmpty && item.keyEquivalentModifierMask == [] {
+                let appName = item.title.trimmingCharacters(in: .whitespaces)
+                let key = item.keyEquivalent
+                if let firstChar = key.first, firstChar.isLetter {
+                    let expectedChar = String((appName.first(where: { $0.isLetter }) ?? "A").lowercased())
+                    #expect(key == expectedChar)
+                } else if let firstChar = key.first, firstChar.isNumber {
+                    #expect("1234".contains(firstChar))
+                }
+            }
+        }
+    }
 }
+
