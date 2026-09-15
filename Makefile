@@ -32,10 +32,10 @@ health:
 	@./scripts/health_check.sh
 
 checksums:
-	@if [ -f "dist/ChromeQuickAccess.dmg" ]; then \
-		cd dist && shasum -a 256 ChromeQuickAccess.dmg > checksums.txt && echo "✅ dist/checksums.txt generated: $$(cat checksums.txt)" && cd ..; \
+	@if [ -f "dist/Khomyak.dmg" ]; then \
+		cd dist && shasum -a 256 Khomyak.dmg > checksums.txt && echo "✅ dist/checksums.txt generated: $$(cat checksums.txt)" && cd ..; \
 	else \
-		echo "ℹ️ dist/ChromeQuickAccess.dmg not built yet. Run 'make native' first."; \
+		echo "ℹ️ dist/Khomyak.dmg not built yet. Run 'make native' first."; \
 	fi
 
 monitor:

@@ -1,13 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
-APP_NAME="Chrome Quick Access"
+APP_NAME="Khomyak"
 DIST_DIR="dist"
 APP_BUNDLE="${DIST_DIR}/${APP_NAME}.app"
 CONTENTS_DIR="${APP_BUNDLE}/Contents"
+RESOURCES_DIR="${CONTENTS_DIR}/Resources"
 MACOS_DIR="${CONTENTS_DIR}/MacOS"
 BUILD_DIR="${DIST_DIR}/build_native"
-DMG_PATH="${DIST_DIR}/ChromeQuickAccess.dmg"
+DMG_PATH="${DIST_DIR}/Khomyak.dmg"
 
 echo "=================================================="
 echo " Building Native ${APP_NAME} (.app)               "
@@ -15,7 +16,7 @@ echo " Target: Universal (arm64 & x86_64) macOS 14.0+   "
 echo "=================================================="
 
 rm -rf "${APP_BUNDLE}" "${BUILD_DIR}"
-mkdir -p "${MACOS_DIR}" "${CONTENTS_DIR}" "${BUILD_DIR}/temp"
+mkdir -p "${MACOS_DIR}" "${CONTENTS_DIR}" "${RESOURCES_DIR}" "${BUILD_DIR}/temp"
 
 SOURCES=(
     "src/ChromeQuickAccess/Engine/KeyCodes.swift"
@@ -56,14 +57,17 @@ swiftc \
     -O
 
 echo "[3/5] Creating Universal Mach-O Binary with lipo..."
-lipo -create -output "${MACOS_DIR}/ChromeQuickAccess" \
+lipo -create -output "${MACOS_DIR}/Khomyak" \
     "${BUILD_DIR}/temp/binary_arm64" \
     "${BUILD_DIR}/temp/binary_x86_64"
 
-echo "[4/5] Packaging Info.plist & Code-Signing..."
+echo "[4/5] Packaging Info.plist, AppIcon & Code-Signing..."
 cp "src/ChromeQuickAccess/Info.plist" "${CONTENTS_DIR}/Info.plist"
+if [ -f "src/ChromeQuickAccess/Resources/AppIcon.icns" ]; then
+    cp "src/ChromeQuickAccess/Resources/AppIcon.icns" "${RESOURCES_DIR}/AppIcon.icns"
+fi
 
-codesign --force --sign - --identifier "com.unacau.chromequickaccess" -r="designated => identifier \"com.unacau.chromequickaccess\"" "${APP_BUNDLE}"
+codesign --force --sign - --identifier "com.almosteleven.khomyak" -r="designated => identifier \"com.almosteleven.khomyak\"" "${APP_BUNDLE}"
 codesign -vvv "${APP_BUNDLE}"
 
 echo "[5/5] Generating DMG Installer..."
@@ -81,5 +85,5 @@ echo "=================================================="
 echo " ✅ Standalone Build Succeeded!"
 echo " App: ${APP_BUNDLE}"
 echo " DMG: ${DMG_PATH}"
-echo " Archs: $(lipo -archs "${MACOS_DIR}/ChromeQuickAccess")"
+echo " Archs: $(lipo -archs "${MACOS_DIR}/Khomyak")"
 echo "=================================================="

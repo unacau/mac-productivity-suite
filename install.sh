@@ -2,11 +2,11 @@
 set -euo pipefail
 
 echo "=================================================="
-echo " Installing Chrome Quick Access (v1.0.0)          "
+echo " Installing Khomyak (v1.0.0)                      "
 echo "=================================================="
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APP_NAME="Chrome Quick Access"
+APP_NAME="Khomyak"
 APP_BUNDLE="${REPO_DIR}/dist/${APP_NAME}.app"
 TARGET_APP="/Applications/${APP_NAME}.app"
 
@@ -25,7 +25,6 @@ echo " App installed to: ${TARGET_APP}"
 echo "=================================================="
 echo "Next Steps:"
 echo " 1. Launch '${APP_NAME}.app' from Applications."
-echo " 2. Ensure Accessibility permission is enabled in System Settings."
-echo " 3. Use Caps-Lock + C to switch Chrome profiles."
-echo " 4. Use Caps-Lock + A to switch Antigravity apps."
-echo " 5. Select text to automatically copy to clipboard."
+echo " 2. Ensure Accessibility permission is enabled in System Settings for '${APP_NAME}'."
+echo " 3. Tap Caps-Lock (or Caps-Lock + letter) to switch apps & profiles."
+echo " 4. Select text to automatically copy to clipboard."

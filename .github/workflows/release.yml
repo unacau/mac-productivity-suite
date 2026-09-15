@@ -65,7 +65,7 @@ jobs:
       - name: Generate SHA-256 Checksums
         run: |
           cd dist
-          shasum -a 256 ChromeQuickAccess.dmg > checksums.txt
+          shasum -a 256 Khomyak.dmg > checksums.txt
           echo "=== Computed Checksums ==="
           cat checksums.txt
           cd ..
@@ -73,12 +73,12 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          name: "${{ github.ref_name }} - Chrome Quick Access & Productivity Suite"
+          name: "${{ github.ref_name }} - Khomyak Productivity Suite"
           generate_release_notes: true
           draft: false
           prerelease: false
           files: |
-            dist/ChromeQuickAccess.dmg
+            dist/Khomyak.dmg
             dist/checksums.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -88,9 +88,9 @@ jobs:
         run: |
           VERSION=$(cat VERSION.txt 2>/dev/null || echo 'N/A')
           BUILD=$(cat BUILD.txt 2>/dev/null || echo 'N/A')
-          SHA=$(shasum -a 256 dist/ChromeQuickAccess.dmg 2>/dev/null | awk '{print $1}' || echo 'N/A')
-          SIZE=$(ls -lh dist/ChromeQuickAccess.dmg 2>/dev/null | awk '{print $5}' || echo 'N/A')
-          ARCHS=$(lipo -archs "dist/Chrome Quick Access.app/Contents/MacOS/ChromeQuickAccess" 2>/dev/null || echo 'N/A')
+          SHA=$(shasum -a 256 dist/Khomyak.dmg 2>/dev/null | awk '{print $1}' || echo 'N/A')
+          SIZE=$(ls -lh dist/Khomyak.dmg 2>/dev/null | awk '{print $5}' || echo 'N/A')
+          ARCHS=$(lipo -archs "dist/Khomyak.app/Contents/MacOS/Khomyak" 2>/dev/null || echo 'N/A')
 
           cat << EOF >> $GITHUB_STEP_SUMMARY
           ## 🚀 GitHub Release Successfully Published
@@ -102,5 +102,5 @@ jobs:
           | **Target Architectures** | \`${ARCHS}\` |
           | **DMG Size** | \`${SIZE}\` |
           | **SHA-256 Hash** | \`${SHA}\` |
-          | **Release Assets** | \`ChromeQuickAccess.dmg\`, \`checksums.txt\` |
+          | **Release Assets** | \`Khomyak.dmg\`, \`checksums.txt\` |
           EOF

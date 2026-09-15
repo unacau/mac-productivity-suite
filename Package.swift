@@ -12,7 +12,7 @@ let package = Package(
             name: "ChromeQuickAccess",
             dependencies: [],
             path: "src/ChromeQuickAccess",
-            exclude: ["Info.plist", "main.swift"],
+            exclude: ["Info.plist", "main.swift", "Resources"],
             swiftSettings: [
                 .unsafeFlags(["-parse-as-library"])
             ],

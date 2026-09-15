@@ -2,13 +2,13 @@
 set -euo pipefail
 
 # ==============================================================================
-# Chrome Quick Access - Native Telemetry & Log Ingestion Utility
+# Khomyak - Native Telemetry & Log Ingestion Utility
 # Directly queries and streams macOS Unified Logging System (os_log)
 # ==============================================================================
 
-SUBSYSTEM="com.unacau.chromequickaccess"
-BUNDLE_ID="com.unacau.chromequickaccess"
-PREDICATE="subsystem == \"${SUBSYSTEM}\" or process == \"ChromeQuickAccess\""
+SUBSYSTEM="com.almosteleven.khomyak"
+BUNDLE_ID="com.almosteleven.khomyak"
+PREDICATE="subsystem == \"${SUBSYSTEM}\" or process == \"Khomyak\""
 
 usage() {
     cat << EOF
