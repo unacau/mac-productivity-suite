@@ -87,27 +87,27 @@ public struct ProfileAvatarView: View {
             if isSelected {
                 Circle()
                     .stroke(Color(red: 130/255, green: 200/255, blue: 250/255), lineWidth: 2.0)
-                    .frame(width: 24, height: 24)
+                    .frame(width: 38, height: 38)
             }
             
             if let avatar = profile.avatarImage {
                 Image(nsImage: avatar)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    .frame(width: 18, height: 18)
+                    .frame(width: 30, height: 30)
                     .clipShape(Circle())
             } else {
                 Circle()
                     .fill(Color(red: 175/255, green: 110/255, blue: 230/255))
-                    .frame(width: 18, height: 18)
+                    .frame(width: 30, height: 30)
                     .overlay(
                         Text(String(profile.effectiveName.prefix(1)).uppercased())
-                            .font(.system(size: 8.5, weight: .bold))
+                            .font(.system(size: 14, weight: .bold))
                             .foregroundColor(.white)
                     )
             }
         }
-        .frame(width: 25, height: 25)
+        .frame(width: 40, height: 40)
     }
 }
 
@@ -121,16 +121,16 @@ public struct AntigravityAvatarView: View {
             if isSelected {
                 Circle()
                     .stroke(Color(red: 130/255, green: 200/255, blue: 250/255), lineWidth: 2.0)
-                    .frame(width: 24, height: 24)
+                    .frame(width: 38, height: 38)
             }
             
             Image(nsImage: item.icon)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 18, height: 18)
+                .frame(width: 30, height: 30)
                 .clipShape(Circle())
         }
-        .frame(width: 25, height: 25)
+        .frame(width: 40, height: 40)
     }
 }
 
@@ -142,7 +142,7 @@ public struct MinimalHUDView: View {
     
     private var cardWidth: CGFloat {
         let count = state.mode == .chrome ? state.profiles.count : state.antigravityItems.count
-        return max(130, CGFloat(count) * 28 + 14)
+        return max(150, CGFloat(count) * 46 + 20)
     }
     
     private var topIcon: NSImage {
@@ -175,27 +175,27 @@ public struct MinimalHUDView: View {
         VStack(spacing: 0) {
             // Inner Blue Card
             VStack(spacing: 0) {
-                Spacer().frame(height: 14)
+                Spacer().frame(height: 16)
                 
                 // 1. App Icon
                 Image(nsImage: topIcon)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 48, height: 48)
-                    .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+                    .frame(width: 72, height: 72)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 
-                Spacer().frame(height: 9)
+                Spacer().frame(height: 10)
                 
                 // 2. App Name Label
                 Text(appTitle)
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: 13, weight: .bold))
                     .foregroundColor(.white)
                     .lineLimit(1)
                 
-                Spacer().frame(height: 9)
+                Spacer().frame(height: 10)
                 
                 // 3. Avatar / Icon Row
-                HStack(spacing: 3.5) {
+                HStack(spacing: 6) {
                     if state.mode == .chrome {
                         ForEach(Array(state.profiles.enumerated()), id: \.element.id) { idx, profile in
                             ProfileAvatarView(
@@ -263,7 +263,7 @@ public final class MinimalHUDWindow: NSPanel {
     
     public init() {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 148, height: 168),
+            contentRect: NSRect(x: 0, y: 0, width: 220, height: 225),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -317,8 +317,8 @@ public final class MinimalHUDWindow: NSPanel {
         if let screen = NSScreen.main {
             let screenRect = screen.visibleFrame
             let fittingSize = hostingView.fittingSize
-            let width = max(140, fittingSize.width)
-            let height = max(160, fittingSize.height)
+            let width = max(150, fittingSize.width)
+            let height = max(215, fittingSize.height)
             let x = screenRect.midX - (width / 2)
             let y = screenRect.midY - (height / 2)
             self.setFrame(NSRect(x: x, y: y, width: width, height: height), display: true)

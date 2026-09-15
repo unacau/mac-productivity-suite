@@ -349,9 +349,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         
         if let icon = icon {
-            let small = NSImage(size: NSSize(width: 16, height: 16))
+            let small = NSImage(size: NSSize(width: 18, height: 18))
             small.lockFocus()
-            icon.draw(in: NSRect(x: 0, y: 0, width: 16, height: 16))
+            icon.draw(in: NSRect(x: 0, y: 0, width: 18, height: 18))
             small.unlockFocus()
             item.image = small
         }

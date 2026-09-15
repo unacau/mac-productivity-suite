@@ -10,8 +10,15 @@ APP_NAME="Khomyak"
 APP_BUNDLE="${REPO_DIR}/dist/${APP_NAME}.app"
 TARGET_APP="/Applications/${APP_NAME}.app"
 
-if [ ! -d "${APP_BUNDLE}" ]; then
-    echo "[*] Building application bundle first..."
+NO_BUILD=false
+for arg in "$@"; do
+    if [ "$arg" == "--no-build" ]; then
+        NO_BUILD=true
+    fi
+done
+
+if [ "${NO_BUILD}" = false ] || [ ! -d "${APP_BUNDLE}" ]; then
+    echo "[*] Building application bundle..."
     "${REPO_DIR}/build_native_app.sh"
 fi
 
