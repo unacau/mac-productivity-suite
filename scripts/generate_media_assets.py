@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 scripts/generate_media_assets.py
-Generates high-resolution, neuroaesthetics-grounded brand media assets for Chomyak (Choma):
+Generates high-resolution, neuroaesthetics-grounded brand media assets for Chomyyak (Choma):
 1. README Hero Banner (1200x480)
 2. OpenGraph / GitHub Social Preview (1280x640)
 3. Custom DMG Installer Window Background (600x400)
@@ -106,7 +106,7 @@ def generate_readme_hero():
     draw_pill(draw, (p2_x + 10, 58), "SUB-16MS FLOW", font_badge, fill=(15, 23, 42, 220), outline=(245, 166, 35), text_color=C_GOLD)
     
     font_title = get_font(52, bold=True)
-    draw.text((fx, 102), "CHOMYAK", fill=C_TEXT_WHITE, font=font_title)
+    draw.text((fx, 102), "CHOMYYAK", fill=C_TEXT_WHITE, font=font_title)
     
     font_slogan = get_font(26, bold=True)
     draw.text((fx, 170), "Tap the Hamster. Own the Flow.", fill=C_GOLD, font=font_slogan)
@@ -143,7 +143,7 @@ def generate_readme_hero():
     draw_pill(draw, (fx + 285, card_y + 74), "⇪ + T / I / A / N", font_key, fill=(30, 41, 68), outline=C_GREEN, text_color=C_GREEN, pad_x=10, pad_y=4)
     draw.text((fx + 425, card_y + 80), "➔ Instant 5-App Switch", fill=C_TEXT_MUTED, font=font_action)
 
-    out_path = ASSETS_DIR / "chomyak_readme_hero.png"
+    out_path = ASSETS_DIR / "chomyyak_readme_hero.png"
     bg.save(out_path, "PNG")
     bg.save(ASSETS_DIR / "khomyak_readme_hero.png", "PNG")
     print(f"✅ Generated: {out_path}")
@@ -169,7 +169,7 @@ def generate_opengraph_banner():
     draw_pill(draw, (p1_x + 12, 110), "100% NATIVE SWIFT 6", font_badge, fill=(15, 23, 42, 220), outline=C_GOLD, text_color=C_GOLD)
     
     font_title = get_font(64, bold=True)
-    draw.text((fx, 160), "CHOMYAK", fill=C_TEXT_WHITE, font=font_title)
+    draw.text((fx, 160), "CHOMYYAK", fill=C_TEXT_WHITE, font=font_title)
     
     font_slogan = get_font(32, bold=True)
     draw.text((fx, 244), "Tap the Hamster. Own the Flow.", fill=C_GOLD, font=font_slogan)
@@ -208,7 +208,7 @@ def generate_opengraph_banner():
     draw.text((fx + 515, 512), "MIT", fill=C_TEXT_WHITE, font=font_metric_num)
     draw.text((fx + 515, 536), "Open Source", fill=C_TEXT_MUTED, font=font_metric_lbl)
 
-    out_path = ASSETS_DIR / "chomyak_opengraph_banner.png"
+    out_path = ASSETS_DIR / "chomyyak_opengraph_banner.png"
     bg.save(out_path, "PNG")
     bg.save(ASSETS_DIR / "khomyak_opengraph_banner.png", "PNG")
     print(f"✅ Generated: {out_path}")
@@ -224,18 +224,18 @@ def generate_dmg_background():
     font_title = get_font(26, bold=True)
     font_sub = get_font(13, bold=False)
     
-    bbox = draw.textbbox((0, 0), "Chomyak", font=font_title)
+    bbox = draw.textbbox((0, 0), "Chomyyak", font=font_title)
     tw = bbox[2] - bbox[0]
-    draw.text(((w - tw) // 2, 35), "Chomyak", fill=C_TEXT_WHITE, font=font_title)
+    draw.text(((w - tw) // 2, 35), "Chomyyak", fill=C_TEXT_WHITE, font=font_title)
     
-    sub_text = "Drag Chomyak to Applications to install"
+    sub_text = "Drag Chomyyak to Applications to install"
     sbbox = draw.textbbox((0, 0), sub_text, font=font_sub)
     stw = sbbox[2] - sbbox[0]
     draw.text(((w - stw) // 2, 70), sub_text, fill=C_CYAN, font=font_sub)
     
     app_cx, app_cy = 150, 210
     draw.ellipse([app_cx - 65, app_cy - 65, app_cx + 65, app_cy + 65], outline=(38, 52, 85), width=2)
-    draw.text((app_cx - 36, app_cy + 75), "Chomyak.app", fill=C_TEXT_MUTED, font=font_sub)
+    draw.text((app_cx - 36, app_cy + 75), "Chomyyak.app", fill=C_TEXT_MUTED, font=font_sub)
     
     app_rx, app_ry = 450, 210
     draw.ellipse([app_rx - 65, app_ry - 65, app_rx + 65, app_ry + 65], outline=(38, 52, 85), width=2)

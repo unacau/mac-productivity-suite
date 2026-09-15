@@ -1,14 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
-APP_NAME="Chomyak"
+APP_NAME="Chomyyak"
 DIST_DIR="dist"
 APP_BUNDLE="${DIST_DIR}/${APP_NAME}.app"
 CONTENTS_DIR="${APP_BUNDLE}/Contents"
 RESOURCES_DIR="${CONTENTS_DIR}/Resources"
 MACOS_DIR="${CONTENTS_DIR}/MacOS"
 BUILD_DIR="${DIST_DIR}/build_native"
-DMG_PATH="${DIST_DIR}/Chomyak.dmg"
+DMG_PATH="${DIST_DIR}/Chomyyak.dmg"
 
 echo "=================================================="
 echo " Building Native ${APP_NAME} (.app)               "
@@ -57,7 +57,7 @@ swiftc \
     -O
 
 echo "[3/5] Creating Universal Mach-O Binary with lipo..."
-lipo -create -output "${MACOS_DIR}/Chomyak" \
+lipo -create -output "${MACOS_DIR}/Chomyyak" \
     "${BUILD_DIR}/temp/binary_arm64" \
     "${BUILD_DIR}/temp/binary_x86_64"
 
@@ -70,7 +70,7 @@ if [ -f "src/ChromeQuickAccess/Resources/dmg_background.png" ]; then
     cp "src/ChromeQuickAccess/Resources/dmg_background.png" "${RESOURCES_DIR}/dmg_background.png"
 fi
 
-codesign --force --sign - --identifier "com.almosteleven.chomyak" -r="designated => identifier \"com.almosteleven.chomyak\"" "${APP_BUNDLE}"
+codesign --force --sign - --identifier "com.almosteleven.chomyyak" -r="designated => identifier \"com.almosteleven.chomyyak\"" "${APP_BUNDLE}"
 codesign -vvv "${APP_BUNDLE}"
 
 echo "[5/5] Generating DMG Installer..."
@@ -91,5 +91,5 @@ echo "=================================================="
 echo " ✅ Standalone Build Succeeded!"
 echo " App: ${APP_BUNDLE}"
 echo " DMG: ${DMG_PATH}"
-echo " Archs: $(lipo -archs "${MACOS_DIR}/Chomyak")"
+echo " Archs: $(lipo -archs "${MACOS_DIR}/Chomyyak")"
 echo "=================================================="

@@ -8,8 +8,8 @@ set -euo pipefail
 
 VERSION=$(cat VERSION.txt | tr -d '[:space:]')
 BUILD=$(cat BUILD.txt | tr -d '[:space:]')
-APP_NAME="Chomyak"
-DMG_FILE="dist/Chomyak.dmg"
+APP_NAME="Chomyyak"
+DMG_FILE="dist/Chomyyak.dmg"
 CHECKSUM_FILE="dist/checksums.txt"
 REPO="unacau/mac-productivity-suite"
 TAG="v$VERSION"

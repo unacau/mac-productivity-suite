@@ -37,9 +37,9 @@ fi
 
 # 2. Check Build Outputs & Universal Binary
 echo -n "[2/3] Checking Build Artifacts & Universal Binary... "
-APP_BUNDLE="dist/Chomyak.app"
+APP_BUNDLE="dist/Chomyyak.app"
 if [ -d "$APP_BUNDLE" ]; then
-    BINARY="$APP_BUNDLE/Contents/MacOS/Chomyak"
+    BINARY="$APP_BUNDLE/Contents/MacOS/Chomyyak"
     if [ -f "$BINARY" ]; then
         ARCHS=$(lipo -archs "$BINARY" 2>/dev/null || echo "Unknown")
         echo "✅ Present (Architectures: $ARCHS)"

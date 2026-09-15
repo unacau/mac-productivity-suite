@@ -5,10 +5,10 @@ import os
 @MainActor
 public final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
-    private let logger = Logger(subsystem: "com.almosteleven.chomyak", category: "app")
+    private let logger = Logger(subsystem: "com.almosteleven.chomyyak", category: "app")
     
     public func applicationDidFinishLaunching(_ notification: Notification) {
-        logger.info("Starting Chomyak...")
+        logger.info("Starting Chomyyak...")
         
         // 1. Setup Menu Bar Status Item
         setupStatusItem()
@@ -29,7 +29,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     public func applicationWillTerminate(_ notification: Notification) {
-        logger.info("Terminating Chomyak: cleaning up event taps and restoring HID mapping.")
+        logger.info("Terminating Chomyyak: cleaning up event taps and restoring HID mapping.")
         CapsLockEngine.shared.stop()
         CopyOnSelectEngine.shared.stop()
     }
@@ -312,7 +312,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         guard let button = statusItem?.button else { return }
         
-        if let image = NSImage(systemSymbolName: "globe", accessibilityDescription: "Chomyak — Tap the Hamster") {
+        if let image = NSImage(systemSymbolName: "globe", accessibilityDescription: "Chomyyak — Tap the Hamster") {
             image.isTemplate = true
             button.image = image
         } else {
@@ -554,7 +554,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem.separator())
         
         let quitItem = makeAlignedMenuItem(
-            title: "Quit Chomyak",
+            title: "Quit Chomyyak",
             keyEquivalent: "q",
             modifierMask: [.command],
             action: #selector(handleQuit),

@@ -2,13 +2,13 @@
 set -euo pipefail
 
 # ==============================================================================
-# Chomyak - Native Telemetry & Log Ingestion Utility
+# Chomyyak - Native Telemetry & Log Ingestion Utility
 # Directly queries and streams macOS Unified Logging System (os_log)
 # ==============================================================================
 
-SUBSYSTEM="com.almosteleven.chomyak"
-BUNDLE_ID="com.almosteleven.chomyak"
-PREDICATE="subsystem == \"${SUBSYSTEM}\" or process == \"Chomyak\""
+SUBSYSTEM="com.almosteleven.chomyyak"
+BUNDLE_ID="com.almosteleven.chomyyak"
+PREDICATE="subsystem == \"${SUBSYSTEM}\" or process == \"Chomyyak\""
 
 usage() {
     cat << EOF
