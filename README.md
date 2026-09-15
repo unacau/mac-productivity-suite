@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="assets/khomyak_readme_hero.png" alt="Khomyak — Tap the Hamster. Own the Flow." width="100%">
+  <img src="assets/chomyak_readme_hero.png" alt="Chomyak (Choma) — Tap the Hamster. Own the Flow." width="100%">
 </p>
 
-# Khomyak (Хомяк) — v1.0.0
+# Chomyak (Choma / Хома) — v1.0.0
 
 A lightweight, zero-latency macOS productivity suite built in pure native Swift 6 and SwiftUI.
 
@@ -76,7 +76,7 @@ make install
 
 ## 📊 Observability & Diagnostics
 
-Khomyak emits structured logs directly to Apple's **macOS Unified Logging System (`os_log`)** under subsystem `com.almosteleven.khomyak`.
+Chomyak emits structured logs directly to Apple's **macOS Unified Logging System (`os_log`)** under subsystem `com.almosteleven.chomyak`.
 
 ### Stream Logs in Real Time
 ```bash
@@ -110,7 +110,7 @@ make health
 
 ## 🎨 Brand Identity & Neuroaesthetics
 
-Khomyak's design and visual hierarchy are grounded in empirical cognitive neuroscience and neuroaesthetics.
+Chomyak's design and visual hierarchy are grounded in empirical cognitive neuroscience and neuroaesthetics.
 - See the complete [Neuroaesthetics Brandbook](file:///Users/igorekishev/Igor/igorekishev/mac-productivity-suite/docs/BRANDBOOK_NEUROAESTHETICS.md).
 
 ---

@@ -18,10 +18,10 @@ public enum HIDMappingService {
         do {
             try task.run()
             task.waitUntilExit()
-            Logger(subsystem: "com.almosteleven.khomyak", category: "hid").info("Applied Caps Lock -> F18 mapping via hidutil.")
+            Logger(subsystem: "com.almosteleven.chomyak", category: "hid").info("Applied Caps Lock -> F18 mapping via hidutil.")
             return task.terminationStatus == 0
         } catch {
-            Logger(subsystem: "com.almosteleven.khomyak", category: "hid").error("Failed to set hidutil mapping: \(error.localizedDescription)")
+            Logger(subsystem: "com.almosteleven.chomyak", category: "hid").error("Failed to set hidutil mapping: \(error.localizedDescription)")
             return false
         }
     }
@@ -34,10 +34,10 @@ public enum HIDMappingService {
         do {
             try task.run()
             task.waitUntilExit()
-            Logger(subsystem: "com.almosteleven.khomyak", category: "hid").info("Restored default HID key mapping.")
+            Logger(subsystem: "com.almosteleven.chomyak", category: "hid").info("Restored default HID key mapping.")
             return task.terminationStatus == 0
         } catch {
-            Logger(subsystem: "com.almosteleven.khomyak", category: "hid").error("Failed to restore hidutil mapping: \(error.localizedDescription)")
+            Logger(subsystem: "com.almosteleven.chomyak", category: "hid").error("Failed to restore hidutil mapping: \(error.localizedDescription)")
             return false
         }
     }
@@ -77,7 +77,7 @@ public final class CapsLockEngine: @unchecked Sendable {
     /// Dynamic hotkey triggers keyed by virtual keycode (app-name letter shortcuts)
     public var dynamicKeyTriggers: [UInt32: @MainActor () -> Void] = [:]
     
-    private let logger = Logger(subsystem: "com.almosteleven.khomyak", category: "engine")
+    private let logger = Logger(subsystem: "com.almosteleven.chomyak", category: "engine")
     
     public init() {
         setupWakeNotification()
@@ -119,7 +119,7 @@ public final class CapsLockEngine: @unchecked Sendable {
             Task { @MainActor in
                 let alert = NSAlert()
                 alert.messageText = "Accessibility Bug Detected"
-                alert.informativeText = "macOS granted Accessibility permissions, but denied the event tap. This happens when an app is recompiled and macOS caches the previous cdhash.\n\nPlease remove Khomyak from System Settings > Privacy & Security > Accessibility and add it back."
+                alert.informativeText = "macOS granted Accessibility permissions, but denied the event tap. This happens when an app is recompiled and macOS caches the previous cdhash.\n\nPlease remove Chomyak from System Settings > Privacy & Security > Accessibility and add it back."
                 alert.alertStyle = .critical
                 alert.runModal()
             }
