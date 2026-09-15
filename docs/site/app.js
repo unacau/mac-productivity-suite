@@ -181,12 +181,12 @@ function buildBrightLiminalEnvironment() {
   panel.position.set(0, 7.5, 0);
   scene.add(panel);
 
-  // Ambient Light: Bright, Radiant, Zero Dark Shadows
-  const ambient = new THREE.AmbientLight(0xFFF0F5, 1.45);
+  // Ambient Light: Bright, Radiant, Balanced (Zero Washout)
+  const ambient = new THREE.AmbientLight(0xFFF0F5, 1.05);
   scene.add(ambient);
 
   // Studio Key Light
-  const keyLight = new THREE.DirectionalLight(0xFFFFFF, 1.9);
+  const keyLight = new THREE.DirectionalLight(0xFFFFFF, 1.35);
   keyLight.position.set(4, 8, 6);
   keyLight.castShadow = true;
   keyLight.shadow.mapSize.width = 2048;
@@ -195,13 +195,13 @@ function buildBrightLiminalEnvironment() {
   scene.add(keyLight);
 
   // Soft Rosy-Pink Rim Light
-  const rimLight = new THREE.DirectionalLight(0xF472B6, 1.8);
+  const rimLight = new THREE.DirectionalLight(0xF472B6, 1.25);
   rimLight.position.set(-5, 4.5, -5);
   scene.add(rimLight);
 
   // Front Soft Fill
-  const fillLight = new THREE.PointLight(0xFCE7F3, 1.2, 10);
-  fillLight.position.set(0, 1.2, 3.2);
+  const fillLight = new THREE.PointLight(0xFCE7F3, 0.8, 12);
+  fillLight.position.set(0, 1.2, 3.5);
   scene.add(fillLight);
 
   // Pale Liminal Pillars in White Haze
@@ -218,245 +218,398 @@ function buildBrightLiminalEnvironment() {
 }
 
 // --------------------------------------------------------------------------
-// Giant Realistic White-Pinkish Hamster (Filling the Screen!)
+// Giant Geometric Bauhaus Hamster with Green LED Keycap (Liminal Experience)
 // --------------------------------------------------------------------------
 function buildGiantRealisticHamster() {
   hamsterRoot = new THREE.Group();
-  hamsterRoot.position.set(0, 0, 0);
-  hamsterRoot.scale.set(1.5, 1.5, 1.5);
+  hamsterRoot.position.set(0, 0.05, 0);
+  hamsterRoot.scale.set(1.4, 1.4, 1.4);
 
-  // Pristine, Soft Pearlescent White Fur Materials
-  const whiteFurMat = new THREE.MeshStandardMaterial({
-    color: 0xFFF7FA, // Clean pearlescent snow-white with subtle rosy warmth
-    roughness: 0.68,
-    metalness: 0.02
-  });
-
-  const softCheekFurMat = new THREE.MeshStandardMaterial({
-    color: 0xFFEDF2, // Delicate rosy blush on cheeks
-    roughness: 0.65,
-    metalness: 0.02
-  });
-
-  const pureWhiteBellyMat = new THREE.MeshStandardMaterial({
-    color: 0xFFFFFF,
-    roughness: 0.75,
-    metalness: 0.01
-  });
-
-  const babyPinkSkinMat = new THREE.MeshStandardMaterial({
-    color: 0xFB7185, // Soft baby rose pink
+  // Bauhaus Palette Materials
+  const bauhausYellowMat = new THREE.MeshStandardMaterial({
+    color: 0xF59E0B, // Rich warm amber / golden-yellow
     roughness: 0.38,
+    metalness: 0.04
+  });
+
+  const bauhausCreamMat = new THREE.MeshStandardMaterial({
+    color: 0xFEF3C7, // Warm Bauhaus ivory / cream
+    roughness: 0.40,
+    metalness: 0.02
+  });
+
+  const bauhausRedMat = new THREE.MeshStandardMaterial({
+    color: 0xEF4444, // Vibrant Bauhaus signal red
+    emissive: 0x991B1B,
+    emissiveIntensity: 0.30,
+    roughness: 0.25,
     metalness: 0.05
   });
 
-  // 1. Giant Chubby Body (Fluffy pear-shaped silhouette)
-  const bodyGeo = new THREE.SphereGeometry(1.08, 48, 48);
-  bodyGeo.scale(1.22, 1.05, 1.12);
-  const bodyMesh = new THREE.Mesh(bodyGeo, whiteFurMat);
-  bodyMesh.position.set(0, 0.85, 0);
-  bodyMesh.castShadow = true;
-  bodyMesh.receiveShadow = true;
-  hamsterRoot.add(bodyMesh);
+  const bauhausOutlineMat = new THREE.MeshBasicMaterial({
+    color: 0x111827 // Deep ink black graphic outline
+  });
 
-  // Pure White Fluffy Chest Patch
-  const bellyGeo = new THREE.SphereGeometry(0.85, 36, 36);
-  bellyGeo.scale(0.9, 0.95, 0.45);
-  const bellyMesh = new THREE.Mesh(bellyGeo, pureWhiteBellyMat);
-  bellyMesh.position.set(0, 0.8, 0.76);
-  hamsterRoot.add(bellyMesh);
+  const eyeObsidianMat = new THREE.MeshStandardMaterial({
+    color: 0x0A0A0C, // Glossy deep obsidian black
+    roughness: 0.05,
+    metalness: 0.30
+  });
 
-  // 2. Enormous Puffed Chubby Cheeks (Overflowing the Screen!)
+  const whitePawMat = new THREE.MeshStandardMaterial({
+    color: 0xFFFFFF,
+    roughness: 0.35,
+    metalness: 0.02
+  });
+
+  const pinkPadMat = new THREE.MeshStandardMaterial({
+    color: 0xF43F5E, // Vibrant cute rose pink
+    roughness: 0.30,
+    metalness: 0.05
+  });
+
+  // 1. Cheeks & Head Group (Kinetic Squish Pivot)
   cheeksGroup = new THREE.Group();
-  cheeksGroup.position.set(0, 0.92, 0.6);
+  cheeksGroup.position.set(0, 0.92, 0.1);
 
-  const cheekGeo = new THREE.SphereGeometry(0.64, 36, 36);
-  cheekGeo.scale(1.25, 0.92, 0.92);
+  // Upper Head Spheres (Two overlapping yellow volumes)
+  const headGeo = new THREE.SphereGeometry(0.72, 36, 36);
+  headGeo.scale(1.15, 0.98, 0.65);
 
-  const leftCheek = new THREE.Mesh(cheekGeo, softCheekFurMat);
-  leftCheek.position.set(-0.76, -0.02, 0);
-  leftCheek.castShadow = true;
-  cheeksGroup.add(leftCheek);
+  const headL = new THREE.Mesh(headGeo, bauhausYellowMat);
+  headL.position.set(-0.48, 0.22, 0);
+  headL.castShadow = true;
+  cheeksGroup.add(headL);
 
-  const rightCheek = new THREE.Mesh(cheekGeo, softCheekFurMat);
-  rightCheek.position.set(0.76, -0.02, 0);
-  rightCheek.castShadow = true;
-  cheeksGroup.add(rightCheek);
+  const headR = new THREE.Mesh(headGeo, bauhausYellowMat);
+  headR.position.set(0.48, 0.22, 0);
+  headR.castShadow = true;
+  cheeksGroup.add(headR);
 
-  // Subtle rosy blush decals on cheeks
-  const blushGeo = new THREE.CircleGeometry(0.26, 20);
-  const blushMat = new THREE.MeshBasicMaterial({ color: 0xFDA4AF, transparent: true, opacity: 0.45 });
-  const blushL = new THREE.Mesh(blushGeo, blushMat);
-  blushL.position.set(-0.95, -0.02, 0.4);
-  blushL.rotation.y = -0.42;
-  cheeksGroup.add(blushL);
+  // Central Vertical Cream Forehead & Muzzle Bridge
+  const centerWedgeGeo = new THREE.SphereGeometry(0.68, 36, 36);
+  centerWedgeGeo.scale(0.82, 1.12, 0.72);
+  const centerWedge = new THREE.Mesh(centerWedgeGeo, bauhausCreamMat);
+  centerWedge.position.set(0, 0.18, 0.12);
+  centerWedge.castShadow = true;
+  cheeksGroup.add(centerWedge);
 
-  const blushR = new THREE.Mesh(blushGeo, blushMat);
-  blushR.position.set(0.95, -0.02, 0.4);
-  blushR.rotation.y = 0.42;
-  cheeksGroup.add(blushR);
+  // Lower Giant Puffed Cheeks (Overlapping yellow & cream circles)
+  const lowerCheekGeo = new THREE.SphereGeometry(0.56, 32, 32);
+  lowerCheekGeo.scale(1.18, 0.92, 0.68);
+
+  const lowerCheekL = new THREE.Mesh(lowerCheekGeo, bauhausYellowMat);
+  lowerCheekL.position.set(-0.66, -0.15, 0.2);
+  lowerCheekL.castShadow = true;
+  cheeksGroup.add(lowerCheekL);
+
+  const lowerCheekR = new THREE.Mesh(lowerCheekGeo, bauhausYellowMat);
+  lowerCheekR.position.set(0.66, -0.15, 0.2);
+  lowerCheekR.castShadow = true;
+  cheeksGroup.add(lowerCheekR);
+
+  // Inner Cream Cheeks Patches
+  const innerPatchGeo = new THREE.SphereGeometry(0.46, 32, 32);
+  innerPatchGeo.scale(0.98, 0.95, 0.75);
+
+  const innerL = new THREE.Mesh(innerPatchGeo, bauhausCreamMat);
+  innerL.position.set(-0.28, -0.16, 0.32);
+  cheeksGroup.add(innerL);
+
+  const innerR = new THREE.Mesh(innerPatchGeo, bauhausCreamMat);
+  innerR.position.set(0.28, -0.16, 0.32);
+  cheeksGroup.add(innerR);
+
+  // Center Chin Pad
+  const chinGeo = new THREE.SphereGeometry(0.36, 24, 24);
+  chinGeo.scale(1.12, 0.85, 0.75);
+  const chin = new THREE.Mesh(chinGeo, bauhausCreamMat);
+  chin.position.set(0, -0.32, 0.32);
+  cheeksGroup.add(chin);
 
   hamsterRoot.add(cheeksGroup);
 
-  // 3. Snout & Cute Baby Pink Button Nose
-  snoutGroup = new THREE.Group();
-  snoutGroup.position.set(0, 0.95, 1.05);
-
-  const snoutGeo = new THREE.SphereGeometry(0.28, 24, 24);
-  snoutGeo.scale(1.05, 0.75, 0.75);
-  const snoutMesh = new THREE.Mesh(snoutGeo, pureWhiteBellyMat);
-  snoutGroup.add(snoutMesh);
-
-  const noseGeo = new THREE.SphereGeometry(0.09, 20, 20);
-  noseGeo.scale(1.25, 0.75, 0.85);
-  const noseMesh = new THREE.Mesh(noseGeo, babyPinkSkinMat);
-  noseMesh.position.set(0, 0.08, 0.18);
-  snoutGroup.add(noseMesh);
-
-  hamsterRoot.add(snoutGroup);
-
-  // 4. Fine Detailed Whiskers Spanning the Screen
-  whiskersGroup = new THREE.Group();
-  whiskersGroup.position.set(0, 1.0, 1.15);
-  const whiskerMat = new THREE.LineBasicMaterial({
-    color: 0xFFFFFF,
-    transparent: true,
-    opacity: 0.85
-  });
-
-  for (let i = 0; i < 8; i++) {
-    const angle = (i - 3.5) * 0.13;
-    // Left Whiskers
-    const curveL = new THREE.QuadraticBezierCurve3(
-      new THREE.Vector3(-0.16, (i - 4) * 0.02, 0),
-      new THREE.Vector3(-0.8, (i - 4) * 0.03, 0.1),
-      new THREE.Vector3(-1.6, angle * 0.9 - 0.14, -0.2)
-    );
-    whiskersGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(curveL.getPoints(14)), whiskerMat));
-
-    // Right Whiskers
-    const curveR = new THREE.QuadraticBezierCurve3(
-      new THREE.Vector3(0.16, (i - 4) * 0.02, 0),
-      new THREE.Vector3(0.8, (i - 4) * 0.03, 0.1),
-      new THREE.Vector3(1.6, angle * 0.9 - 0.14, -0.2)
-    );
-    whiskersGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(curveR.getPoints(14)), whiskerMat));
-  }
-  hamsterRoot.add(whiskersGroup);
-
-  // 5. Deep Liquid-Dark Obsidian Eyes (High Specular Reflections)
-  eyesGroup = new THREE.Group();
-  eyesGroup.position.set(0, 1.25, 1.02);
-
-  const eyeMat = new THREE.MeshBasicMaterial({
-    color: 0x08080C
-  });
-  const eyeGeo = new THREE.SphereGeometry(0.18, 32, 32);
-
-  eyeLeft = new THREE.Mesh(eyeGeo, eyeMat);
-  eyeLeft.position.set(-0.42, 0, 0);
-  eyesGroup.add(eyeLeft);
-
-  eyeRight = new THREE.Mesh(eyeGeo, eyeMat);
-  eyeRight.position.set(0.42, 0, 0);
-  eyesGroup.add(eyeRight);
-
-  // Big Shiny Specular Highlights
-  const glintGeo = new THREE.SphereGeometry(0.055, 16, 16);
-  const glintMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
-  const glintL = new THREE.Mesh(glintGeo, glintMat);
-  glintL.position.set(-0.38, 0.06, 0.15);
-  eyesGroup.add(glintL);
-
-  const glintR = new THREE.Mesh(glintGeo, glintMat);
-  glintR.position.set(0.46, 0.06, 0.15);
-  eyesGroup.add(glintR);
-
-  hamsterRoot.add(eyesGroup);
-
-  // 6. Translucent Pinkish Ears
-  const earOuterGeo = new THREE.SphereGeometry(0.32, 24, 24);
-  earOuterGeo.scale(0.9, 1.05, 0.35);
-
-  const earInnerGeo = new THREE.SphereGeometry(0.24, 20, 20);
-  earInnerGeo.scale(0.85, 0.95, 0.2);
+  // 2. Symmetrical Bauhaus Geometric Circular Ears
+  const earOuterGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.08, 36);
+  earOuterGeo.rotateX(Math.PI / 2);
+  const earInnerGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.09, 36);
+  earInnerGeo.rotateX(Math.PI / 2);
+  const earRingGeo = new THREE.TorusGeometry(0.38, 0.018, 16, 48);
+  const earInnerRingGeo = new THREE.TorusGeometry(0.25, 0.015, 16, 48);
 
   leftEarGroup = new THREE.Group();
-  leftEarGroup.position.set(-0.76, 1.85, -0.05);
-  leftEarGroup.rotation.z = 0.38;
-  leftEarGroup.rotation.y = -0.22;
-  leftEarGroup.add(new THREE.Mesh(earOuterGeo, whiteFurMat));
-  const lInner = new THREE.Mesh(earInnerGeo, babyPinkSkinMat);
-  lInner.position.z = 0.06;
-  leftEarGroup.add(lInner);
+  leftEarGroup.position.set(-0.70, 1.86, -0.05);
+  leftEarGroup.rotation.z = 0.25;
+  const lOuter = new THREE.Mesh(earOuterGeo, bauhausYellowMat);
+  const lInner = new THREE.Mesh(earInnerGeo, bauhausCreamMat);
+  lInner.position.z = 0.008;
+  const lRing = new THREE.Mesh(earRingGeo, bauhausOutlineMat);
+  lRing.position.z = 0.042;
+  const lInnerRing = new THREE.Mesh(earInnerRingGeo, bauhausOutlineMat);
+  lInnerRing.position.z = 0.046;
+  leftEarGroup.add(lOuter, lInner, lRing, lInnerRing);
   hamsterRoot.add(leftEarGroup);
 
   rightEarGroup = new THREE.Group();
-  rightEarGroup.position.set(0.76, 1.85, -0.05);
-  rightEarGroup.rotation.z = -0.38;
-  rightEarGroup.rotation.y = 0.22;
-  rightEarGroup.add(new THREE.Mesh(earOuterGeo, whiteFurMat));
-  const rInner = new THREE.Mesh(earInnerGeo, babyPinkSkinMat);
-  rInner.position.z = 0.06;
-  rightEarGroup.add(rInner);
+  rightEarGroup.position.set(0.70, 1.86, -0.05);
+  rightEarGroup.rotation.z = -0.25;
+  const rOuter = new THREE.Mesh(earOuterGeo, bauhausYellowMat);
+  const rInner = new THREE.Mesh(earInnerGeo, bauhausCreamMat);
+  rInner.position.z = 0.008;
+  const rRing = new THREE.Mesh(earRingGeo, bauhausOutlineMat);
+  rRing.position.z = 0.042;
+  const rInnerRing = new THREE.Mesh(earInnerRingGeo, bauhausOutlineMat);
+  rInnerRing.position.z = 0.046;
+  rightEarGroup.add(rOuter, rInner, rRing, rInnerRing);
   hamsterRoot.add(rightEarGroup);
 
-  // 7. Little Pink Front Paws Holding Keycap lower down
-  const pawGeo = new THREE.SphereGeometry(0.14, 20, 20);
-  pawGeo.scale(1.1, 0.75, 1.4);
+  // 3. Concentric Bauhaus Eyes (Outer Rings + Obsidian Core + Dual Glints)
+  eyesGroup = new THREE.Group();
+  eyesGroup.position.set(0, 1.28, 0.72);
 
-  const leftPaw = new THREE.Mesh(pawGeo, babyPinkSkinMat);
-  leftPaw.position.set(-0.35, 0.42, 0.98);
-  leftPaw.rotation.y = 0.25;
-  hamsterRoot.add(leftPaw);
+  const eyeBaseGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.04, 48);
+  eyeBaseGeo.rotateX(Math.PI / 2);
+  const eyeRingOuterGeo = new THREE.TorusGeometry(0.35, 0.016, 16, 64);
+  const eyeRingInnerGeo = new THREE.TorusGeometry(0.27, 0.015, 16, 64);
+  const eyeSphereGeo = new THREE.SphereGeometry(0.20, 32, 32);
+  const glintBigGeo = new THREE.SphereGeometry(0.065, 16, 16);
+  const glintSmallGeo = new THREE.SphereGeometry(0.032, 16, 16);
+  const glintMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
 
-  const rightPaw = new THREE.Mesh(pawGeo, babyPinkSkinMat);
-  rightPaw.position.set(0.35, 0.42, 0.98);
-  rightPaw.rotation.y = -0.25;
-  hamsterRoot.add(rightPaw);
+  // Left Eye Sub-Assembly
+  const eyeLGroup = new THREE.Group();
+  eyeLGroup.position.set(-0.38, 0, 0.04);
+  eyeLGroup.rotation.y = -0.08;
 
-  // Keycap Canvas Texture with ⇪ Caps Lock
-  const kCanvas = document.createElement("canvas");
-  kCanvas.width = 256; kCanvas.height = 256;
-  const kCtx = kCanvas.getContext("2d");
-  kCtx.fillStyle = "#1E293B";
-  kCtx.fillRect(0, 0, 256, 256);
-  kCtx.fillStyle = "#F472B6";
-  kCtx.font = "bold 90px system-ui, sans-serif";
-  kCtx.textAlign = "center";
-  kCtx.fillText("⇪", 128, 120);
-  kCtx.font = "bold 38px system-ui, sans-serif";
-  kCtx.fillText("CAPS", 128, 185);
-  const kTex = new THREE.CanvasTexture(kCanvas);
+  const eyeBaseL = new THREE.Mesh(eyeBaseGeo, bauhausCreamMat);
+  eyeLGroup.add(eyeBaseL);
 
-  const keycapGeo = new THREE.BoxGeometry(0.52, 0.26, 0.46);
-  const keycapMat = new THREE.MeshStandardMaterial({
-    map: kTex,
-    color: 0xFFFFFF,
-    emissive: 0xFB7185,
-    emissiveIntensity: 0.4,
-    roughness: 0.25,
-    metalness: 0.2
+  const ringOutL = new THREE.Mesh(eyeRingOuterGeo, bauhausOutlineMat);
+  ringOutL.position.z = 0.025;
+  eyeLGroup.add(ringOutL);
+
+  const ringInL = new THREE.Mesh(eyeRingInnerGeo, bauhausOutlineMat);
+  ringInL.position.z = 0.026;
+  eyeLGroup.add(ringInL);
+
+  eyeLeft = new THREE.Mesh(eyeSphereGeo, eyeObsidianMat);
+  eyeLeft.position.z = 0.06;
+  eyeLGroup.add(eyeLeft);
+
+  const glintLBig = new THREE.Mesh(glintBigGeo, glintMat);
+  glintLBig.position.set(-0.06, 0.06, 0.22);
+  eyeLGroup.add(glintLBig);
+
+  const glintLSmall = new THREE.Mesh(glintSmallGeo, glintMat);
+  glintLSmall.position.set(0.07, -0.06, 0.22);
+  eyeLGroup.add(glintLSmall);
+
+  eyesGroup.add(eyeLGroup);
+
+  // Right Eye Sub-Assembly
+  const eyeRGroup = new THREE.Group();
+  eyeRGroup.position.set(0.38, 0, 0.04);
+  eyeRGroup.rotation.y = 0.08;
+
+  const eyeBaseR = new THREE.Mesh(eyeBaseGeo, bauhausCreamMat);
+  eyeRGroup.add(eyeBaseR);
+
+  const ringOutR = new THREE.Mesh(eyeRingOuterGeo, bauhausOutlineMat);
+  ringOutR.position.z = 0.025;
+  eyeRGroup.add(ringOutR);
+
+  const ringInR = new THREE.Mesh(eyeRingInnerGeo, bauhausOutlineMat);
+  ringInR.position.z = 0.026;
+  eyeRGroup.add(ringInR);
+
+  eyeRight = new THREE.Mesh(eyeSphereGeo, eyeObsidianMat);
+  eyeRight.position.z = 0.06;
+  eyeRGroup.add(eyeRight);
+
+  const glintRBig = new THREE.Mesh(glintBigGeo, glintMat);
+  glintRBig.position.set(-0.06, 0.06, 0.22);
+  eyeRGroup.add(glintRBig);
+
+  const glintRSmall = new THREE.Mesh(glintSmallGeo, glintMat);
+  glintRSmall.position.set(0.07, -0.06, 0.22);
+  eyeRGroup.add(glintRSmall);
+
+  eyesGroup.add(eyeRGroup);
+
+  hamsterRoot.add(eyesGroup);
+
+  // 4. Red Inverted Triangle Nose & Bauhaus Curved Smiling Mouth
+  snoutGroup = new THREE.Group();
+  snoutGroup.position.set(0, 0.98, 0.78);
+
+  // Inverted Flat Triangular Prism (horizontal top, downward pointing vertex)
+  const noseShape = new THREE.Shape();
+  const nw = 0.20;
+  const nh = 0.22;
+  noseShape.moveTo(-nw, nh * 0.45);
+  noseShape.lineTo(nw, nh * 0.45);
+  noseShape.lineTo(0, -nh * 0.65);
+  noseShape.closePath();
+
+  const noseGeo = new THREE.ExtrudeGeometry(noseShape, { depth: 0.06, bevelEnabled: false });
+  const noseMat = new THREE.MeshBasicMaterial({ color: 0xFF2A2A });
+  const noseMesh = new THREE.Mesh(noseGeo, noseMat);
+  noseMesh.position.z = -0.03;
+  snoutGroup.add(noseMesh);
+
+  // Clean dark outline around the red triangle
+  const noseEdges = new THREE.EdgesGeometry(noseGeo);
+  const noseLine = new THREE.LineSegments(noseEdges, new THREE.LineBasicMaterial({ color: 0x111827, linewidth: 2 }));
+  noseLine.position.z = -0.03;
+  snoutGroup.add(noseLine);
+
+  // Curved Black Smile Lines (Bauhaus W-mouth)
+  const curveL = new THREE.QuadraticBezierCurve3(
+    new THREE.Vector3(-0.32, -0.15, -0.05),
+    new THREE.Vector3(-0.16, -0.28, 0.02),
+    new THREE.Vector3(0, -0.14, 0.04)
+  );
+  const smileL = new THREE.Mesh(new THREE.TubeGeometry(curveL, 20, 0.022, 8, false), bauhausOutlineMat);
+  snoutGroup.add(smileL);
+
+  const curveR = new THREE.QuadraticBezierCurve3(
+    new THREE.Vector3(0, -0.14, 0.04),
+    new THREE.Vector3(0.16, -0.28, 0.02),
+    new THREE.Vector3(0.32, -0.15, -0.05)
+  );
+  const smileR = new THREE.Mesh(new THREE.TubeGeometry(curveR, 20, 0.022, 8, false), bauhausOutlineMat);
+  snoutGroup.add(smileR);
+
+  hamsterRoot.add(snoutGroup);
+
+  // 5. Pure White Paws with Pink Pads Resting on Keycap
+  const pawGeo = new THREE.SphereGeometry(0.19, 24, 24);
+  pawGeo.scale(1.15, 0.95, 1.15);
+  const padGeo = new THREE.SphereGeometry(0.042, 16, 16);
+
+  // Left Paw
+  const leftPawGroup = new THREE.Group();
+  leftPawGroup.position.set(-0.44, 0.44, 0.94);
+  const leftPawMesh = new THREE.Mesh(pawGeo, whitePawMat);
+  leftPawGroup.add(leftPawMesh);
+  [
+    [-0.08, -0.07, 0.15],
+    [0.0, -0.09, 0.17],
+    [0.08, -0.07, 0.15]
+  ].forEach(p => {
+    const pad = new THREE.Mesh(padGeo, pinkPadMat);
+    pad.position.set(...p);
+    leftPawGroup.add(pad);
   });
-  keycapMesh = new THREE.Mesh(keycapGeo, keycapMat);
-  keycapMesh.position.set(0, 0.42, 1.05);
+  hamsterRoot.add(leftPawGroup);
+
+  // Right Paw
+  const rightPawGroup = new THREE.Group();
+  rightPawGroup.position.set(0.44, 0.44, 0.94);
+  const rightPawMesh = new THREE.Mesh(pawGeo, whitePawMat);
+  rightPawGroup.add(rightPawMesh);
+  [
+    [-0.08, -0.07, 0.15],
+    [0.0, -0.09, 0.17],
+    [0.08, -0.07, 0.15]
+  ].forEach(p => {
+    const pad = new THREE.Mesh(padGeo, pinkPadMat);
+    pad.position.set(...p);
+    rightPawGroup.add(pad);
+  });
+  hamsterRoot.add(rightPawGroup);
+
+  // 6. Blue "Caps Lock" Keycap with Glowing Green LED & Yellow Arrow
+  const kCanvas = document.createElement("canvas");
+  kCanvas.width = 512; kCanvas.height = 360;
+  const kCtx = kCanvas.getContext("2d");
+
+  // Deep Navy Royal Blue Gradient
+  const grad = kCtx.createLinearGradient(0, 0, 0, 360);
+  grad.addColorStop(0, "#0F2B66");
+  grad.addColorStop(1, "#081636");
+  kCtx.fillStyle = grad;
+  kCtx.fillRect(0, 0, 512, 360);
+
+  // Soft inner border for keycap chamfer
+  kCtx.strokeStyle = "rgba(255, 255, 255, 0.22)";
+  kCtx.lineWidth = 6;
+  kCtx.strokeRect(12, 12, 488, 336);
+
+  // Glowing Green LED Dot with Soft Radial Glow Halo
+  const ledGlow = kCtx.createRadialGradient(80, 85, 4, 80, 85, 48);
+  ledGlow.addColorStop(0, "#86EFAC");
+  ledGlow.addColorStop(0.3, "rgba(34, 197, 94, 0.85)");
+  ledGlow.addColorStop(1, "rgba(34, 197, 94, 0)");
+  kCtx.fillStyle = ledGlow;
+  kCtx.beginPath();
+  kCtx.arc(80, 85, 48, 0, Math.PI * 2);
+  kCtx.fill();
+
+  kCtx.fillStyle = "#22C55E";
+  kCtx.beginPath();
+  kCtx.arc(80, 85, 14, 0, Math.PI * 2);
+  kCtx.fill();
+
+  // Bold Golden-Yellow Upward Arrow (Caps Lock Symbol) with crisp dark outline
+  kCtx.save();
+  kCtx.translate(256, 145);
+  kCtx.beginPath();
+  kCtx.moveTo(0, -70);      // top tip
+  kCtx.lineTo(58, -14);     // right corner
+  kCtx.lineTo(26, -14);     // right notch
+  kCtx.lineTo(26, 50);      // right stem bottom
+  kCtx.lineTo(-26, 50);     // left stem bottom
+  kCtx.lineTo(-26, -14);    // left notch
+  kCtx.lineTo(-58, -14);    // left corner
+  kCtx.closePath();
+  kCtx.fillStyle = "#FFD700";
+  kCtx.fill();
+  kCtx.strokeStyle = "#0F172A";
+  kCtx.lineWidth = 7;
+  kCtx.lineJoin = "round";
+  kCtx.stroke();
+  kCtx.restore();
+
+  // Crisp White "caps lock" Text
+  kCtx.fillStyle = "#FFFFFF";
+  kCtx.font = "bold 44px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+  kCtx.textAlign = "center";
+  kCtx.fillText("caps lock", 256, 280);
+
+  const kTex = new THREE.CanvasTexture(kCanvas);
+  kTex.anisotropy = 4;
+
+  const keycapGeo = new THREE.BoxGeometry(1.48, 0.72, 0.40);
+  const keycapBodyMat = new THREE.MeshBasicMaterial({
+    color: 0x0A1C42
+  });
+  const keycapFrontMat = new THREE.MeshBasicMaterial({
+    map: kTex
+  });
+
+  // Six-sided material mapping so texture ONLY appears on front (+Z face, index 4)
+  keycapMesh = new THREE.Mesh(keycapGeo, [
+    keycapBodyMat, keycapBodyMat, keycapBodyMat, keycapBodyMat, keycapFrontMat, keycapBodyMat
+  ]);
+  keycapMesh.position.set(0, 0.12, 0.88);
   keycapMesh.castShadow = true;
   hamsterRoot.add(keycapMesh);
 
-  // Keycap Warm Glow Light
-  const keycapGlow = new THREE.PointLight(0xFB7185, 1.6, 3.5);
-  keycapGlow.position.set(0, 0.55, 1.25);
-  hamsterRoot.add(keycapGlow);
+  // Real 3D Glowing Green LED PointLight
+  const greenLedLight = new THREE.PointLight(0x22C55E, 3.2, 2.5);
+  greenLedLight.position.set(-0.52, 0.28, 1.15);
+  hamsterRoot.add(greenLedLight);
 
-  // 9. Soft Hind Feet Resting on Floor
-  const footGeo = new THREE.SphereGeometry(0.2, 20, 20);
-  footGeo.scale(1.25, 0.55, 1.8);
-  const leftFoot = new THREE.Mesh(footGeo, babyPinkSkinMat);
-  leftFoot.position.set(-0.72, -0.05, 0.45);
+  // 7. Soft Hind Feet Resting on Marble Floor
+  const footGeo = new THREE.SphereGeometry(0.24, 20, 20);
+  footGeo.scale(1.2, 0.5, 1.5);
+  const leftFoot = new THREE.Mesh(footGeo, bauhausYellowMat);
+  leftFoot.position.set(-0.78, -0.12, 0.35);
   hamsterRoot.add(leftFoot);
 
-  const rightFoot = new THREE.Mesh(footGeo, babyPinkSkinMat);
-  rightFoot.position.set(0.72, -0.05, 0.45);
+  const rightFoot = new THREE.Mesh(footGeo, bauhausYellowMat);
+  rightFoot.position.set(0.78, -0.12, 0.35);
   hamsterRoot.add(rightFoot);
 
   scene.add(hamsterRoot);
@@ -659,18 +812,18 @@ function animate() {
     }
   }
 
-  // Whisker and nose micro-twitch
-  if (snoutGroup && whiskersGroup) {
+  // Nose micro-twitch
+  if (snoutGroup) {
     const twitch = Math.sin(time * 22.0) * 0.012 * (Math.sin(time * 0.8) > 0.6 ? 1 : 0);
-    snoutGroup.position.y = 0.95 + twitch;
-    whiskersGroup.rotation.z = twitch * 1.5;
+    snoutGroup.position.y = 0.96 + twitch;
+    if (whiskersGroup) whiskersGroup.rotation.z = twitch * 1.5;
   }
 
   // Ear twitch
   if (leftEarGroup && rightEarGroup) {
     const earTwitch = Math.sin(time * 18.0) * 0.035 * (Math.sin(time * 0.5) > 0.8 ? 1 : 0);
-    leftEarGroup.rotation.z = 0.38 + earTwitch;
-    rightEarGroup.rotation.z = -0.38 - earTwitch;
+    leftEarGroup.rotation.z = 0.25 + earTwitch;
+    rightEarGroup.rotation.z = -0.25 - earTwitch;
   }
 
   // Eyes Cursor Tracking & Blinking
