@@ -32,7 +32,7 @@ public final class CopyOnSelectEngine: @unchecked Sendable {
         pendingCopyTask = nil
     }
     
-    private let logger = Logger(subsystem: "com.almosteleven.chomyyak", category: "copy-on-select")
+    private let logger = Logger(subsystem: "com.almosteleven.khomyak", category: "copy-on-select")
     
     public init() {}
     

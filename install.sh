@@ -2,11 +2,11 @@
 set -euo pipefail
 
 echo "=================================================="
-echo " Installing Chomyyak (v1.0.0)                      "
+echo " Installing Khomyak (v1.0.0)                      "
 echo "=================================================="
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APP_NAME="Chomyyak"
+APP_NAME="Khomyak"
 APP_BUNDLE="${REPO_DIR}/dist/${APP_NAME}.app"
 TARGET_APP="/Applications/${APP_NAME}.app"
 

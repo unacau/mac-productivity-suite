@@ -1,4 +1,4 @@
-# Chomyak (Bauhaus Edition) — Constructivist Neuroaesthetics Brandbook 📐🐹
+# Khomyak (Bauhaus Edition) — Constructivist Neuroaesthetics Brandbook 📐🐹
 
 > **The Synthesis of Weimar Constructivism & Cognitive Neuroscience**  
 > Grounded in *Brain, Beauty, & Art: Foundations of Neuroaesthetics* (Anjan Chatterjee & Eileen R. Cardillo, Eds., Oxford University Press, 2022)  
@@ -8,7 +8,7 @@
 
 ## 1. Executive Summary & Brand Purpose
 
-**Chomyak: Bauhaus Edition** (Choma / Хома / *Der Hamster*) is a radical functionalist re-imagining of the macOS productivity suite.
+**Khomyak: Bauhaus Edition** (Хомяк / *Der Hamster*) is a radical functionalist re-imagining of the macOS productivity suite.
 
 * **The Core Philosophy:** *«Form folgt Fluss»* (*"Form Follows Flow"*). Ornamental skeuomorphism, digital fur textures, and frivolous micro-details are eliminated. In their place stands pure, irreducible geometric constructivism designed to achieve zero cognitive friction.
 * **The Transformed Metaphor:** Tapping the physical Caps-Lock key ceases to be a playful cartoon meme and becomes an **industrial switchboard operation**—a tactile, driverless bridge between developer cognition and machine execution.
@@ -22,12 +22,12 @@
 
 ## 2. Visual Identity & Iconography
 
-![Chomyak Bauhaus Identity App Icon](file:///Users/igorekishev/Igor/igorekishev/mac-productivity-suite/assets/khomyak_bauhaus_identity_appicon.jpg)
+![Khomyak Bauhaus Identity App Icon](file:///Users/igorekishev/Igor/igorekishev/mac-productivity-suite/assets/khomyak_bauhaus_identity_appicon.jpg)
 
 ### The Geometric Deconstruction (Geon Theory)
 In 1987, cognitive neuroscientist Irving Biederman proposed **Recognition-by-Components (RBC)**: the human ventral visual stream (V4/IT) parses complex objects into fundamental 3D volumetric primitives called **geons** (cylinders, spheres, wedges, blocks). 
 
-The Bauhaus Chomyak reduces the mascot into five pure geometric geons:
+The Bauhaus Khomyak reduces the mascot into five pure geometric geons:
 1. **The Dual Cheek Spheres (🟡 Cadmium Yellow):** Intersecting Euclidean circular disks delivering the mandatory 60% horizontal facial width.
 2. **Concentric Ocular Rings (⚪ Warm Cream & 🔘 Obsidian):** Two high-contrast concentric circular discs creating a fixation target for the Fusiform Face Area (FFA).
 3. **The Vitality Triangle (🔴 Vermilion Red):** An inverted equilateral triangle serving as the nose/muzzle, driving acute attention (salience network).
@@ -46,7 +46,7 @@ graph TD
     C <--> A
 ```
 
-| Triad Node | Neurobiological Target | Bauhaus Translation | Implementation in Chomyak |
+| Triad Node | Neurobiological Target | Bauhaus Translation | Implementation in Khomyak |
 | :--- | :--- | :--- | :--- |
 | **Sensory-Motor** | Ventral/Dorsal streams, F5 premotor mirror neurons | László Moholy-Nagy’s tactile charts (*Tasttafeln*) & industrial honesty | The keycap is rendered as an axonometric mechanical prism; paws physically depress the switch block to prime keyboard tap action. |
 | **Emotion-Valuation** | Medial Orbitofrontal Cortex (mOFC), Ventral Striatum | Wassily Kandinsky’s color-form synesthesia (*Point and Line to Plane*) | Primary Cadmium Yellow radiates warmth and safety; Vermilion Red activates alertness; Cobalt Blue provides grounding stability. |
@@ -115,8 +115,8 @@ graph TD
 
 ### 6.1 Typography
 * **macOS UI Font:** Apple SF Pro / SF Pro Text with tight geometric letter spacing (`-0.015em`).
-* **Display / Brand Wordmark:** Geometric Grotesque (Futura, DIN 1451, or SF Pro Display Black in ALL-CAPS with `letter-spacing: +0.08em`).
-* **Wordmark Rendering:** `CHOMYAK` with a subtle geometric dot (`CHOMYAK · 1919`).
+* **Display / Brand Wordmark:** Geometric Grotesque (Futura, DIN 1451, or SF Pro Display Black with `letter-spacing: +0.08em`).
+* **Wordmark Rendering:** `Khomyak` with a subtle geometric dot (`Khomyak · 1919`).
 
 ### 6.2 Minimal HUD Overlay (Bauhaus Edition)
 * **Architecture:** Constructivist floating palette with stark 1px `#475569` borders and dark blur vibrancy (`NSVisualEffectView.Material.hudWindow`).
@@ -132,7 +132,7 @@ graph TD
 
 ## 7. Comparison: Classic Neuroaesthetics vs. Bauhaus Constructivist
 
-| Dimension | Classic Chomyak (v1.0.0) | Chomyak: Bauhaus Edition |
+| Dimension | Classic Khomyak (v1.0.0) | Khomyak: Bauhaus Edition |
 | :--- | :--- | :--- |
 | **Aesthetic Paradigm** | Apple 3D Emoji / Pixar Stylization | Weimar Constructivism / Functionalist Modernism |
 | **Visual Texture** | Soft gradients, subsurface gloss, 3D clay | Flat planes, crisp geometric contours, axonometric solids |

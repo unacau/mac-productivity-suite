@@ -992,7 +992,7 @@ struct ChromeQuickAccessUnitTests {
         #expect(refreshItem?.keyEquivalent == "r")
         #expect(refreshItem?.keyEquivalentModifierMask == [.command])
         
-        let quitItem = menu.items.first(where: { $0.title.contains("Quit Chomyyak") })
+        let quitItem = menu.items.first(where: { $0.title.contains("Quit Khomyak") })
         #expect(quitItem != nil)
         #expect(quitItem?.keyEquivalent == "q")
         #expect(quitItem?.keyEquivalentModifierMask == [.command])

@@ -5,15 +5,15 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleExecutable</key>
-	<string>Chomyyak</string>
+	<string>Khomyak</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.almosteleven.chomyyak</string>
+	<string>com.almosteleven.khomyak</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Chomyyak</string>
+	<string>Khomyak</string>
 	<key>CFBundleDisplayName</key>
-	<string>Chomyyak</string>
+	<string>Khomyak</string>
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundlePackageType</key>

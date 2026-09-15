@@ -1,5 +1,5 @@
 /**
- * CHOMYAK (CHOMA) — Ethereal Bright Liminal 3D Giant Hamster Experience
+ * Khomyak (Хомяк) — Ethereal Bright Liminal 3D Giant Hamster Experience
  * Ultra-clean, photorealistic giant geometric Bauhaus hamster filling the screen.
  */
 

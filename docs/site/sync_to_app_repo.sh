@@ -2,12 +2,12 @@
 set -euo pipefail
 
 # sync_to_app_repo.sh
-# Synchronizes the Chomyak official website into the main mac-productivity-suite repo (docs/site)
+# Synchronizes the Khomyak official website into the main mac-productivity-suite repo (docs/site)
 
 WEBSITE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET_DIR="/Users/igorekishev/Igor/igorekishev/mac-productivity-suite/docs/site"
 
-echo "🐹 Synchronizing Chomyak website to: ${TARGET_DIR}..."
+echo "🐹 Synchronizing Khomyak website to: ${TARGET_DIR}..."
 mkdir -p "${TARGET_DIR}"
 
 rsync -av --delete \
