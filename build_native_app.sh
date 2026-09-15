@@ -66,6 +66,9 @@ cp "src/ChromeQuickAccess/Info.plist" "${CONTENTS_DIR}/Info.plist"
 if [ -f "src/ChromeQuickAccess/Resources/AppIcon.icns" ]; then
     cp "src/ChromeQuickAccess/Resources/AppIcon.icns" "${RESOURCES_DIR}/AppIcon.icns"
 fi
+if [ -f "src/ChromeQuickAccess/Resources/dmg_background.png" ]; then
+    cp "src/ChromeQuickAccess/Resources/dmg_background.png" "${RESOURCES_DIR}/dmg_background.png"
+fi
 
 codesign --force --sign - --identifier "com.almosteleven.khomyak" -r="designated => identifier \"com.almosteleven.khomyak\"" "${APP_BUNDLE}"
 codesign -vvv "${APP_BUNDLE}"
@@ -74,9 +77,12 @@ echo "[5/5] Generating DMG Installer..."
 rm -f "${DMG_PATH}"
 DMG_STAGE="${BUILD_DIR}/dmg_stage"
 rm -rf "${DMG_STAGE}"
-mkdir -p "${DMG_STAGE}"
+mkdir -p "${DMG_STAGE}/.background"
 cp -R "${APP_BUNDLE}" "${DMG_STAGE}/"
 ln -s /Applications "${DMG_STAGE}/Applications"
+if [ -f "src/ChromeQuickAccess/Resources/dmg_background.png" ]; then
+    cp "src/ChromeQuickAccess/Resources/dmg_background.png" "${DMG_STAGE}/.background/background.png"
+fi
 hdiutil create -volname "${APP_NAME}" -srcfolder "${DMG_STAGE}" -ov -format UDZO "${DMG_PATH}"
 
 rm -rf "${BUILD_DIR}"

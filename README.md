@@ -1,8 +1,13 @@
+<p align="center">
+  <img src="assets/khomyak_readme_hero.png" alt="Khomyak — Tap the Hamster. Own the Flow." width="100%">
+</p>
+
 # Khomyak (Хомяк) — v1.0.0
 
 A lightweight, zero-latency macOS productivity suite built in pure native Swift 6 and SwiftUI.
 
-*«Тапни хомяка — войди в поток.»* (*“Tap the Hamster. Own the Flow.”*)
+> **“Tap the Hamster. Own the Flow.”**  
+> *«Тапни хомяка — войди в поток.»*
 
 Eliminates workflow friction with driverless Caps-Lock remapping, instant Chrome profile cycling, multi-app toolkit switching (Terminal, IDE, AI Agent, Notes), and Linux/X11-style universal Copy-on-Select.
 
@@ -10,27 +15,46 @@ Eliminates workflow friction with driverless Caps-Lock remapping, instant Chrome
 
 ## ⚡ Key Features
 
-- **🐹 Tap the Hamster (Caps-Lock Dual-Role)**:
-  - **Tapped Alone**: Synthesizes `Escape` key (`0x35`). Essential for Vim users, terminal commands, and dismissing modals.
-  - **Held Down**: Acts as a modifier without toggling the Caps-Lock LED.
-- **🌐 Chrome Profile Switcher (`Caps-Lock + C`)**:
-  - Instant focus and cycling between open Google Chrome profiles.
-  - Direct profile jump via number keys (`Caps-Lock + 1..4`).
-  - Dynamic discovery from `~/Library/Application Support/Google/Chrome/Local State` with authentic profile avatars and account badges.
-  - Native macOS Accessibility API integration—zero AppleScript UI scripting and no unwanted new tabs.
-- **🛠️ 5-App Toolkit Ecosystem**:
-  - Direct letter shortcuts for your core stack: Terminal (`T`), IDE (`I`), AI Agent (`A`), Notes (`N`), and Chrome (`C`).
-  - Dynamic letter routing matching application names.
-- **📋 Universal Copy-on-Select**:
-  - Automatically copies highlighted text to the clipboard upon mouse drag selection (>10pt distance) or multi-click (double-click word / triple-click line).
-  - Operates universally across all macOS applications with zero configuration required.
-  - Toggle on the fly via the menu bar status icon.
-- **🖥️ Non-Activating HUD Overlay**:
-  - Compact dark-bezel HUD overlay with portrait cards and avatar badges.
-  - Instant navigation via Arrow keys, `Tab` / `Shift-Tab`, or digits.
-- **🛡️ 100% Pure Native & Driverless**:
-  - Zero third-party drivers or background daemons (no Karabiner-Elements, no Hammerspoon).
-  - Low-latency CoreGraphics event tap (`CGEventTap`) and IOHID remapping (`hidutil`).
+### 🐹 1. Dual-Role Caps-Lock Hyper Key
+<p align="center">
+  <img src="assets/features/feature_caps_hyper.png" alt="Caps-Lock Dual-Role Hyper Key" width="85%">
+</p>
+
+- **Tapped Alone (< 200ms)**: Synthesizes `Escape` key (`0x35`). Essential for Vim users, terminal commands, and dismissing modals.
+- **Held Down**: Acts as `Hyper` modifier (`Shift + Control + Option + Command`) without toggling the Caps-Lock LED.
+- **Driverless CoreGraphics**: Zero third-party drivers or background daemons (`CGEventTap` and `IOHID`).
+
+### 🌐 2. Chrome Multi-Profile Switcher (`Caps-Lock + C`)
+<p align="center">
+  <img src="assets/features/feature_chrome_switch.png" alt="Chrome Multi-Profile Switcher" width="85%">
+</p>
+
+- **Instant Cycling**: Rapidly cycle between open Google Chrome profile windows without touching the mouse.
+- **Direct Jump (`Caps + 1..4`)**: Jump directly to a profile slot by index.
+- **Dynamic Discovery**: Reads `~/Library/Application Support/Google/Chrome/Local State` with authentic profile avatars and account badges.
+- **Zero Tab Clutter**: Native macOS Accessibility API integration—focuses existing windows without AppleScript delays or blank tabs.
+
+### 🛠️ 3. 5-App Toolkit Fast Switcher
+<p align="center">
+  <img src="assets/features/feature_toolkit_switch.png" alt="5-App Toolkit Fast Switcher" width="85%">
+</p>
+
+- **Home-Row Letter Shortcuts**:
+  - `Caps + T` ➔ **Terminal** (iTerm2, Ghostty, Alacritty, Terminal)
+  - `Caps + I` ➔ **IDE** (VS Code, Cursor, Xcode, JetBrains)
+  - `Caps + A` ➔ **AI Agent** (Claude, ChatGPT, Perplexity)
+  - `Caps + N` ➔ **Notes** (Obsidian, Apple Notes, Notion)
+  - `Caps + C` ➔ **Chrome Profiles**
+- **Sub-16ms Execution**: Direct native window focus in 1 display frame.
+
+### 📋 4. Universal Linux/X11 Copy-on-Select
+<p align="center">
+  <img src="assets/features/feature_copy_select.png" alt="Universal Copy-on-Select" width="85%">
+</p>
+
+- **Drag-to-Copy**: Highlight text with mouse drag (>10pt distance) to automatically copy to clipboard.
+- **Multi-Click Selection**: Double-click a word or triple-click a line to copy immediately.
+- **Universal & Driverless**: Operates seamlessly across browsers, code editors, PDF viewers, and terminals. Toggle anytime via the menu bar icon.
 
 ---
 
