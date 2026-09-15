@@ -67,6 +67,7 @@ const PROFILES = [
   {
     name: "Work",
     icon: "💼",
+    initial: "W",
     space: "Space 1",
     tabs: "Linear • GitHub PRs • Figma",
     url: "https://linear.app/team-core",
@@ -75,6 +76,7 @@ const PROFILES = [
   {
     name: "Personal",
     icon: "🏠",
+    initial: "P",
     space: "Space 2",
     tabs: "YouTube Music • Reddit • X",
     url: "https://youtube.com/watch?v=lofi",
@@ -83,6 +85,7 @@ const PROFILES = [
   {
     name: "Client",
     icon: "🚀",
+    initial: "C",
     space: "Space 3",
     tabs: "Stripe Billing • AWS • Vercel",
     url: "https://dashboard.stripe.com",
@@ -616,85 +619,226 @@ function buildGiantRealisticHamster() {
 }
 
 // --------------------------------------------------------------------------
-// Flanking 3D Chrome Profile Windows (Clean, never blocking the Hamster!)
+// Flanking 3D Chrome Profile HUD Bezel (1:1 with Native Khomyak HUD)
 // --------------------------------------------------------------------------
-function createPortalCanvas(profile) {
+function drawChromeSquircleIcon(ctx, x, y, size) {
+  // Squircle Background (Crisp pure white with rounded corners)
+  ctx.save();
+  ctx.fillStyle = "#FFFFFF";
+  ctx.shadowColor = "rgba(0, 0, 0, 0.4)";
+  ctx.shadowBlur = 14;
+  ctx.shadowOffsetY = 4;
+  ctx.beginPath();
+  ctx.roundRect(x, y, size, size, size * 0.24);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(0, 0, 0, 0.14)";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+
+  // Draw Google Chrome Logo
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  const rOuter = size * 0.38;
+  const rInner = size * 0.17;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, rOuter, 0, Math.PI * 2);
+  ctx.clip();
+
+  // Top Red Blade
+  ctx.fillStyle = "#EA4335";
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.arc(cx, cy, rOuter, -Math.PI * 0.85, Math.PI * 0.18, false);
+  ctx.lineTo(cx, cy);
+  ctx.fill();
+
+  // Bottom-Left Green Blade
+  ctx.fillStyle = "#34A853";
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.arc(cx, cy, rOuter, Math.PI * 0.52, Math.PI * 1.52, false);
+  ctx.lineTo(cx, cy);
+  ctx.fill();
+
+  // Bottom-Right Yellow Blade
+  ctx.fillStyle = "#FBBC05";
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.arc(cx, cy, rOuter, -Math.PI * 0.15, Math.PI * 0.85, false);
+  ctx.lineTo(cx, cy);
+  ctx.fill();
+
+  // Center white separator circle
+  ctx.fillStyle = "#FFFFFF";
+  ctx.beginPath();
+  ctx.arc(cx, cy, rInner + 4.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Center Blue circle
+  ctx.fillStyle = "#1A73E8";
+  ctx.beginPath();
+  ctx.arc(cx, cy, rInner, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function createPortalCanvas(selectedIdx) {
   const canvas = document.createElement("canvas");
-  canvas.width = 640;
-  canvas.height = 380;
+  canvas.width = 600;
+  canvas.height = 520;
   const ctx = canvas.getContext("2d");
 
-  // Pure White Card Body
-  ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
-  ctx.roundRect(0, 0, 640, 380, 28);
+  // 1. Outer Dark Frosted Glass Bezel (High-contrast deep obsidian)
+  ctx.save();
+  ctx.fillStyle = "#161618";
+  ctx.beginPath();
+  ctx.roundRect(10, 10, 580, 500, 36);
   ctx.fill();
 
-  // Vibrant Border
-  ctx.strokeStyle = profile.color;
-  ctx.lineWidth = 6;
-  ctx.roundRect(0, 0, 640, 380, 28);
+  // Specular Border
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.28)";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+
+  // 2. Inner Slate-Blue Card (High contrast deep royal/slate blue matching MinimalHUDWindow)
+  const cardX = 26;
+  const cardY = 26;
+  const cardW = 548;
+  const cardH = 468;
+  const cardR = 24;
+
+  ctx.save();
+  ctx.fillStyle = "#1D427B";
+  ctx.beginPath();
+  ctx.roundRect(cardX, cardY, cardW, cardH, cardR);
+  ctx.fill();
+
+  ctx.strokeStyle = "#60A5FA";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.restore();
+
+  // 3. Squircle Chrome App Icon (Centered & High-Contrast)
+  const iconSize = 104;
+  const iconX = (600 - iconSize) / 2;
+  const iconY = 48;
+  drawChromeSquircleIcon(ctx, iconX, iconY, iconSize);
+
+  // 4. App Name Label ("Google Chrome")
+  ctx.save();
+  ctx.fillStyle = "#FFFFFF";
+  ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+  ctx.shadowColor = "rgba(0, 0, 0, 0.6)";
+  ctx.shadowBlur = 8;
+  ctx.fillText("Google Chrome", 300, 184);
+  ctx.restore();
+
+  // 5. Horizontal Profile Avatars Row
+  const activeProfile = PROFILES[selectedIdx] || PROFILES[0];
+  const avatarSpacing = 98;
+  const totalW = (PROFILES.length - 1) * avatarSpacing;
+  const startX = 300 - totalW / 2;
+  const avatarY = 256;
+  const avatarRadius = 28;
+
+  PROFILES.forEach((p, idx) => {
+    const cx = startX + idx * avatarSpacing;
+    const isSelected = idx === selectedIdx;
+
+    if (isSelected) {
+      // Electric Cyan Glowing Selection Ring
+      ctx.save();
+      ctx.strokeStyle = "#38BDF8";
+      ctx.lineWidth = 4.5;
+      ctx.shadowColor = "#38BDF8";
+      ctx.shadowBlur = 22;
+      ctx.beginPath();
+      ctx.arc(cx, avatarY, avatarRadius + 11, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Avatar Circle
+    ctx.save();
+    ctx.fillStyle = p.color || "#0284C7";
+    ctx.beginPath();
+    ctx.arc(cx, avatarY, avatarRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // White Border around Avatar
+    ctx.strokeStyle = "#FFFFFF";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Monogram Initial
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 22px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const initial = p.initial || p.name.charAt(0);
+    ctx.fillText(initial, cx, avatarY + 1);
+    ctx.restore();
+
+    // Profile Label Below Avatar
+    ctx.save();
+    ctx.fillStyle = isSelected ? "#FFFFFF" : "rgba(255, 255, 255, 0.72)";
+    ctx.font = isSelected ? "bold 15px -apple-system, BlinkMacSystemFont, sans-serif" : "13px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.textAlign = "center";
+    ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
+    ctx.shadowBlur = 6;
+    ctx.fillText(p.name, cx, avatarY + 50);
+    ctx.restore();
+  });
+
+  // 6. Active Profile Footnote & Space Indicator
+  ctx.save();
+  // Dark pill container
+  ctx.fillStyle = "rgba(0, 0, 0, 0.42)";
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.roundRect(cardX + 24, 356, cardW - 48, 86, 16);
+  ctx.fill();
   ctx.stroke();
 
-  // Header Titlebar
-  ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
-  ctx.fillRect(0, 0, 640, 64);
+  ctx.fillStyle = "#7DD3FC";
+  ctx.font = "bold 16px -apple-system, BlinkMacSystemFont, monospace";
+  ctx.textAlign = "center";
+  ctx.fillText(`⚡ Teleport to ${activeProfile.space} • ${activeProfile.name}`, 300, 388);
 
-  // Traffic Lights
-  ctx.fillStyle = "#FF5F56"; ctx.beginPath(); ctx.arc(36, 32, 9, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = "#FFBD2E"; ctx.beginPath(); ctx.arc(65, 32, 9, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = "#27C93F"; ctx.beginPath(); ctx.arc(94, 32, 9, 0, Math.PI*2); ctx.fill();
-
-  // Title Text
-  ctx.fillStyle = "#0F172A";
-  ctx.font = "bold 24px system-ui, sans-serif";
-  ctx.fillText(`Google Chrome — ${profile.name} (${profile.space})`, 130, 41);
-
-  // Profile Icon & Heading
-  ctx.font = "54px system-ui, sans-serif";
-  ctx.fillText(profile.icon, 44, 150);
-
-  ctx.fillStyle = "#0F172A";
-  ctx.font = "bold 32px system-ui, sans-serif";
-  ctx.fillText(`${profile.name} Profile`, 125, 134);
-
-  ctx.fillStyle = profile.color;
-  ctx.font = "bold 20px monospace";
-  ctx.fillText(`⚡ 0ms SPACE TELEPORT`, 125, 168);
-
-  // Active Tabs Preview
-  ctx.fillStyle = "#475569";
-  ctx.font = "22px system-ui, sans-serif";
-  ctx.fillText(`Active Tabs: ${profile.tabs}`, 44, 245);
-
-  // Omnibox URL Bar
-  ctx.fillStyle = "rgba(0, 0, 0, 0.04)";
-  ctx.roundRect(44, 275, 552, 54, 14);
-  ctx.fill();
-
-  ctx.fillStyle = profile.color;
-  ctx.font = "20px monospace";
-  ctx.fillText(`🔒 ${profile.url}`, 68, 310);
+  ctx.fillStyle = "rgba(255, 255, 255, 0.90)";
+  ctx.font = "14px -apple-system, BlinkMacSystemFont, sans-serif";
+  ctx.fillText(activeProfile.tabs, 300, 418);
+  ctx.restore();
 
   return canvas;
 }
 
 function buildFlankingChromeWindows() {
   PROFILES.forEach((p, idx) => {
-    const canvas = createPortalCanvas(p);
+    const canvas = createPortalCanvas(idx);
     const texture = new THREE.CanvasTexture(canvas);
     texture.minFilter = THREE.LinearFilter;
 
-    const portalGeo = new THREE.PlaneGeometry(1.6, 0.95);
+    const portalGeo = new THREE.PlaneGeometry(1.42, 1.24);
     const portalMat = new THREE.MeshBasicMaterial({
       map: texture,
       side: THREE.DoubleSide,
       transparent: true,
+      fog: false, // CRITICAL: disables washing out by white scene fog!
       opacity: idx === 0 ? 1.0 : 0.0
     });
 
     const portalMesh = new THREE.Mesh(portalGeo, portalMat);
     // Positioned floating to the left side so the hamster is 100% visible
-    portalMesh.position.set(-2.1, 0.85, 1.6);
+    portalMesh.position.set(-2.05, 0.85, 1.6);
     portalMesh.rotation.y = 0.32;
     portalMesh.userData = { profileIndex: idx };
 
@@ -752,26 +896,45 @@ function onMouseMove(e) {
   mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
   targetHeadX = mouseX * 0.28;
   targetHeadY = mouseY * 0.18;
+
+  // Pointer cursor ONLY when hovering directly over the unoccluded Caps Lock button
+  if (keycapMesh && camera && container) {
+    mouseVec.x = mouseX;
+    mouseVec.y = mouseY;
+    raycaster.setFromCamera(mouseVec, camera);
+    const allHits = raycaster.intersectObjects(hamsterRoot.children, true);
+    const isOverKey = allHits.length > 0 && allHits[0].object === keycapMesh;
+    container.style.cursor = isOverKey ? "pointer" : "default";
+  }
 }
 
 function onPointerDown(e) {
+  userInteracted = true;
   mouseVec.x = (e.clientX / window.innerWidth) * 2 - 1;
   mouseVec.y = -(e.clientY / window.innerHeight) * 2 + 1;
 
   raycaster.setFromCamera(mouseVec, camera);
 
-  // Click on Giant Hamster
-  const hamsterHits = raycaster.intersectObjects(hamsterRoot.children, true);
-  if (hamsterHits.length > 0) {
+  // Raycast all visible objects under cursor sorted by distance from camera
+  const allHits = raycaster.intersectObjects(hamsterRoot.children, true);
+  if (allHits.length === 0) return;
+
+  const closest = allHits[0];
+
+  // 1. Closest visible object is the Caps Lock Keycap -> ONLY this triggers profile switch!
+  if (closest.object === keycapMesh) {
+    // Tactile physical key press depression animation
+    keycapMesh.position.y -= 0.05;
+    setTimeout(() => {
+      if (keycapMesh) keycapMesh.position.y += 0.05;
+    }, 130);
     switchProfile(null, true);
     return;
   }
 
-  // Click on Window
-  const winHits = raycaster.intersectObjects(profileWindows);
-  if (winHits.length > 0) {
-    switchProfile(null, true);
-  }
+  // 2. Clicked anywhere else on the hamster (cheeks, snout, ears, paws) -> ONLY squeeze/squish!
+  // NEVER changes the HUD profile.
+  triggerHamsterSquish();
 }
 
 function onWindowResize() {
@@ -872,9 +1035,4 @@ document.addEventListener("DOMContentLoaded", () => {
       switchProfile(2, true);
     }
   });
-
-  // Initial intro preview after 3s
-  setTimeout(() => {
-    if (!userInteracted) switchProfile(1, false);
-  }, 3000);
 });
