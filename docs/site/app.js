@@ -65,35 +65,94 @@ const sound = new ASMRSoundEngine();
 // ==========================================================================
 const PROFILES = [
   {
-    name: "Work",
+    name: "Igor",
     icon: "💼",
-    initial: "W",
+    initial: "I",
     space: "Space 1",
-    tabs: "Linear • GitHub PRs • Figma",
+    tabs: "GitHub • Linear • Specs",
     url: "https://linear.app/team-core",
-    color: "#0284C7"
+    color: "#F43F5E"
   },
   {
-    name: "Personal",
-    icon: "🏠",
-    initial: "P",
+    name: "Nastya",
+    icon: "🎨",
+    initial: "N",
     space: "Space 2",
-    tabs: "YouTube Music • Reddit • X",
-    url: "https://youtube.com/watch?v=lofi",
-    color: "#E11D48"
+    tabs: "Figma • Bauhaus Mascot • Lofi",
+    url: "https://figma.com",
+    color: "#10B981"
   },
   {
-    name: "Client",
-    icon: "🚀",
-    initial: "C",
+    name: "Al11",
+    icon: "🔥",
+    initial: "A",
     space: "Space 3",
-    tabs: "Stripe Billing • AWS • Vercel",
-    url: "https://dashboard.stripe.com",
-    color: "#059669"
+    tabs: "GCP Console • Phoenix Traces",
+    url: "https://console.cloud.google.com",
+    color: "#F59E0B"
+  },
+  {
+    name: "GCP Trial",
+    icon: "🕶️",
+    initial: "G",
+    space: "Space 4",
+    tabs: "Vertex AI • Cloud Billing",
+    url: "https://console.cloud.google.com/vertex-ai",
+    color: "#06B6D4"
   }
 ];
 
+const CATEGORY_DATA = {
+  chrome: {
+    title: "Google Chrome",
+    shortcut: "Caps-Lock + C",
+    color: "#3B82F6"
+  },
+  terminal: {
+    title: "Terminal (iTerm2)",
+    shortcut: "Caps-Lock + T",
+    color: "#10B981",
+    lines: [
+      "$ swift test",
+      "Building for debugging...",
+      "✔ Test suite 'ChromeQuickAccessTests' passed (0.042s)",
+      "12 tests passed, 0 failures.",
+      "igorekishev@MacBook-Pro git:(main) ▋"
+    ]
+  },
+  ide: {
+    title: "IDE (Antigravity IDE)",
+    shortcut: "Caps-Lock + I",
+    color: "#6366F1",
+    lines: [
+      "// AppGroupEngine.swift — 5-Category Suite",
+      "public static let ide = AppGroupEngine(",
+      "  category: \"IDE\",",
+      "  candidates: [AppCandidate(\"Antigravity IDE\")]",
+      ") // sub-16ms CGEventTap window focus"
+    ]
+  },
+  ai: {
+    title: "AI Agent (Antigravity)",
+    shortcut: "Caps-Lock + A",
+    color: "#06B6D4",
+    message: "Verified 100% native CGEventTap architecture without background daemons. Context switches execute in 1 display frame."
+  },
+  notes: {
+    title: "Notes (Apple Notes)",
+    shortcut: "Caps-Lock + N",
+    color: "#F59E0B",
+    tasks: [
+      "☑ Zero-latency Caps-Lock Hyper Key",
+      "☑ 5-App Toolkit Fast Switcher",
+      "☑ Universal Copy-on-Select",
+      "☐ Ship Khomyak v1.0.0 Release"
+    ]
+  }
+};
+
 let activeIndex = 0;
+let currentCategory = "chrome";
 let userInteracted = false;
 
 // ==========================================================================
@@ -103,8 +162,12 @@ let scene, camera, renderer, controls;
 let hamsterRoot, cheeksGroup, eyesGroup, snoutGroup;
 let eyeLeft, eyeRight;
 let leftEarGroup, rightEarGroup;
-let whiskersGroup, keycapMesh;
-let profileWindows = [];
+let whiskersGroup;
+let keyboardGroup;
+let interactiveKeyMeshes = [];
+let keyMeshMap = {};
+let portalWindowMesh, portalCanvas, portalCtx, portalTexture;
+let activePortalScale = 1.0;
 
 let mouseX = 0, mouseY = 0;
 let targetHeadX = 0, targetHeadY = 0;
@@ -122,7 +185,7 @@ function initThreeJS() {
 
   // Camera: Placed directly facing the giant hamster face and cheeks
   camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 1000);
-  camera.position.set(0, 1.35, 6.2);
+  camera.position.set(2.45, 1.95, 7.2);
 
   // Renderer
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
@@ -141,7 +204,7 @@ function initThreeJS() {
   controls.maxPolarAngle = Math.PI / 2 - 0.02;
   controls.minDistance = 2.4;
   controls.maxDistance = 8.0;
-  controls.target.set(0, 1.1, 0); // Directly look at the cute hamster face!
+  controls.target.set(0, 1.10, 0); // Directly look at the cute hamster face!
 
   // Raycasting
   raycaster = new THREE.Raycaster();
@@ -150,6 +213,7 @@ function initThreeJS() {
   // Build Scene
   buildBrightLiminalEnvironment();
   buildGiantRealisticHamster();
+  buildMechanicalKeyboardDeck();
   buildFlankingChromeWindows();
 
   // Events
@@ -491,8 +555,10 @@ function buildGiantRealisticHamster() {
   const padGeo = new THREE.SphereGeometry(0.042, 16, 16);
 
   // Left Paw
+  // Front Paws: resting gracefully above keyboard deck
   const leftPawGroup = new THREE.Group();
-  leftPawGroup.position.set(-0.44, 0.44, 0.94);
+  leftPawGroup.position.set(-0.46, 0.18, 0.96);
+  leftPawGroup.rotation.x = 0.22;
   const leftPawMesh = new THREE.Mesh(pawGeo, whitePawMat);
   leftPawGroup.add(leftPawMesh);
   [
@@ -508,7 +574,8 @@ function buildGiantRealisticHamster() {
 
   // Right Paw
   const rightPawGroup = new THREE.Group();
-  rightPawGroup.position.set(0.44, 0.44, 0.94);
+  rightPawGroup.position.set(0.46, 0.18, 0.96);
+  rightPawGroup.rotation.x = 0.22;
   const rightPawMesh = new THREE.Mesh(pawGeo, whitePawMat);
   rightPawGroup.add(rightPawMesh);
   [
@@ -522,89 +589,7 @@ function buildGiantRealisticHamster() {
   });
   hamsterRoot.add(rightPawGroup);
 
-  // 6. Blue "Caps Lock" Keycap with Glowing Green LED & Yellow Arrow
-  const kCanvas = document.createElement("canvas");
-  kCanvas.width = 512; kCanvas.height = 360;
-  const kCtx = kCanvas.getContext("2d");
-
-  // Deep Navy Royal Blue Gradient
-  const grad = kCtx.createLinearGradient(0, 0, 0, 360);
-  grad.addColorStop(0, "#0F2B66");
-  grad.addColorStop(1, "#081636");
-  kCtx.fillStyle = grad;
-  kCtx.fillRect(0, 0, 512, 360);
-
-  // Soft inner border for keycap chamfer
-  kCtx.strokeStyle = "rgba(255, 255, 255, 0.22)";
-  kCtx.lineWidth = 6;
-  kCtx.strokeRect(12, 12, 488, 336);
-
-  // Glowing Green LED Dot with Soft Radial Glow Halo
-  const ledGlow = kCtx.createRadialGradient(80, 85, 4, 80, 85, 48);
-  ledGlow.addColorStop(0, "#86EFAC");
-  ledGlow.addColorStop(0.3, "rgba(34, 197, 94, 0.85)");
-  ledGlow.addColorStop(1, "rgba(34, 197, 94, 0)");
-  kCtx.fillStyle = ledGlow;
-  kCtx.beginPath();
-  kCtx.arc(80, 85, 48, 0, Math.PI * 2);
-  kCtx.fill();
-
-  kCtx.fillStyle = "#22C55E";
-  kCtx.beginPath();
-  kCtx.arc(80, 85, 14, 0, Math.PI * 2);
-  kCtx.fill();
-
-  // Bold Golden-Yellow Upward Arrow (Caps Lock Symbol) with crisp dark outline
-  kCtx.save();
-  kCtx.translate(256, 145);
-  kCtx.beginPath();
-  kCtx.moveTo(0, -70);      // top tip
-  kCtx.lineTo(58, -14);     // right corner
-  kCtx.lineTo(26, -14);     // right notch
-  kCtx.lineTo(26, 50);      // right stem bottom
-  kCtx.lineTo(-26, 50);     // left stem bottom
-  kCtx.lineTo(-26, -14);    // left notch
-  kCtx.lineTo(-58, -14);    // left corner
-  kCtx.closePath();
-  kCtx.fillStyle = "#FFD700";
-  kCtx.fill();
-  kCtx.strokeStyle = "#0F172A";
-  kCtx.lineWidth = 7;
-  kCtx.lineJoin = "round";
-  kCtx.stroke();
-  kCtx.restore();
-
-  // Crisp White "caps lock" Text
-  kCtx.fillStyle = "#FFFFFF";
-  kCtx.font = "bold 44px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-  kCtx.textAlign = "center";
-  kCtx.fillText("caps lock", 256, 280);
-
-  const kTex = new THREE.CanvasTexture(kCanvas);
-  kTex.anisotropy = 4;
-
-  const keycapGeo = new THREE.BoxGeometry(1.48, 0.72, 0.40);
-  const keycapBodyMat = new THREE.MeshBasicMaterial({
-    color: 0x0A1C42
-  });
-  const keycapFrontMat = new THREE.MeshBasicMaterial({
-    map: kTex
-  });
-
-  // Six-sided material mapping so texture ONLY appears on front (+Z face, index 4)
-  keycapMesh = new THREE.Mesh(keycapGeo, [
-    keycapBodyMat, keycapBodyMat, keycapBodyMat, keycapBodyMat, keycapFrontMat, keycapBodyMat
-  ]);
-  keycapMesh.position.set(0, 0.12, 0.88);
-  keycapMesh.castShadow = true;
-  hamsterRoot.add(keycapMesh);
-
-  // Real 3D Glowing Green LED PointLight
-  const greenLedLight = new THREE.PointLight(0x22C55E, 3.2, 2.5);
-  greenLedLight.position.set(-0.52, 0.28, 1.15);
-  hamsterRoot.add(greenLedLight);
-
-  // 7. Soft Hind Feet Resting on Marble Floor
+  // 6. Soft Hind Feet Resting on Marble Floor
   const footGeo = new THREE.SphereGeometry(0.24, 20, 20);
   footGeo.scale(1.2, 0.5, 1.5);
   const leftFoot = new THREE.Mesh(footGeo, bauhausYellowMat);
@@ -619,236 +604,667 @@ function buildGiantRealisticHamster() {
 }
 
 // --------------------------------------------------------------------------
-// Flanking 3D Chrome Profile HUD Bezel (1:1 with Native Khomyak HUD)
+// 3D Mechanical Keyboard Command Deck (60% Layout with Highlighted Keys)
 // --------------------------------------------------------------------------
-function drawChromeSquircleIcon(ctx, x, y, size) {
-  // Squircle Background (Crisp pure white with rounded corners)
+function createKeycapTexture(label, isInteractive, accentColor, hasLed, isCaps) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext("2d");
+
+  // Keycap base gradient
+  const bgGrad = ctx.createLinearGradient(0, 0, 0, 256);
+  if (isCaps) {
+    bgGrad.addColorStop(0, "#1E1B4B");
+    bgGrad.addColorStop(1, "#0F172A");
+  } else if (isInteractive) {
+    bgGrad.addColorStop(0, "#1E293B");
+    bgGrad.addColorStop(1, "#0F172A");
+  } else {
+    bgGrad.addColorStop(0, "#182030");
+    bgGrad.addColorStop(1, "#0F1420");
+  }
+  ctx.fillStyle = bgGrad;
+  ctx.beginPath();
+  ctx.roundRect(8, 8, 240, 240, 28);
+  ctx.fill();
+
+  // Chamfered Inner Bevel Border
+  ctx.strokeStyle = isInteractive ? (accentColor || "#38BDF8") : "rgba(255, 255, 255, 0.12)";
+  ctx.lineWidth = isInteractive ? 8 : 4;
+  ctx.stroke();
+
+  // Top Inset Highlight
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(16, 16, 224, 224, 20);
+  ctx.stroke();
+
+  // Glowing LED for Caps Lock
+  if (hasLed) {
+    const ledGrad = ctx.createRadialGradient(48, 48, 2, 48, 48, 24);
+    ledGrad.addColorStop(0, "#86EFAC");
+    ledGrad.addColorStop(0.4, "rgba(34, 197, 94, 0.9)");
+    ledGrad.addColorStop(1, "rgba(34, 197, 94, 0)");
+    ctx.fillStyle = ledGrad;
+    ctx.beginPath();
+    ctx.arc(48, 48, 24, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#22C55E";
+    ctx.beginPath();
+    ctx.arc(48, 48, 8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Golden Upward Arrow for Caps Lock
+  if (isCaps) {
+    ctx.save();
+    ctx.translate(128, 100);
+    ctx.beginPath();
+    ctx.moveTo(0, -42);
+    ctx.lineTo(36, -8);
+    ctx.lineTo(16, -8);
+    ctx.lineTo(16, 32);
+    ctx.lineTo(-16, 32);
+    ctx.lineTo(-16, -8);
+    ctx.lineTo(-36, -8);
+    ctx.closePath();
+    ctx.fillStyle = "#F59E0B";
+    ctx.fill();
+    ctx.strokeStyle = "#0F172A";
+    ctx.lineWidth = 5;
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("caps", 128, 185);
+  } else {
+    // Standard or Highlighted Legend
+    ctx.fillStyle = isInteractive ? (accentColor || "#FFFFFF") : "#94A3B8";
+    ctx.font = isInteractive ? "bold 72px -apple-system, BlinkMacSystemFont, monospace" : "bold 56px -apple-system, BlinkMacSystemFont, monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.shadowColor = isInteractive ? (accentColor || "#38BDF8") : "rgba(0,0,0,0.5)";
+    ctx.shadowBlur = isInteractive ? 14 : 4;
+    ctx.fillText(label, 128, 128);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.anisotropy = 4;
+  return texture;
+}
+
+function buildMechanicalKeyboardDeck() {
+  keyboardGroup = new THREE.Group();
+  keyboardGroup.position.set(0, -0.06, 1.70);
+  keyboardGroup.rotation.x = -0.22; // 12.5° ergonomic tilt toward camera
+
+  // 1. Keyboard Chassis (Dark Anodized Aluminum / Slate)
+  const chassisGeo = new THREE.BoxGeometry(2.78, 0.11, 1.10);
+  const chassisMat = new THREE.MeshStandardMaterial({
+    color: 0x161C28,
+    roughness: 0.32,
+    metalness: 0.82
+  });
+  const chassis = new THREE.Mesh(chassisGeo, chassisMat);
+  chassis.position.y = -0.055;
+  chassis.castShadow = true;
+  chassis.receiveShadow = true;
+  keyboardGroup.add(chassis);
+
+  // Top Plate Inset
+  const plateGeo = new THREE.BoxGeometry(2.70, 0.03, 1.02);
+  const plateMat = new THREE.MeshStandardMaterial({
+    color: 0x0F1420,
+    roughness: 0.45,
+    metalness: 0.65
+  });
+  const plate = new THREE.Mesh(plateGeo, plateMat);
+  plate.position.y = 0.005;
+  keyboardGroup.add(plate);
+
+  // Front Neon Underglow Strip
+  const glowStripGeo = new THREE.BoxGeometry(2.68, 0.015, 0.015);
+  const glowStripMat = new THREE.MeshBasicMaterial({ color: 0x38BDF8 });
+  const glowStrip = new THREE.Mesh(glowStripGeo, glowStripMat);
+  glowStrip.position.set(0, -0.01, 0.54);
+  keyboardGroup.add(glowStrip);
+
+  // 2. Key Matrix Layout
+  const unitSize = 0.155;
+  const keyGap = 0.022;
+  const step = unitSize + keyGap; // ~0.177
+  const startZ = -0.36;
+
+  // Key creation helper
+  function addKey(x, z, widthUnits, label, options = {}) {
+    const keyWidth = unitSize * widthUnits + keyGap * (widthUnits - 1);
+    const keyDepth = unitSize;
+    const keyHeight = 0.075;
+
+    const topTex = createKeycapTexture(
+      label,
+      options.isInteractive,
+      options.accentColor,
+      options.hasLed,
+      options.isCaps
+    );
+
+    const sideMat = new THREE.MeshStandardMaterial({
+      color: options.isCaps ? 0x1A2238 : (options.isInteractive ? 0x1E293B : 0x121824),
+      roughness: 0.4,
+      metalness: 0.3
+    });
+
+    const topMat = new THREE.MeshStandardMaterial({
+      map: topTex,
+      roughness: 0.28,
+      metalness: 0.25,
+      emissive: options.accentColor ? new THREE.Color(options.accentColor) : new THREE.Color(0x000000),
+      emissiveIntensity: options.isInteractive ? 0.35 : 0.0
+    });
+
+    // Box materials: [+X, -X, +Y(top), -Y, +Z, -Z]
+    const keyMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(keyWidth, keyHeight, keyDepth),
+      [sideMat, sideMat, topMat, sideMat, sideMat, sideMat]
+    );
+
+    const baseY = 0.055;
+    keyMesh.position.set(x, baseY, z);
+    keyMesh.castShadow = true;
+    keyMesh.receiveShadow = true;
+
+    keyMesh.userData = {
+      label: label,
+      basePosY: baseY,
+      isInteractive: !!options.isInteractive,
+      category: options.category || null,
+      subIndex: options.subIndex !== undefined ? options.subIndex : null,
+      keyId: options.keyId || label.toLowerCase(),
+      accentColor: options.accentColor || null
+    };
+
+    if (options.hasLed) {
+      const ledLight = new THREE.PointLight(0x22C55E, 2.5, 1.6);
+      ledLight.position.set(-keyWidth * 0.26, keyHeight * 0.6, -keyDepth * 0.2);
+      keyMesh.add(ledLight);
+      keyMesh.userData.ledLight = ledLight;
+    }
+
+    if (options.isInteractive) {
+      interactiveKeyMeshes.push(keyMesh);
+      keyMeshMap[keyMesh.userData.keyId] = keyMesh;
+    }
+
+    keyboardGroup.add(keyMesh);
+    return keyMesh;
+  }
+
+  // Row 0: Numbers Row (Z = -0.36)
+  let curX = -1.22;
+  addKey(curX + 0.5 * step, startZ, 1.0, "Esc");
+  curX += step;
+  
+  // Highlighted Profile slots 1..4
+  addKey(curX + 0.5 * step, startZ, 1.0, "1", { isInteractive: true, category: "chrome", subIndex: 0, keyId: "1", accentColor: "#F43F5E" });
+  curX += step;
+  addKey(curX + 0.5 * step, startZ, 1.0, "2", { isInteractive: true, category: "chrome", subIndex: 1, keyId: "2", accentColor: "#10B981" });
+  curX += step;
+  addKey(curX + 0.5 * step, startZ, 1.0, "3", { isInteractive: true, category: "chrome", subIndex: 2, keyId: "3", accentColor: "#F59E0B" });
+  curX += step;
+  addKey(curX + 0.5 * step, startZ, 1.0, "4", { isInteractive: true, category: "chrome", subIndex: 3, keyId: "4", accentColor: "#06B6D4" });
+  curX += step;
+
+  ["5", "6", "7", "8", "9", "0", "-", "="].forEach(k => {
+    addKey(curX + 0.5 * step, startZ, 1.0, k);
+    curX += step;
+  });
+  addKey(curX + 0.75 * step, startZ, 1.5, "Bksp");
+
+  // Row 1: QWERTY Row (Z = -0.18)
+  curX = -1.22;
+  addKey(curX + 0.7 * step, startZ + step, 1.4, "Tab");
+  curX += 1.4 * step;
+
+  ["Q", "W", "E", "R"].forEach(k => {
+    addKey(curX + 0.5 * step, startZ + step, 1.0, k);
+    curX += step;
+  });
+
+  // Highlighted T for Terminal
+  addKey(curX + 0.5 * step, startZ + step, 1.0, "T", { isInteractive: true, category: "terminal", keyId: "t", accentColor: "#10B981" });
+  curX += step;
+
+  ["Y", "U"].forEach(k => {
+    addKey(curX + 0.5 * step, startZ + step, 1.0, k);
+    curX += step;
+  });
+
+  // Highlighted I for IDE
+  addKey(curX + 0.5 * step, startZ + step, 1.0, "I", { isInteractive: true, category: "ide", keyId: "i", accentColor: "#6366F1" });
+  curX += step;
+
+  ["O", "P", "[", "]", "\\"].forEach(k => {
+    addKey(curX + 0.5 * step, startZ + step, 1.0, k);
+    curX += step;
+  });
+
+  // Row 2: Home Row (Z = 0.0)
+  curX = -1.22;
+  // Highlighted Caps Lock with green LED & golden arrow
+  addKey(curX + 0.875 * step, startZ + step * 2, 1.75, "Caps", { isInteractive: true, isCaps: true, hasLed: true, category: "caps", keyId: "caps", accentColor: "#F59E0B" });
+  curX += 1.75 * step;
+
+  // Highlighted A for AI Agent
+  addKey(curX + 0.5 * step, startZ + step * 2, 1.0, "A", { isInteractive: true, category: "ai", keyId: "a", accentColor: "#06B6D4" });
+  curX += step;
+
+  ["S", "D", "F", "G", "H", "J", "K", "L", ";", "'"].forEach(k => {
+    addKey(curX + 0.5 * step, startZ + step * 2, 1.0, k);
+    curX += step;
+  });
+  addKey(curX + 0.9 * step, startZ + step * 2, 1.8, "Enter");
+
+  // Row 3: Shift Row (Z = 0.18)
+  curX = -1.22;
+  addKey(curX + 1.05 * step, startZ + step * 3, 2.1, "Shift");
+  curX += 2.1 * step;
+
+  ["Z", "X"].forEach(k => {
+    addKey(curX + 0.5 * step, startZ + step * 3, 1.0, k);
+    curX += step;
+  });
+
+  // Highlighted C for Chrome Profiles
+  addKey(curX + 0.5 * step, startZ + step * 3, 1.0, "C", { isInteractive: true, category: "chrome", keyId: "c", accentColor: "#3B82F6" });
+  curX += step;
+
+  ["V", "B"].forEach(k => {
+    addKey(curX + 0.5 * step, startZ + step * 3, 1.0, k);
+    curX += step;
+  });
+
+  // Highlighted N for Notes
+  addKey(curX + 0.5 * step, startZ + step * 3, 1.0, "N", { isInteractive: true, category: "notes", keyId: "n", accentColor: "#F59E0B" });
+  curX += step;
+
+  ["M", ",", ".", "/"].forEach(k => {
+    addKey(curX + 0.5 * step, startZ + step * 3, 1.0, k);
+    curX += step;
+  });
+  addKey(curX + 1.05 * step, startZ + step * 3, 2.1, "Shift");
+
+  // Row 4: Spacebar Row (Z = 0.36)
+  curX = -1.22;
+  ["Ctrl", "Opt", "Cmd"].forEach(k => {
+    addKey(curX + 0.625 * step, startZ + step * 4, 1.25, k);
+    curX += 1.25 * step;
+  });
+
+  // Spacebar
+  addKey(curX + 2.75 * step, startZ + step * 4, 5.5, "Khomyak Space");
+  curX += 5.5 * step;
+
+  ["Cmd", "Opt", "Fn", "Ctrl"].forEach(k => {
+    addKey(curX + 0.625 * step, startZ + step * 4, 1.25, k);
+    curX += 1.25 * step;
+  });
+
+  scene.add(keyboardGroup);
+}
+
+// --------------------------------------------------------------------------
+// Multi-Category 3D Portal Canvas Renderer
+// --------------------------------------------------------------------------
+function drawSquircleBadge(ctx, x, y, size, icon, bgColor) {
   ctx.save();
-  ctx.fillStyle = "#FFFFFF";
+  ctx.fillStyle = bgColor || "#FFFFFF";
   ctx.shadowColor = "rgba(0, 0, 0, 0.4)";
   ctx.shadowBlur = 14;
   ctx.shadowOffsetY = 4;
   ctx.beginPath();
   ctx.roundRect(x, y, size, size, size * 0.24);
   ctx.fill();
-  ctx.strokeStyle = "rgba(0, 0, 0, 0.14)";
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
   ctx.lineWidth = 2;
   ctx.stroke();
-  ctx.restore();
 
-  // Draw Google Chrome Logo
-  const cx = x + size / 2;
-  const cy = y + size / 2;
-  const rOuter = size * 0.38;
-  const rInner = size * 0.17;
-
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(cx, cy, rOuter, 0, Math.PI * 2);
-  ctx.clip();
-
-  // Top Red Blade
-  ctx.fillStyle = "#EA4335";
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.arc(cx, cy, rOuter, -Math.PI * 0.85, Math.PI * 0.18, false);
-  ctx.lineTo(cx, cy);
-  ctx.fill();
-
-  // Bottom-Left Green Blade
-  ctx.fillStyle = "#34A853";
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.arc(cx, cy, rOuter, Math.PI * 0.52, Math.PI * 1.52, false);
-  ctx.lineTo(cx, cy);
-  ctx.fill();
-
-  // Bottom-Right Yellow Blade
-  ctx.fillStyle = "#FBBC05";
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.arc(cx, cy, rOuter, -Math.PI * 0.15, Math.PI * 0.85, false);
-  ctx.lineTo(cx, cy);
-  ctx.fill();
-
-  // Center white separator circle
-  ctx.fillStyle = "#FFFFFF";
-  ctx.beginPath();
-  ctx.arc(cx, cy, rInner + 4.5, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Center Blue circle
-  ctx.fillStyle = "#1A73E8";
-  ctx.beginPath();
-  ctx.arc(cx, cy, rInner, 0, Math.PI * 2);
-  ctx.fill();
-
+  ctx.fillStyle = "#0F172A";
+  ctx.font = `${Math.floor(size * 0.52)}px -apple-system, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(icon, x + size / 2, y + size / 2);
   ctx.restore();
 }
 
-function createPortalCanvas(selectedIdx) {
-  const canvas = document.createElement("canvas");
-  canvas.width = 600;
-  canvas.height = 520;
-  const ctx = canvas.getContext("2d");
+function createPortalCanvas(category = "chrome", selectedIdx = 0) {
+  if (!portalCanvas) {
+    portalCanvas = document.createElement("canvas");
+    portalCanvas.width = 600;
+    portalCanvas.height = 520;
+    portalCtx = portalCanvas.getContext("2d");
+  }
+  const ctx = portalCtx;
+  ctx.clearRect(0, 0, 600, 520);
 
-  // 1. Outer Dark Frosted Glass Bezel (High-contrast deep obsidian)
+  // 1. Outer Frosted Glass Bezel (High-contrast deep obsidian)
   ctx.save();
-  ctx.fillStyle = "#161618";
+  ctx.fillStyle = "#12141A";
   ctx.beginPath();
   ctx.roundRect(10, 10, 580, 500, 36);
   ctx.fill();
-
-  // Specular Border
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.28)";
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.24)";
   ctx.lineWidth = 2;
   ctx.stroke();
   ctx.restore();
 
-  // 2. Inner Slate-Blue Card (High contrast deep royal/slate blue matching MinimalHUDWindow)
+  // 2. Inner Royal Slate Card
   const cardX = 26;
   const cardY = 26;
   const cardW = 548;
   const cardH = 468;
   const cardR = 24;
 
+  const catData = CATEGORY_DATA[category] || CATEGORY_DATA.chrome;
+
   ctx.save();
-  ctx.fillStyle = "#1D427B";
+  ctx.fillStyle = "#162032";
   ctx.beginPath();
   ctx.roundRect(cardX, cardY, cardW, cardH, cardR);
   ctx.fill();
-
-  ctx.strokeStyle = "#60A5FA";
+  ctx.strokeStyle = catData.color || "#38BDF8";
   ctx.lineWidth = 3;
   ctx.stroke();
   ctx.restore();
 
-  // 3. Squircle Chrome App Icon (Centered & High-Contrast)
-  const iconSize = 104;
-  const iconX = (600 - iconSize) / 2;
-  const iconY = 48;
-  drawChromeSquircleIcon(ctx, iconX, iconY, iconSize);
+  // 3. Header & Icon
+  if (category === "chrome") {
+    drawSquircleBadge(ctx, 248, 48, 104, "🌐", "#FFFFFF");
 
-  // 4. App Name Label ("Google Chrome")
-  ctx.save();
-  ctx.fillStyle = "#FFFFFF";
-  ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "alphabetic";
-  ctx.shadowColor = "rgba(0, 0, 0, 0.6)";
-  ctx.shadowBlur = 8;
-  ctx.fillText("Google Chrome", 300, 184);
-  ctx.restore();
-
-  // 5. Horizontal Profile Avatars Row
-  const activeProfile = PROFILES[selectedIdx] || PROFILES[0];
-  const avatarSpacing = 98;
-  const totalW = (PROFILES.length - 1) * avatarSpacing;
-  const startX = 300 - totalW / 2;
-  const avatarY = 256;
-  const avatarRadius = 28;
-
-  PROFILES.forEach((p, idx) => {
-    const cx = startX + idx * avatarSpacing;
-    const isSelected = idx === selectedIdx;
-
-    if (isSelected) {
-      // Electric Cyan Glowing Selection Ring
-      ctx.save();
-      ctx.strokeStyle = "#38BDF8";
-      ctx.lineWidth = 4.5;
-      ctx.shadowColor = "#38BDF8";
-      ctx.shadowBlur = 22;
-      ctx.beginPath();
-      ctx.arc(cx, avatarY, avatarRadius + 11, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    // Avatar Circle
     ctx.save();
-    ctx.fillStyle = p.color || "#0284C7";
-    ctx.beginPath();
-    ctx.arc(cx, avatarY, avatarRadius, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Google Chrome", 300, 184);
+    ctx.restore();
 
-    // White Border around Avatar
-    ctx.strokeStyle = "#FFFFFF";
-    ctx.lineWidth = 2;
+    // Horizontal Profile Avatars Row
+    const activeProfile = PROFILES[selectedIdx] || PROFILES[0];
+    const avatarSpacing = 98;
+    const totalW = (PROFILES.length - 1) * avatarSpacing;
+    const startX = 300 - totalW / 2;
+    const avatarY = 256;
+    const avatarRadius = 28;
+
+    PROFILES.forEach((p, idx) => {
+      const cx = startX + idx * avatarSpacing;
+      const isSelected = idx === selectedIdx;
+
+      if (isSelected) {
+        ctx.save();
+        ctx.strokeStyle = "#38BDF8";
+        ctx.lineWidth = 4.5;
+        ctx.shadowColor = "#38BDF8";
+        ctx.shadowBlur = 20;
+        ctx.beginPath();
+        ctx.arc(cx, avatarY, avatarRadius + 10, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      ctx.save();
+      ctx.fillStyle = p.color || "#0284C7";
+      ctx.beginPath();
+      ctx.arc(cx, avatarY, avatarRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#FFFFFF";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = "#FFFFFF";
+      ctx.font = "bold 22px -apple-system, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(p.initial || p.name[0], cx, avatarY + 1);
+      ctx.restore();
+
+      ctx.save();
+      ctx.fillStyle = isSelected ? "#FFFFFF" : "rgba(255, 255, 255, 0.65)";
+      ctx.font = isSelected ? "bold 15px -apple-system, sans-serif" : "13px -apple-system, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(p.name, cx, avatarY + 50);
+      ctx.restore();
+    });
+
+    // Active Profile Pill Footnote
+    ctx.save();
+    ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(cardX + 24, 356, cardW - 48, 86, 16);
+    ctx.fill();
     ctx.stroke();
 
-    // Monogram Initial
-    ctx.fillStyle = "#FFFFFF";
-    ctx.font = "bold 22px -apple-system, BlinkMacSystemFont, sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    const initial = p.initial || p.name.charAt(0);
-    ctx.fillText(initial, cx, avatarY + 1);
+    if (selectedIdx === 3) {
+      // Profile 4: The Spotlight Paradox Callout!
+      ctx.fillStyle = "#38BDF8";
+      ctx.font = "bold 15px -apple-system, monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(`⚡ Profile 4: ${activeProfile.name} • 0ms Instant Warp`, 300, 382);
+
+      ctx.fillStyle = "#F87171";
+      ctx.font = "bold 13px -apple-system, sans-serif";
+      ctx.fillText(`🚫 Spotlight can't reach profiles (~5.4s manual mouse hunt)`, 300, 406);
+
+      ctx.fillStyle = "#94A3B8";
+      ctx.font = "12px -apple-system, sans-serif";
+      ctx.fillText(`Khomyak Caps + 4 teleports here in 1 frame (540x faster)`, 300, 426);
+    } else {
+      ctx.fillStyle = "#7DD3FC";
+      ctx.font = "bold 16px -apple-system, monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(`⚡ Teleport to ${activeProfile.space} • ${activeProfile.name} (Caps + ${selectedIdx + 1})`, 300, 388);
+
+      ctx.fillStyle = "rgba(255, 255, 255, 0.90)";
+      ctx.font = "14px -apple-system, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(activeProfile.tabs, 300, 418);
+    }
     ctx.restore();
 
-    // Profile Label Below Avatar
+  } else if (category === "terminal") {
+    drawSquircleBadge(ctx, 248, 48, 104, "💻", "#0F172A");
+
     ctx.save();
-    ctx.fillStyle = isSelected ? "#FFFFFF" : "rgba(255, 255, 255, 0.72)";
-    ctx.font = isSelected ? "bold 15px -apple-system, BlinkMacSystemFont, sans-serif" : "13px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, sans-serif";
     ctx.textAlign = "center";
-    ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
-    ctx.shadowBlur = 6;
-    ctx.fillText(p.name, cx, avatarY + 50);
+    ctx.fillText("Terminal (iTerm2)", 300, 184);
     ctx.restore();
-  });
 
-  // 6. Active Profile Footnote & Space Indicator
-  ctx.save();
-  // Dark pill container
-  ctx.fillStyle = "rgba(0, 0, 0, 0.42)";
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.roundRect(cardX + 24, 356, cardW - 48, 86, 16);
-  ctx.fill();
-  ctx.stroke();
+    // Terminal Shell Screen Box
+    ctx.save();
+    ctx.fillStyle = "#090D16";
+    ctx.strokeStyle = "rgba(16, 185, 129, 0.4)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(cardX + 24, 214, cardW - 48, 226, 16);
+    ctx.fill();
+    ctx.stroke();
 
-  ctx.fillStyle = "#7DD3FC";
-  ctx.font = "bold 16px -apple-system, BlinkMacSystemFont, monospace";
-  ctx.textAlign = "center";
-  ctx.fillText(`⚡ Teleport to ${activeProfile.space} • ${activeProfile.name}`, 300, 388);
+    // Traffic light dots
+    ctx.fillStyle = "#EF4444"; ctx.beginPath(); ctx.arc(cardX + 44, 234, 6, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#F59E0B"; ctx.beginPath(); ctx.arc(cardX + 62, 234, 6, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#10B981"; ctx.beginPath(); ctx.arc(cardX + 80, 234, 6, 0, Math.PI*2); ctx.fill();
 
-  ctx.fillStyle = "rgba(255, 255, 255, 0.90)";
-  ctx.font = "14px -apple-system, BlinkMacSystemFont, sans-serif";
-  ctx.fillText(activeProfile.tabs, 300, 418);
-  ctx.restore();
+    ctx.fillStyle = "#64748B";
+    ctx.font = "11px -apple-system, monospace";
+    ctx.fillText("zsh — 80x24 — sub-16ms switch", cardX + 104, 238);
 
-  return canvas;
+    // Terminal text lines
+    ctx.font = "13px ui-monospace, monospace";
+    const lines = [
+      { text: "$ swift test", color: "#E2E8F0" },
+      { text: "✔ Test suite 'ChromeQuickAccessTests' passed (0.042s)", color: "#34D399" },
+      { text: "🧠 Mnemonic: Think \"Terminal\" ➔ Press T (Caps + T)", color: "#FCD34D" },
+      { text: "igorekishev@MacBook git:(main) ▋", color: "#38BDF8" }
+    ];
+
+    lines.forEach((l, i) => {
+      ctx.fillStyle = l.color;
+      ctx.fillText(l.text, cardX + 44, 276 + i * 32);
+    });
+    ctx.restore();
+
+  } else if (category === "ide") {
+    drawSquircleBadge(ctx, 248, 48, 104, "🛠️", "#1E1B4B");
+
+    ctx.save();
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Antigravity IDE", 300, 184);
+    ctx.restore();
+
+    // Code Editor Box
+    ctx.save();
+    ctx.fillStyle = "#0B0F19";
+    ctx.strokeStyle = "rgba(99, 102, 241, 0.4)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(cardX + 24, 214, cardW - 48, 226, 16);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#818CF8";
+    ctx.font = "12px ui-monospace, monospace";
+    ctx.fillText("AppGroupEngine.swift — Swift 6 Native", cardX + 44, 238);
+
+    const codeLines = [
+      { num: "42", code: "public static let ide = AppGroupEngine(", color: "#F472B6" },
+      { num: "43", code: "    category: \"IDE\", candidates: [\"IntelliJ IDEA\"]", color: "#E2E8F0" },
+      { num: "44", code: "    // 🧠 Mnemonic: Think \"IDEA\" ➔ Press I", color: "#FCD34D" },
+      { num: "45", code: ") // ⚡ Sub-16ms CGEventTap window focus", color: "#34D399" }
+    ];
+
+    codeLines.forEach((l, i) => {
+      ctx.fillStyle = "#475569";
+      ctx.font = "12px ui-monospace, monospace";
+      ctx.fillText(l.num, cardX + 44, 276 + i * 32);
+
+      ctx.fillStyle = l.color;
+      ctx.fillText(l.code, cardX + 74, 276 + i * 32);
+    });
+    ctx.restore();
+
+  } else if (category === "ai") {
+    drawSquircleBadge(ctx, 248, 48, 104, "🤖", "#083344");
+
+    ctx.save();
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Antigravity AI Agent", 300, 184);
+    ctx.restore();
+
+    // AI Chat Card
+    ctx.save();
+    ctx.fillStyle = "#081B2B";
+    ctx.strokeStyle = "rgba(6, 182, 212, 0.45)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(cardX + 24, 214, cardW - 48, 226, 16);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#22D3EE";
+    ctx.font = "bold 13px -apple-system, sans-serif";
+    ctx.fillText("● AI Agent Stream • Latency: 0ms", cardX + 44, 244);
+
+    ctx.fillStyle = "#E2E8F0";
+    ctx.font = "14px -apple-system, sans-serif";
+    ctx.fillText("“Zero third-party drivers or background daemons.", cardX + 44, 280);
+    ctx.fillText("Your brain thinks 'Agent' ➔ fingers press 'A'.”", cardX + 44, 308);
+
+    ctx.fillStyle = "#FCD34D";
+    ctx.font = "bold 13px ui-monospace, monospace";
+    ctx.fillText("🧠 Mnemonic: Think \"Agent\" ➔ Press A (Caps + A)", cardX + 44, 350);
+
+    ctx.fillStyle = "#38BDF8";
+    ctx.font = "bold 13px ui-monospace, monospace";
+    ctx.fillText("Caps-Lock + A ➔ Instant Summon", cardX + 44, 394);
+    ctx.restore();
+
+  } else if (category === "notes" || category === "caps") {
+    drawSquircleBadge(ctx, 248, 48, 104, "📝", "#451A03");
+
+    ctx.save();
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Quick Notes & Scratchpad", 300, 184);
+    ctx.restore();
+
+    // Notes Scratchpad Card
+    ctx.save();
+    ctx.fillStyle = "#1C1917";
+    ctx.strokeStyle = "rgba(245, 158, 11, 0.4)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(cardX + 24, 214, cardW - 48, 226, 16);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#FCD34D";
+    ctx.font = "bold 13px -apple-system, sans-serif";
+    ctx.fillText("📌 Today's Engineering Log", cardX + 44, 244);
+
+    const tasks = [
+      { check: "☑", text: "Zero-latency Caps-Lock Hyper Key (0x35)", color: "#34D399" },
+      { check: "☑", text: "5-App Toolkit Switcher (C, T, I, A, N)", color: "#34D399" },
+      { check: "🧠", text: "Mnemonic: Think \"Notes\" ➔ Press N", color: "#FCD34D" },
+      { check: "☐", text: "Ship Khomyak v1.0.0 Universal DMG", color: "#38BDF8" }
+    ];
+
+    tasks.forEach((t, i) => {
+      ctx.fillStyle = t.color;
+      ctx.font = "14px ui-monospace, monospace";
+      ctx.fillText(`${t.check}  ${t.text}`, cardX + 44, 282 + i * 32);
+    });
+    ctx.restore();
+  }
+
+  return portalCanvas;
 }
 
 function buildFlankingChromeWindows() {
-  PROFILES.forEach((p, idx) => {
-    const canvas = createPortalCanvas(idx);
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.minFilter = THREE.LinearFilter;
+  createPortalCanvas("chrome", 0);
+  portalTexture = new THREE.CanvasTexture(portalCanvas);
+  portalTexture.minFilter = THREE.LinearFilter;
 
-    const portalGeo = new THREE.PlaneGeometry(1.42, 1.24);
-    const portalMat = new THREE.MeshBasicMaterial({
-      map: texture,
-      side: THREE.DoubleSide,
-      transparent: true,
-      fog: false, // CRITICAL: disables washing out by white scene fog!
-      opacity: idx === 0 ? 1.0 : 0.0
-    });
-
-    const portalMesh = new THREE.Mesh(portalGeo, portalMat);
-    // Positioned floating to the left side so the hamster is 100% visible
-    portalMesh.position.set(-2.05, 0.85, 1.6);
-    portalMesh.rotation.y = 0.32;
-    portalMesh.userData = { profileIndex: idx };
-
-    scene.add(portalMesh);
-    profileWindows.push(portalMesh);
+  const portalGeo = new THREE.PlaneGeometry(1.42, 1.24);
+  const portalMat = new THREE.MeshBasicMaterial({
+    map: portalTexture,
+    side: THREE.DoubleSide,
+    transparent: true,
+    fog: false,
+    opacity: 1.0
   });
+
+  portalWindowMesh = new THREE.Mesh(portalGeo, portalMat);
+  portalWindowMesh.position.set(-2.05, 0.85, 1.6);
+  portalWindowMesh.rotation.y = 0.32;
+  scene.add(portalWindowMesh);
 }
 
 // --------------------------------------------------------------------------
-// Switch Profiles & Squish Physics
+// Category Activation & Tactile Key Depression
 // --------------------------------------------------------------------------
 let isSquishing = false;
 let squishTime = 0;
@@ -859,52 +1275,95 @@ function triggerHamsterSquish() {
   sound.playChime();
 }
 
-function switchProfile(targetIndex = null, fromUser = false) {
-  if (targetIndex === null) {
-    activeIndex = (activeIndex + 1) % PROFILES.length;
-  } else {
-    activeIndex = parseInt(targetIndex, 10);
-  }
-
+function activateCategory(category = "chrome", subIndex = null, keyId = null, fromUser = false) {
   if (fromUser) userInteracted = true;
-  sound.playClick();
+  currentCategory = category;
 
-  // Show active window smoothly
-  profileWindows.forEach((win, idx) => {
-    const isTarget = idx === activeIndex;
-    win.material.opacity = isTarget ? 1.0 : 0.0;
-    if (isTarget) {
-      win.scale.set(1.15, 1.15, 1);
-      setTimeout(() => win.scale.set(1.0, 1.0, 1), 180);
+  if (category === "chrome") {
+    if (subIndex !== null && subIndex !== undefined) {
+      activeIndex = parseInt(subIndex, 10);
+    } else {
+      activeIndex = (activeIndex + 1) % PROFILES.length;
     }
-  });
-
-  // Keycap Flash
-  if (keycapMesh) {
-    keycapMesh.material.emissiveIntensity = 2.2;
-    setTimeout(() => keycapMesh.material.emissiveIntensity = 0.5, 220);
   }
 
+  sound.playClick();
   triggerHamsterSquish();
+
+  // Physical 3D key depression animation
+  const targetKeyId = keyId || (category === "chrome" ? (subIndex !== null ? String(subIndex + 1) : "c") : keyId);
+  const keyMesh = keyMeshMap[targetKeyId] || (category === "chrome" ? keyMeshMap["c"] : keyMeshMap[category[0]]);
+
+  if (keyMesh) {
+    keyMesh.position.y = keyMesh.userData.basePosY - 0.045;
+    if (keyMesh.material && keyMesh.material[2]) {
+      keyMesh.material[2].emissiveIntensity = 2.8;
+    }
+
+    setTimeout(() => {
+      if (keyMesh) {
+        keyMesh.position.y = keyMesh.userData.basePosY;
+        if (keyMesh.material && keyMesh.material[2]) {
+          keyMesh.material[2].emissiveIntensity = 0.35;
+        }
+      }
+    }, 130);
+  }
+
+  // Redraw 3D portal window
+  createPortalCanvas(currentCategory, activeIndex);
+  if (portalTexture) {
+    portalTexture.needsUpdate = true;
+  }
+
+  // Portal scale bounce
+  if (portalWindowMesh) {
+    portalWindowMesh.scale.set(1.14, 1.14, 1);
+    setTimeout(() => {
+      if (portalWindowMesh) portalWindowMesh.scale.set(1.0, 1.0, 1);
+    }, 160);
+  }
 }
 
 // --------------------------------------------------------------------------
-// Mouse Handlers
+// Mouse & Raycasting Handlers
 // --------------------------------------------------------------------------
+let hoveredKeyMesh = null;
+
 function onMouseMove(e) {
+  const container = document.getElementById("canvas-container");
+  if (!container || !camera) return;
+
   mouseX = (e.clientX / window.innerWidth) * 2 - 1;
   mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
   targetHeadX = mouseX * 0.28;
   targetHeadY = mouseY * 0.18;
 
-  // Pointer cursor ONLY when hovering directly over the unoccluded Caps Lock button
-  if (keycapMesh && camera && container) {
-    mouseVec.x = mouseX;
-    mouseVec.y = mouseY;
-    raycaster.setFromCamera(mouseVec, camera);
-    const allHits = raycaster.intersectObjects(hamsterRoot.children, true);
-    const isOverKey = allHits.length > 0 && allHits[0].object === keycapMesh;
-    container.style.cursor = isOverKey ? "pointer" : "default";
+  mouseVec.x = mouseX;
+  mouseVec.y = mouseY;
+  raycaster.setFromCamera(mouseVec, camera);
+
+  // Check hover over interactive keys
+  const keyHits = raycaster.intersectObjects(interactiveKeyMeshes, true);
+
+  if (keyHits.length > 0) {
+    container.style.cursor = "pointer";
+    const hitKey = keyHits[0].object;
+    if (hoveredKeyMesh !== hitKey) {
+      if (hoveredKeyMesh && hoveredKeyMesh.material && hoveredKeyMesh.material[2]) {
+        hoveredKeyMesh.material[2].emissiveIntensity = 0.35;
+      }
+      hoveredKeyMesh = hitKey;
+      if (hoveredKeyMesh.material && hoveredKeyMesh.material[2]) {
+        hoveredKeyMesh.material[2].emissiveIntensity = 1.2;
+      }
+    }
+  } else {
+    container.style.cursor = "default";
+    if (hoveredKeyMesh && hoveredKeyMesh.material && hoveredKeyMesh.material[2]) {
+      hoveredKeyMesh.material[2].emissiveIntensity = 0.35;
+      hoveredKeyMesh = null;
+    }
   }
 }
 
@@ -915,26 +1374,20 @@ function onPointerDown(e) {
 
   raycaster.setFromCamera(mouseVec, camera);
 
-  // Raycast all visible objects under cursor sorted by distance from camera
-  const allHits = raycaster.intersectObjects(hamsterRoot.children, true);
-  if (allHits.length === 0) return;
-
-  const closest = allHits[0];
-
-  // 1. Closest visible object is the Caps Lock Keycap -> ONLY this triggers profile switch!
-  if (closest.object === keycapMesh) {
-    // Tactile physical key press depression animation
-    keycapMesh.position.y -= 0.05;
-    setTimeout(() => {
-      if (keycapMesh) keycapMesh.position.y += 0.05;
-    }, 130);
-    switchProfile(null, true);
+  // 1. Raycast interactive keys
+  const keyHits = raycaster.intersectObjects(interactiveKeyMeshes, true);
+  if (keyHits.length > 0) {
+    const hitKey = keyHits[0].object;
+    const uData = hitKey.userData;
+    activateCategory(uData.category, uData.subIndex, uData.keyId, true);
     return;
   }
 
-  // 2. Clicked anywhere else on the hamster (cheeks, snout, ears, paws) -> ONLY squeeze/squish!
-  // NEVER changes the HUD profile.
-  triggerHamsterSquish();
+  // 2. Raycast hamster for squish squeeze
+  const hamsterHits = raycaster.intersectObjects(hamsterRoot ? hamsterRoot.children : [], true);
+  if (hamsterHits.length > 0) {
+    triggerHamsterSquish();
+  }
 }
 
 function onWindowResize() {
@@ -961,7 +1414,7 @@ function animate() {
   // Giant Hamster Breathing Motion
   const breath = Math.sin(time * 2.8) * 0.02;
   if (!isSquishing && hamsterRoot) {
-    hamsterRoot.scale.set(1.5 + breath * 0.2, 1.5 - breath * 0.35, 1.5 + breath * 0.2);
+    hamsterRoot.scale.set(1.4 + breath * 0.15, 1.4 - breath * 0.25, 1.4 + breath * 0.15);
   }
 
   // Giant Cheeks Squish Spring Physics
@@ -1020,19 +1473,62 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Keyboard Navigation: [C], [1, 2, 3], [Space]
+  // Spotlight Paradox Card Toggle & Close
+  const paradoxCard = document.getElementById("paradox-card");
+  const paradoxToggle = document.getElementById("paradox-toggle");
+  const paradoxClose = document.getElementById("paradox-close");
+  
+  if (paradoxToggle && paradoxCard) {
+    paradoxToggle.addEventListener("click", () => {
+      paradoxCard.classList.toggle("minimized");
+      sound.playClick();
+    });
+  }
+  
+  if (paradoxClose && paradoxCard) {
+    paradoxClose.addEventListener("click", () => {
+      paradoxCard.classList.add("minimized");
+      sound.playClick();
+    });
+  }
+
+  // Spotlight Paradox: Simulate Profile 4 Jump Button
+  const simProfile4Btn = document.getElementById("simulate-profile4-btn");
+  if (simProfile4Btn) {
+    simProfile4Btn.addEventListener("click", () => {
+      activateCategory("chrome", 3, "4", true);
+    });
+  }
+
+  // Mnemonic Thought-to-Key Interactive Pills
+  document.querySelectorAll(".mnemonic-pill").forEach((pill) => {
+    pill.addEventListener("click", () => {
+      const cat = pill.getAttribute("data-category");
+      const key = pill.getAttribute("data-key");
+      activateCategory(cat, 0, key, true);
+    });
+  });
+
+  // Keyboard Navigation: [C], [1..4], [T], [I], [A], [N], [Space]
   window.addEventListener("keydown", (e) => {
     if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
 
-    if (e.key === "c" || e.key === "C" || e.key === " ") {
+    const key = e.key.toLowerCase();
+    if (key === "c" || key === " ") {
       e.preventDefault();
-      switchProfile(null, true);
-    } else if (e.key === "1") {
-      switchProfile(0, true);
-    } else if (e.key === "2") {
-      switchProfile(1, true);
-    } else if (e.key === "3") {
-      switchProfile(2, true);
+      activateCategory("chrome", (activeIndex + 1) % PROFILES.length, "c", true);
+    } else if (["1", "2", "3", "4"].includes(key)) {
+      activateCategory("chrome", parseInt(key, 10) - 1, key, true);
+    } else if (key === "t") {
+      activateCategory("terminal", 0, "t", true);
+    } else if (key === "i") {
+      activateCategory("ide", 0, "i", true);
+    } else if (key === "a") {
+      activateCategory("ai", 0, "a", true);
+    } else if (key === "n") {
+      activateCategory("notes", 0, "n", true);
+    } else if (key === "capslock") {
+      activateCategory("caps", 0, "caps", true);
     }
   });
 });

@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Khomyak — Instant Chrome Profile Switcher for macOS</title>
-  <meta name="description" content="Switch Chrome profiles in 0ms across all macOS Spaces via Caps Lock + C.">
+  <title>Khomyak — 5-Category macOS Productivity Suite</title>
+  <meta name="description" content="Switch Chrome profiles, Terminal, IDE, AI Agent, and Notes in 0ms via Caps-Lock Home-Row Shortcuts.">
 
   <!-- OpenGraph -->
-  <meta property="og:title" content="Khomyak — Instant Chrome Profile Switcher">
-  <meta property="og:description" content="Switch Chrome profiles in 0ms across all macOS Spaces via Caps Lock + C.">
+  <meta property="og:title" content="Khomyak — 5-Category macOS Productivity Suite">
+  <meta property="og:description" content="Switch Chrome profiles, Terminal, IDE, AI Agent, and Notes in 0ms via Caps-Lock Home-Row Shortcuts.">
   <meta property="og:image" content="assets/images/khomyak_opengraph_banner.png">
 
   <link rel="icon" type="image/png" href="assets/images/AppIcon.png">
@@ -34,6 +34,9 @@
       </div>
 
       <div class="nav-controls">
+        <button id="paradox-toggle" class="glass-btn badge-btn" title="Toggle Spotlight Paradox insight">
+          <span>⚡ Spotlight Paradox</span>
+        </button>
         <button id="sound-toggle" class="glass-btn sound-btn" title="Toggle tactile sound">
           <span id="sound-icon">🔊</span>
         </button>
@@ -46,15 +49,81 @@
       </div>
     </header>
 
-    <!-- Bottom Center: Single Discrete Tactile Hint -->
-    <footer class="bottom-hint">
-      <span class="hint-text">
-        Press <kbd class="glow-kbd">C</kbd> or Click <kbd class="glow-kbd">Caps Lock</kbd> to Switch Profiles • Drag to Orbit • Click Hamster to Squeeze
-      </span>
-    </footer>
+    <!-- Floating Insight Card: The Spotlight Paradox & The 4th Profile Pain -->
+    <aside class="insight-card paradox-card minimized" id="paradox-card">
+      <div class="card-header">
+        <div class="card-badge">⚡ Spotlight Paradox</div>
+        <button class="card-close" id="paradox-close" title="Minimize card">✕</button>
+      </div>
+      <h3 class="card-title">Why turning Khomyak off hurts</h3>
+      <p class="card-desc">Spotlight is instant for standalone apps. But macOS is completely blind to browser profiles.</p>
+      
+      <div class="compare-matrix">
+        <div class="compare-row app-row">
+          <div class="row-info">
+            <span class="row-target">Terminal / iTerm</span>
+            <span class="row-method">Spotlight <kbd>Cmd</kbd>+<kbd>Space</kbd> ➔ <kbd>ite</kbd></span>
+          </div>
+          <span class="row-time success">0.3s ✅</span>
+        </div>
+
+        <div class="compare-row profile-row-manual">
+          <div class="row-info">
+            <span class="row-target">Profile 4 (Without Khomyak)</span>
+            <span class="row-method">Mouse ➔ Menu ➔ Profiles ➔ Scan</span>
+          </div>
+          <span class="row-time danger">5.4s 🛑</span>
+        </div>
+
+        <div class="compare-row profile-row-khomyak">
+          <div class="row-info">
+            <span class="row-target">Profile 4 (With Khomyak)</span>
+            <span class="row-method">Instant <kbd class="glow-kbd">Caps</kbd>+<kbd class="glow-kbd">4</kbd></span>
+          </div>
+          <span class="row-time lightning">0.01s ⚡</span>
+        </div>
+      </div>
+
+      <div class="card-action">
+        <button class="action-btn" id="simulate-profile4-btn">
+          <span>⚡ Jump to Profile 4 (Watch 3D Deck)</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Bottom Center: Mnemonic Thought-to-Key Bar & Tactile Hint -->
+    <div class="bottom-container">
+      <!-- Insight 1: Mnemonic Connection (Brain thinks in names, not categories) -->
+      <div class="mnemonic-bar">
+        <span class="mnemonic-label">🧠 Think tool ➔ Press first letter:</span>
+        <div class="mnemonic-buttons">
+          <button class="mnemonic-pill" data-key="c" data-category="chrome" title="Think Chrome ➔ Press C">
+            <span class="pill-word">"<strong>C</strong>hrome"</span> <kbd class="pill-kbd">C</kbd>
+          </button>
+          <button class="mnemonic-pill" data-key="i" data-category="ide" title="Think IDEA ➔ Press I">
+            <span class="pill-word">"<strong>I</strong>DEA"</span> <kbd class="pill-kbd">I</kbd>
+          </button>
+          <button class="mnemonic-pill" data-key="t" data-category="terminal" title="Think Terminal ➔ Press T">
+            <span class="pill-word">"<strong>T</strong>erminal"</span> <kbd class="pill-kbd">T</kbd>
+          </button>
+          <button class="mnemonic-pill" data-key="a" data-category="ai" title="Think Agent ➔ Press A">
+            <span class="pill-word">"<strong>A</strong>gent"</span> <kbd class="pill-kbd">A</kbd>
+          </button>
+          <button class="mnemonic-pill" data-key="n" data-category="notes" title="Think Notes ➔ Press N">
+            <span class="pill-word">"<strong>N</strong>otes"</span> <kbd class="pill-kbd">N</kbd>
+          </button>
+        </div>
+      </div>
+
+      <footer class="bottom-hint">
+        <span class="hint-text">
+          Press <kbd class="glow-kbd">Caps</kbd> + <kbd class="glow-kbd">C</kbd>, <kbd class="glow-kbd">I</kbd>, <kbd class="glow-kbd">T</kbd>, <kbd class="glow-kbd">A</kbd>, <kbd class="glow-kbd">N</kbd> or <kbd class="glow-kbd">1..4</kbd> • Click 3D Keys • Drag to Orbit
+        </span>
+      </footer>
+    </div>
 
   </div>
 
-  <script src="app.js?v=hud4"></script>
+  <script src="app.js?v=insights2"></script>
 </body>
 </html>

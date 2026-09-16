@@ -219,12 +219,21 @@ kbd {
   font-weight: 800;
 }
 
-/* Minimal Bottom Hint */
+/* Minimal Bottom Hint & Container */
+.bottom-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  pointer-events: none;
+}
+
 .bottom-hint {
   width: 100%;
   display: flex;
   justify-content: center;
-  margin-bottom: 8px;
 }
 
 .hint-text {
@@ -235,15 +244,285 @@ kbd {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(0, 0, 0, 0.06);
-  padding: 10px 24px;
+  padding: 8px 20px;
   border-radius: 999px;
-  font-size: 0.86rem;
+  font-size: 0.82rem;
   color: var(--text-muted);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
 }
 
+/* 3. Insight 1: Mnemonic Thought-to-Key Bar */
+.mnemonic-bar {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 6px 16px;
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+}
+
+.mnemonic-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #334155;
+  letter-spacing: 0.02em;
+}
+
+.mnemonic-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mnemonic-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(241, 245, 249, 0.85);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  color: #1E293B;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mnemonic-pill:hover {
+  background: #FFFFFF;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  border-color: #38BDF8;
+}
+
+.mnemonic-pill:active {
+  transform: scale(0.96);
+}
+
+.pill-word strong {
+  color: #0284C7;
+  font-weight: 800;
+}
+
+.pill-kbd {
+  padding: 1px 6px;
+  font-size: 0.72rem;
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.28);
+}
+
+/* 4. Insight 2: Spotlight Paradox Floating Card */
+.badge-btn {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0284C7;
+  border: 1px solid rgba(2, 132, 199, 0.22);
+  background: rgba(240, 249, 255, 0.85);
+}
+
+.badge-btn:hover {
+  background: #FFFFFF;
+  border-color: #0284C7;
+  box-shadow: 0 4px 16px rgba(2, 132, 199, 0.2);
+}
+
+.insight-card.paradox-card {
+  position: absolute;
+  top: 86px;
+  right: 32px;
+  width: 380px;
+  max-width: calc(100vw - 64px);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 20px;
+  padding: 18px 20px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+  pointer-events: auto;
+  z-index: 20;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.paradox-card.minimized {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.92) translateY(-10px);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #0284C7;
+  background: rgba(2, 132, 199, 0.1);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.card-close {
+  background: transparent;
+  color: #94A3B8;
+  font-size: 0.88rem;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: color 0.15s;
+}
+
+.card-close:hover {
+  color: #0F172A;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.card-title {
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: #0F172A;
+  line-height: 1.25;
+  margin-bottom: 4px;
+}
+
+.card-desc {
+  font-size: 0.78rem;
+  color: #64748B;
+  line-height: 1.35;
+  margin-bottom: 12px;
+}
+
+/* Compare Matrix */
+.compare-matrix {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.compare-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.025);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.compare-row.app-row {
+  border-left: 3.5px solid #10B981;
+}
+
+.compare-row.profile-row-manual {
+  border-left: 3.5px solid #EF4444;
+  background: rgba(239, 68, 68, 0.04);
+}
+
+.compare-row.profile-row-khomyak {
+  border-left: 3.5px solid #0284C7;
+  background: rgba(2, 132, 199, 0.07);
+}
+
+.row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.row-target {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.row-method {
+  font-size: 0.68rem;
+  color: #64748B;
+}
+
+.row-method kbd {
+  font-size: 0.68rem;
+  padding: 1px 4px;
+}
+
+.row-time {
+  font-size: 0.8rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+}
+
+.row-time.success {
+  color: #059669;
+}
+
+.row-time.danger {
+  color: #DC2626;
+}
+
+.row-time.lightning {
+  color: #0284C7;
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+}
+
+/* Card Action Button */
+.action-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 16px;
+  background: linear-gradient(135deg, #0284C7 0%, #0369A1 100%);
+  color: #FFFFFF;
+  border-radius: 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  box-shadow: 0 6px 18px rgba(2, 132, 199, 0.28);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(2, 132, 199, 0.42);
+  background: linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%);
+}
+
+.action-btn:active {
+  transform: scale(0.98);
+}
+
+/* Responsive Rules */
+@media (max-width: 900px) {
+  .insight-card.paradox-card {
+    top: auto;
+    bottom: 120px;
+    right: 16px;
+    left: 16px;
+    width: auto;
+    max-width: none;
+  }
+  .mnemonic-label { display: none; }
+}
+
 @media (max-width: 768px) {
   .ui-overlay { padding: 16px; }
-  .hint-text { font-size: 0.76rem; padding: 8px 16px; gap: 8px; text-align: center; }
+  .hint-text { font-size: 0.72rem; padding: 6px 14px; gap: 6px; text-align: center; }
   .glass-link { display: none; }
+  .mnemonic-pill { font-size: 0.7rem; padding: 3px 8px; }
+  .badge-btn { display: none; }
 }
