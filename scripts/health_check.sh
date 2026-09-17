@@ -2,12 +2,12 @@
 set -euo pipefail
 
 # ==============================================================================
-# Chrome Quick Access - System Health & Diagnostics Utility
+# Khomyak (Хомяк) - System Health & Diagnostics Utility
 # Evaluates version consistency, binary architectures, and automated tests
 # ==============================================================================
 
 echo "=================================================="
-echo " Chrome Quick Access — System Health Check        "
+echo " Khomyak (Хомяк) — System Health Check            "
 echo "=================================================="
 
 FAILED=0

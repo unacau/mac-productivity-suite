@@ -80,7 +80,7 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
     public init(category: String, candidates: [AppCandidate]) {
         self.category = category
         self.candidates = candidates
-        self.logger = Logger(subsystem: "com.unacau.chromequickaccess", category: category.lowercased())
+        self.logger = Logger(subsystem: "com.almosteleven.khomyak", category: category.lowercased())
         refreshItems()
         setupAppSwitchObserver()
     }

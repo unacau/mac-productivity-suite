@@ -12,7 +12,7 @@ PREDICATE="subsystem == \"${SUBSYSTEM}\" or process == \"Khomyak\""
 
 usage() {
     cat << EOF
-Mac Productivity Suite — Telemetry & Log Monitor
+Khomyak (Хомяк) — Telemetry & Log Monitor
 
 Usage:
   ./scripts/monitor_telemetry.sh [command] [options]

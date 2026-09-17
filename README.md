@@ -112,6 +112,7 @@ make health
 
 Khomyak's design and visual hierarchy are grounded in empirical cognitive neuroscience and neuroaesthetics.
 - See the complete [Neuroaesthetics Brandbook](file:///Users/igorekishev/Igor/igorekishev/mac-productivity-suite/docs/BRANDBOOK_NEUROAESTHETICS.md).
+- See the [Bauhaus Edition Brandbook](file:///Users/igorekishev/Igor/igorekishev/mac-productivity-suite/docs/BRANDBOOK_BAUHAUS_EDITION.md) for geometric geon deconstruction.
 
 ---
 

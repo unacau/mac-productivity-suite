@@ -126,7 +126,7 @@ public final class ChromeProfileEngine: ObservableObject {
     public static var localStatePathOverride: String? = nil
     
     private var cachedAvatars: [String: NSImage] = [:]
-    private let logger = Logger(subsystem: "com.unacau.chromequickaccess", category: "profiles")
+    private let logger = Logger(subsystem: "com.almosteleven.khomyak", category: "profiles")
     
     public init() {
         refreshProfiles()

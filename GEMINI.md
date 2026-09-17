@@ -1,10 +1,11 @@
-# Project: Chrome Quick Access (v1.0.0)
+# Project: Khomyak (Хомяк) — macOS Productivity Suite (v1.0.0)
 
 ## Tech Stack & Architecture
 - **Target Platform**: macOS 14.0+ (Sonoma, Sequoia, Tahoe).
 - **Primary Engine (Swift 6+)**: 100% Pure Native Standalone App (`src/ChromeQuickAccess`) using SwiftUI, AppKit bridging, CoreGraphics `CGEvent` taps, and driverless IOHID remapping.
   - `Engine/KeyCodes.swift`: Virtual keycode definitions and Carbon/AppKit key lookup.
   - `Engine/CapsLockEngine.swift`: Driverless hardware remapping via `hidutil` (Caps-Lock -> F18) and dual-role head-insert `CGEventTap` (Escape on tap, Hyper modifier on hold).
+  - `Engine/AppGroupEngine.swift`: Universal Pinned Quick Apps (4 slots max: Terminal, IDE, AI Agent, Notes), home-row shortcuts (`T`, `I`, `A`, `N`, `C`), letter cycling submenus, dynamic alphabet catalog, and 1-click slot replacement.
   - `Engine/ChromeProfileEngine.swift`: Dynamic Chromium `Local State` discovery, monogram avatar rendering, native macOS Accessibility (`AXUIElement`) menu bar profile switching, and window raising.
   - `Engine/AntigravityEngine.swift`: Discovery and fast cycling for Antigravity & Antigravity IDE.
   - `Engine/CopyOnSelectEngine.swift`: Linux/X11-style automatic clipboard copying on text drag selection (>10pt) and multi-click selection.
@@ -17,7 +18,7 @@
 - **System Health & Diagnostics**: `make health` or `./scripts/health_check.sh` (3-point validation).
 - **Semantic Version Bumping**: `make bump-patch`, `make bump-minor`, `make bump-major` (Synchronizes `VERSION.txt`, `BUILD.txt`, and `Info.plist`).
 - **Telemetry & Direct Log Ingestion**:
-  - `make monitor`: Real-time streaming from macOS Unified Logging (`os_log` subsystem `com.unacau.chromequickaccess`).
+  - `make monitor`: Real-time streaming from macOS Unified Logging (`os_log` subsystem `com.almosteleven.khomyak`).
   - `make diagnostics`: Aggregated log level and category distribution summary over the last hour.
   - `./scripts/monitor_telemetry.sh errors 30m`: Filter errors and faults directly from system log stream.
 - **Validation & Quality Gates**: `make validate` (verifies version synchronization and shell script syntax).
@@ -37,9 +38,12 @@
   - Keep low-level `CGEvent` monitoring/filtering logic strictly separated in `Engine/` services away from SwiftUI Views.
   - **Always** ensure explicit accessibility permission checks (`AXIsProcessTrusted()`) before registering global event taps.
   - Gracefully handle event tap disablement events (`kCGEventTapDisabledByTimeout`, `kCGEventTapDisabledByUserInput`) by re-enabling the tap via `CGEvent.tapEnable(tap: true)`.
-  - Instrument structured logs using `os.Logger(subsystem: "com.unacau.chromequickaccess", category: ...)` rather than raw `print()` statements.
+  - Instrument structured logs using `os.Logger(subsystem: "com.almosteleven.khomyak", category: ...)` rather than raw `print()` statements.
 - **HUD Overlay Lifecycle & Dismissal Order**:
   - **Always hide the HUD overlay window (`MinimalHUDWindow.shared.hideImmediate()`) BEFORE triggering application activation or window focus**. External window launches cause macOS window server transitions that can swallow keyboard events and block the run loop, trapping the HUD on screen if hidden after the launch.
+- **Pinned Apps & Universal Catalog Conventions**:
+  - Enforce a hard ceiling of 4 pinned app slots. Single-app modes must hide the avatar row in the HUD to prevent visual noise.
+  - Letter cycling must group apps deterministically by sanitized first letter.
 - **Chromium Profile Automation Guardrail**:
   - **Never match Chromium windows by profile name or title substrings.**
   - **Always automate via native macOS menu bar (`kAXMenuBarAttribute`)**: Target the browser's "Profiles" menu bar item (`getProfilesMenuItems`), select items strictly by position/index, and detect the currently active profile using `AXMenuItemMarkChar == "✓"`.

@@ -22,7 +22,7 @@
 
 ## 2. Visual Identity & Iconography
 
-![Khomyak Bauhaus Identity App Icon](file:///Users/igorekishev/Igor/igorekishev/mac-productivity-suite/assets/khomyak_bauhaus_identity_appicon.jpg)
+![Khomyak Bauhaus Identity App Icon](file:///Users/igorekishev/Igor/igorekishev/mac-productivity-suite/assets/explorations/khomyak_bauhaus_identity_appicon.jpg)
 
 ### The Geometric Deconstruction (Geon Theory)
 In 1987, cognitive neuroscientist Irving Biederman proposed **Recognition-by-Components (RBC)**: the human ventral visual stream (V4/IT) parses complex objects into fundamental 3D volumetric primitives called **geons** (cylinders, spheres, wedges, blocks). 

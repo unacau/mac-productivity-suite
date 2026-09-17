@@ -20,7 +20,7 @@ FEATURES_DIR.mkdir(parents=True, exist_ok=True)
 
 APP_ICON_PATH = REPO_ROOT / "src/ChromeQuickAccess/Resources/AppIcon.png"
 if not APP_ICON_PATH.exists():
-    APP_ICON_PATH = Path("/Users/igorekishev/.gemini/antigravity/brain/8f5160ea-d58a-4d8d-8180-ba84e1269aaf/khomyak_high_contrast_2_1789435199593.jpg")
+    APP_ICON_PATH = REPO_ROOT / "assets/AppIcon.png"
 
 # Neuroaesthetic Brand Color Tokens
 C_MIDNIGHT = (11, 17, 32)        # #0B1120
