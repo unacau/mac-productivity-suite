@@ -733,10 +733,15 @@ struct ChromeQuickAccessUnitTests {
         MinimalHUDWindow.shared.showAppGroup(mode: .notes, items: items, selectedIndex: 0)
         #expect(ChromeSwitcherState.shared.mode == .notes)
         #expect(ChromeSwitcherState.shared.selectedAppItem?.name == "Obsidian")
+        #expect(ChromeSwitcherState.shared.hasBrothers == true)
         #expect(ChromeSwitcherState.shared.isVisible == true)
         
         MinimalHUDWindow.shared.selectNext()
         #expect(ChromeSwitcherState.shared.selectedAppItem?.name == "Notes")
+        
+        // Single app without brothers has hasBrothers == false (no bottom redundant icon)
+        MinimalHUDWindow.shared.showAppGroup(mode: .notes, items: [items[0]], selectedIndex: 0)
+        #expect(ChromeSwitcherState.shared.hasBrothers == false)
         
         MinimalHUDWindow.shared.hideImmediate()
         #expect(ChromeSwitcherState.shared.isVisible == false)
@@ -957,6 +962,15 @@ struct ChromeQuickAccessUnitTests {
     
     @Test @MainActor
     func testLetterSelectionStateManagement() {
+        let previous = UserDefaults.standard.stringArray(forKey: "SelectedAppBundleIDs")
+        defer {
+            if let prev = previous {
+                UserDefaults.standard.set(prev, forKey: "SelectedAppBundleIDs")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "SelectedAppBundleIDs")
+            }
+        }
+        
         let testBundleID = "com.test.unique-app"
         
         // Ensure clean state
@@ -981,10 +995,9 @@ struct ChromeQuickAccessUnitTests {
     
     @Test @MainActor
     func testTwoGroupMenuStructure() {
+        UserDefaults.standard.set(AppGroupEngine.defaultPinnedBundleIDs, forKey: "SelectedAppBundleIDs")
         let appDelegate = AppDelegate()
         let menu = appDelegate.buildStatusMenu()
-        
-        let titles = menu.items.map { $0.title }
         
         // Refresh Profiles & Apps and Quit Quick Access use native keyEquivalent with ⌘ modifier
         let refreshItem = menu.items.first(where: { $0.title.contains("Refresh Profiles & Apps") })
@@ -1033,7 +1046,7 @@ struct ChromeQuickAccessUnitTests {
         
         // Headers present in Change App submenu
         #expect(subTitles.contains("Chrome Profiles (up to 4):"))
-        #expect(subTitles.contains("Pinned Quick Apps (up to 5):"))
+        #expect(subTitles.contains("Pinned Quick Apps (up to 4):"))
         #expect(subTitles.contains("Choose Other App..."))
         
         // App shortcuts derive strictly from first letter of app name (or slot digit for Chrome)
@@ -1077,7 +1090,11 @@ struct ChromeQuickAccessUnitTests {
     @Test @MainActor
     func testPinnedAppsMaxLimitAndGrouping() {
         let initialPinned = AppGroupEngine.pinnedAppItems()
-        #expect(initialPinned.count <= 5)
+        #expect(initialPinned.count <= 4)
+        
+        // 5 total quick apps including Chrome/browser
+        #expect(AppGroupEngine.maxPinnedQuickApps == 4)
+        #expect(AppGroupEngine.maxPinnedQuickApps + 1 == 5)
         
         // Grouped by letter
         let grouped = AppGroupEngine.pinnedAppsGroupedByLetter()
@@ -1087,6 +1104,55 @@ struct ChromeQuickAccessUnitTests {
                 #expect(firstChar == group.letter)
             }
         }
+    }
+    
+    @Test @MainActor
+    func testCanPinMoreAppsAndExplicitReplacement() {
+        let previous = UserDefaults.standard.stringArray(forKey: "SelectedAppBundleIDs")
+        defer {
+            if let prev = previous {
+                UserDefaults.standard.set(prev, forKey: "SelectedAppBundleIDs")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "SelectedAppBundleIDs")
+            }
+        }
+        
+        UserDefaults.standard.set(AppGroupEngine.defaultPinnedBundleIDs, forKey: "SelectedAppBundleIDs")
+        #expect(AppGroupEngine.pinnedAppItems().count == 4)
+        #expect(AppGroupEngine.canPinMoreApps == false)
+        
+        // Explicit replacement replaces target app and keeps count at 4
+        let targetOld = "com.apple.Notes"
+        let targetNew = "com.tdesktop.Telegram"
+        AppGroupEngine.replaceApp(oldBundleID: targetOld, newBundleID: targetNew)
+        
+        #expect(AppGroupEngine.isAppSelected(bundleID: targetNew) == true)
+        #expect(AppGroupEngine.isAppSelected(bundleID: targetOld) == false)
+        #expect(AppGroupEngine.pinnedAppItems().count == 4)
+        #expect(AppGroupEngine.canPinMoreApps == false)
+        
+        // After deselecting, canPinMoreApps becomes true
+        AppGroupEngine.deselectApp(bundleID: targetNew)
+        #expect(AppGroupEngine.pinnedAppItems().count == 3)
+        #expect(AppGroupEngine.canPinMoreApps == true)
+    }
+    
+    @Test @MainActor
+    func testProfileExplicitReplacement() {
+        let engine = ChromeProfileEngine.shared
+        let savedDirs = engine.selectedProfileDirs
+        defer {
+            engine.selectedProfileDirs = savedDirs
+        }
+        
+        engine.selectedProfileDirs = ["Default", "Profile 1", "Profile 2", "Profile 3"]
+        #expect(engine.selectedProfileDirs.count == 4)
+        
+        // Replace slot without silent overflow
+        engine.replaceProfile(oldDir: "Profile 3", newDir: "Profile 4")
+        #expect(engine.selectedProfileDirs == ["Default", "Profile 1", "Profile 2", "Profile 4"])
+        #expect(engine.isProfileSelected(dir: "Profile 4") == true)
+        #expect(engine.isProfileSelected(dir: "Profile 3") == false)
     }
 }
 

@@ -99,11 +99,24 @@ public final class ChromeProfileEngine: ObservableObject {
         }
     }
     
+    public func deselectProfile(dir: String) {
+        if selectedProfileDirs.count > 1 {
+            selectedProfileDirs.removeAll(where: { $0 == dir })
+        }
+    }
+    
+    public func replaceProfile(oldDir: String, newDir: String) {
+        if let idx = selectedProfileDirs.firstIndex(of: oldDir) {
+            selectedProfileDirs[idx] = newDir
+        } else {
+            selectedProfileDirs.removeAll(where: { $0 == oldDir })
+            selectedProfileDirs.append(newDir)
+        }
+    }
+    
     public func toggleProfileSelection(dir: String) {
         if selectedProfileDirs.contains(dir) {
-            if selectedProfileDirs.count > 1 {
-                selectedProfileDirs.removeAll(where: { $0 == dir })
-            }
+            deselectProfile(dir: dir)
         } else {
             selectProfile(dir: dir)
         }

@@ -606,12 +606,23 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
         }
     }
     
+    /// Maximum number of non-browser pinned quick apps (4 pinned + 1 Chrome/browser = 5 quick apps total)
+    public static let maxPinnedQuickApps = 4
+    
+    /// Default pinned quick apps (4 core apps + 1 Chrome/browser = 5 quick apps total)
+    public static let defaultPinnedBundleIDs: [String] = [
+        "com.google.antigravity",
+        "com.google.antigravity-ide",
+        "com.googlecode.iterm2",
+        "com.apple.Notes"
+    ]
+    
     public static var selectedBundleIDs: Set<String> {
         get {
             if let saved = UserDefaults.standard.stringArray(forKey: "SelectedAppBundleIDs"), !saved.isEmpty {
-                return Set(saved)
+                return Set(saved.prefix(maxPinnedQuickApps))
             }
-            var initial = Set<String>()
+            var initial: [String] = []
             let legacyKeys = [
                 "SelectedApp_AI Agent",
                 "SelectedApp_IDE",
@@ -619,33 +630,40 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
                 "SelectedApp_Notes"
             ]
             for key in legacyKeys {
-                if let val = UserDefaults.standard.string(forKey: key) {
-                    initial.insert(val)
+                if let val = UserDefaults.standard.string(forKey: key), !initial.contains(val) {
+                    initial.append(val)
                 }
             }
             if initial.isEmpty {
-                for engine in allEngines {
-                    if let id = engine.selectedBundleID {
-                        initial.insert(id)
-                    }
-                }
+                initial = defaultPinnedBundleIDs
             }
-            if initial.isEmpty {
-                initial = [
-                    "com.google.antigravity",
-                    "com.google.antigravity-ide",
-                    "com.googlecode.iterm2",
-                    "com.apple.Notes"
-                ]
-            }
-            let list = Array(initial.prefix(5))
+            let list = Array(initial.prefix(maxPinnedQuickApps))
             UserDefaults.standard.set(list, forKey: "SelectedAppBundleIDs")
             return Set(list)
         }
         set {
-            let list = Array(newValue.prefix(5))
+            let list = Array(newValue.prefix(maxPinnedQuickApps))
             UserDefaults.standard.set(list, forKey: "SelectedAppBundleIDs")
         }
+    }
+    
+    /// Whether more quick apps can be pinned (max 4 pinned apps + 1 Chrome/browser = 5 quick apps total)
+    public static var canPinMoreApps: Bool {
+        pinnedAppItems().count < maxPinnedQuickApps
+    }
+    
+    /// Explicitly replace an existing pinned app with a new app
+    public static func replaceApp(oldBundleID: String, newBundleID: String) {
+        var list = UserDefaults.standard.stringArray(forKey: "SelectedAppBundleIDs") ?? Array(selectedBundleIDs)
+        if let idx = list.firstIndex(of: oldBundleID) {
+            list[idx] = newBundleID
+        } else {
+            list.removeAll(where: { $0 == oldBundleID })
+            list.append(newBundleID)
+        }
+        let capped = Array(list.prefix(maxPinnedQuickApps))
+        UserDefaults.standard.set(capped, forKey: "SelectedAppBundleIDs")
+        selectedBundleIDs = Set(capped)
     }
     
     public static func isAppSelected(bundleID: String) -> Bool {
@@ -655,7 +673,7 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
     public static func selectApp(bundleID: String) {
         var list = UserDefaults.standard.stringArray(forKey: "SelectedAppBundleIDs") ?? Array(selectedBundleIDs)
         if !list.contains(bundleID) {
-            if list.count >= 5 {
+            if list.count >= maxPinnedQuickApps {
                 list.removeLast()
             }
             list.append(bundleID)
@@ -699,7 +717,7 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
         let selected = selectedBundleIDs
         let all = allDiscoveredItems()
         let matched = all.filter { selected.contains($0.bundleID) }
-        return Array(matched.prefix(5))
+        return Array(matched.prefix(maxPinnedQuickApps))
     }
     
     /// Returns pinned apps grouped by their first letter, sorted alphabetically.
@@ -768,7 +786,9 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
             custom.items.append(item)
         }
         
-        selectApp(bundleID: bundleID)
+        if canPinMoreApps {
+            selectApp(bundleID: bundleID)
+        }
         return item
     }
     

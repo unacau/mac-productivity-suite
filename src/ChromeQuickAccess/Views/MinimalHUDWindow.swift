@@ -57,6 +57,14 @@ public final class ChromeSwitcherState: ObservableObject {
         selectedAppItem
     }
     
+    public var hasBrothers: Bool {
+        if mode == .chrome {
+            return profiles.count > 1
+        } else {
+            return antigravityItems.count > 1
+        }
+    }
+    
     public func selectNext() {
         let count = mode == .chrome ? profiles.count : antigravityItems.count
         guard count > 0 else { return }
@@ -141,6 +149,9 @@ public struct MinimalHUDView: View {
     public init() {}
     
     private var cardWidth: CGFloat {
+        if !state.hasBrothers {
+            return 150
+        }
         let count = state.mode == .chrome ? state.profiles.count : state.antigravityItems.count
         return max(150, CGFloat(count) * 46 + 20)
     }
@@ -192,28 +203,32 @@ public struct MinimalHUDView: View {
                     .foregroundColor(.white)
                     .lineLimit(1)
                 
-                Spacer().frame(height: 10)
-                
-                // 3. Avatar / Icon Row
-                HStack(spacing: 6) {
-                    if state.mode == .chrome {
-                        ForEach(Array(state.profiles.enumerated()), id: \.element.id) { idx, profile in
-                            ProfileAvatarView(
-                                profile: profile,
-                                isSelected: idx == state.selectedIndex
-                            )
-                        }
-                    } else {
-                        ForEach(Array(state.antigravityItems.enumerated()), id: \.element.id) { idx, item in
-                            AntigravityAvatarView(
-                                item: item,
-                                isSelected: idx == state.selectedIndex
-                            )
+                // 3. Avatar / Icon Row (only displayed when there are sibling "brothers" to cycle between)
+                if state.hasBrothers {
+                    Spacer().frame(height: 10)
+                    
+                    HStack(spacing: 6) {
+                        if state.mode == .chrome {
+                            ForEach(Array(state.profiles.enumerated()), id: \.element.id) { idx, profile in
+                                ProfileAvatarView(
+                                    profile: profile,
+                                    isSelected: idx == state.selectedIndex
+                                )
+                            }
+                        } else {
+                            ForEach(Array(state.antigravityItems.enumerated()), id: \.element.id) { idx, item in
+                                AntigravityAvatarView(
+                                    item: item,
+                                    isSelected: idx == state.selectedIndex
+                                )
+                            }
                         }
                     }
+                    
+                    Spacer().frame(height: 14)
+                } else {
+                    Spacer().frame(height: 16)
                 }
-                
-                Spacer().frame(height: 14)
             }
             .frame(width: cardWidth)
             .background(
@@ -318,7 +333,8 @@ public final class MinimalHUDWindow: NSPanel {
             let screenRect = screen.visibleFrame
             let fittingSize = hostingView.fittingSize
             let width = max(150, fittingSize.width)
-            let height = max(215, fittingSize.height)
+            let minHeight: CGFloat = ChromeSwitcherState.shared.hasBrothers ? 215 : 140
+            let height = max(minHeight, fittingSize.height)
             let x = screenRect.midX - (width / 2)
             let y = screenRect.midY - (height / 2)
             self.setFrame(NSRect(x: x, y: y, width: width, height: height), display: true)

@@ -294,14 +294,164 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         guard let button = statusItem?.button else { return }
         
-        if let image = NSImage(systemSymbolName: "globe", accessibilityDescription: "Khomyak — Tap the Hamster") {
-            image.isTemplate = true
-            button.image = image
-        } else {
-            button.title = "⚡C"
-        }
+        let icon = makeKhomyakStatusIcon()
+        button.image = icon
+        button.imagePosition = .imageOnly
+        button.toolTip = "Khomyak (Хомяк) — Tap the Hamster"
         
         updateMenu()
+    }
+    
+    /// Generates a resolution-independent, full-color vector status bar icon of the Khomyak mascot
+    /// featuring its signature concentric target eyes, red triangle nose, cheek lobes, and paws.
+    private func makeKhomyakStatusIcon() -> NSImage {
+        let size = NSSize(width: 18, height: 18)
+        let image = NSImage(size: size, flipped: false) { rect in
+            guard let cg = NSGraphicsContext.current?.cgContext else { return false }
+            
+            let s = rect.width / 32.0
+            cg.scaleBy(x: s, y: s)
+
+            // Palette (Cadmium Yellow, Cream, Obsidian Dark, Vermilion Red, Pure White)
+            let cYellow = NSColor(red: 0.965, green: 0.737, blue: 0.078, alpha: 1.0).cgColor // #F6BC14
+            let cCream = NSColor(red: 1.0, green: 0.98, blue: 0.92, alpha: 1.0).cgColor
+            let cDark = NSColor(red: 0.086, green: 0.106, blue: 0.149, alpha: 1.0).cgColor   // #161B26
+            let cRed = NSColor(red: 0.902, green: 0.224, blue: 0.275, alpha: 1.0).cgColor   // #E63946
+            let cWhite = NSColor.white.cgColor
+
+            cg.setLineCap(.round)
+            cg.setLineJoin(.round)
+
+            func Y(_ y: CGFloat) -> CGFloat { 32.0 - y }
+
+            // 1. Ears
+            func drawEar(cx: CGFloat, svgY: CGFloat) {
+                let cy = Y(svgY)
+                cg.setFillColor(cYellow)
+                cg.setStrokeColor(cDark)
+                cg.setLineWidth(1.4)
+                cg.addEllipse(in: CGRect(x: cx - 4.2, y: cy - 4.2, width: 8.4, height: 8.4))
+                cg.drawPath(using: .fillStroke)
+
+                cg.setFillColor(cCream)
+                cg.setStrokeColor(cDark)
+                cg.setLineWidth(0.8)
+                cg.addEllipse(in: CGRect(x: cx - 2.2, y: cy - 2.2, width: 4.4, height: 4.4))
+                cg.drawPath(using: .fillStroke)
+            }
+            drawEar(cx: 7.5, svgY: 7.5)
+            drawEar(cx: 24.5, svgY: 7.5)
+
+            // 2. Cheek Lobes (Backing)
+            cg.setFillColor(cYellow)
+            cg.setStrokeColor(cDark)
+            cg.setLineWidth(1.4)
+            cg.addEllipse(in: CGRect(x: 9.0 - 6.2, y: Y(16.5) - 6.2, width: 12.4, height: 12.4))
+            cg.drawPath(using: .fillStroke)
+            cg.addEllipse(in: CGRect(x: 23.0 - 6.2, y: Y(16.5) - 6.2, width: 12.4, height: 12.4))
+            cg.drawPath(using: .fillStroke)
+
+            // 3. Head Center Fill
+            let head = CGMutablePath()
+            head.move(to: CGPoint(x: 9, y: Y(10)))
+            head.addCurve(to: CGPoint(x: 23, y: Y(10)), control1: CGPoint(x: 13, y: Y(8.5)), control2: CGPoint(x: 19, y: Y(8.5)))
+            head.addCurve(to: CGPoint(x: 26.5, y: Y(18)), control1: CGPoint(x: 25.5, y: Y(12)), control2: CGPoint(x: 26.5, y: Y(15)))
+            head.addCurve(to: CGPoint(x: 16, y: Y(22.5)), control1: CGPoint(x: 26.5, y: Y(21)), control2: CGPoint(x: 21.5, y: Y(22.5)))
+            head.addCurve(to: CGPoint(x: 5.5, y: Y(18)), control1: CGPoint(x: 10.5, y: Y(22.5)), control2: CGPoint(x: 5.5, y: Y(21)))
+            head.addCurve(to: CGPoint(x: 9, y: Y(10)), control1: CGPoint(x: 5.5, y: Y(15)), control2: CGPoint(x: 6.5, y: Y(12)))
+            head.closeSubpath()
+            cg.addPath(head)
+            cg.setFillColor(cYellow)
+            cg.fillPath()
+
+            // 4. White Muzzle
+            let muzzle = CGMutablePath()
+            muzzle.move(to: CGPoint(x: 12.5, y: Y(9.5)))
+            muzzle.addCurve(to: CGPoint(x: 10.5, y: Y(18)), control1: CGPoint(x: 12.5, y: Y(9.5)), control2: CGPoint(x: 10.5, y: Y(14)))
+            muzzle.addCurve(to: CGPoint(x: 16, y: Y(22.5)), control1: CGPoint(x: 10.5, y: Y(21.5)), control2: CGPoint(x: 13, y: Y(22.5)))
+            muzzle.addCurve(to: CGPoint(x: 21.5, y: Y(18)), control1: CGPoint(x: 19, y: Y(22.5)), control2: CGPoint(x: 21.5, y: Y(21.5)))
+            muzzle.addCurve(to: CGPoint(x: 19.5, y: Y(9.5)), control1: CGPoint(x: 21.5, y: Y(14)), control2: CGPoint(x: 19.5, y: Y(9.5)))
+            muzzle.closeSubpath()
+            cg.addPath(muzzle)
+            cg.setFillColor(cWhite)
+            cg.fillPath()
+
+            // 5. Signature Concentric Eyes
+            func drawEye(cx: CGFloat, svgY: CGFloat, gx: CGFloat, svgGY: CGFloat) {
+                let cy = Y(svgY)
+                let gy = Y(svgGY)
+
+                // Outer ring
+                cg.setFillColor(cWhite)
+                cg.setStrokeColor(cDark)
+                cg.setLineWidth(1.3)
+                cg.addEllipse(in: CGRect(x: cx - 4.2, y: cy - 4.2, width: 8.4, height: 8.4))
+                cg.drawPath(using: .fillStroke)
+
+                // Middle ring
+                cg.setFillColor(cWhite)
+                cg.setStrokeColor(cDark)
+                cg.setLineWidth(0.9)
+                cg.addEllipse(in: CGRect(x: cx - 3.0, y: cy - 3.0, width: 6.0, height: 6.0))
+                cg.drawPath(using: .fillStroke)
+
+                // Pupil
+                cg.setFillColor(cDark)
+                cg.addEllipse(in: CGRect(x: cx - 1.9, y: cy - 1.9, width: 3.8, height: 3.8))
+                cg.fillPath()
+
+                // Glare highlight
+                cg.setFillColor(cWhite)
+                cg.addEllipse(in: CGRect(x: gx - 0.7, y: gy - 0.7, width: 1.4, height: 1.4))
+                cg.fillPath()
+            }
+            drawEye(cx: 11.2, svgY: 13.8, gx: 12.0, svgGY: 13.0)
+            drawEye(cx: 20.8, svgY: 13.8, gx: 21.6, svgGY: 13.0)
+
+            // 6. Red Inverted Triangle Nose
+            let nose = CGMutablePath()
+            nose.move(to: CGPoint(x: 14.1, y: Y(16.8)))
+            nose.addLine(to: CGPoint(x: 17.9, y: Y(16.8)))
+            nose.addLine(to: CGPoint(x: 16.0, y: Y(19.2)))
+            nose.closeSubpath()
+            cg.addPath(nose)
+            cg.setFillColor(cRed)
+            cg.setStrokeColor(cDark)
+            cg.setLineWidth(0.6)
+            cg.drawPath(using: .fillStroke)
+
+            // 7. Mouth W
+            let mouth = CGMutablePath()
+            mouth.move(to: CGPoint(x: 13.8, y: Y(20.0)))
+            mouth.addCurve(to: CGPoint(x: 16.0, y: Y(20.0)), control1: CGPoint(x: 14.6, y: Y(20.8)), control2: CGPoint(x: 15.4, y: Y(20.8)))
+            mouth.addCurve(to: CGPoint(x: 18.2, y: Y(20.0)), control1: CGPoint(x: 16.6, y: Y(20.8)), control2: CGPoint(x: 17.4, y: Y(20.8)))
+            cg.addPath(mouth)
+            cg.setStrokeColor(cDark)
+            cg.setLineWidth(1.0)
+            cg.strokePath()
+
+            // 8. Paws
+            func drawPaw(cx: CGFloat, svgY: CGFloat) {
+                let cy = Y(svgY)
+                cg.setFillColor(cWhite)
+                cg.setStrokeColor(cDark)
+                cg.setLineWidth(1.1)
+                cg.addEllipse(in: CGRect(x: cx - 2.5, y: cy - 2.5, width: 5.0, height: 5.0))
+                cg.drawPath(using: .fillStroke)
+
+                cg.setFillColor(cRed)
+                cg.addEllipse(in: CGRect(x: cx - 0.8 - 0.35, y: cy - 1.0 - 0.35, width: 0.7, height: 0.7))
+                cg.addEllipse(in: CGRect(x: cx - 0.35, y: cy - 1.3 - 0.35, width: 0.7, height: 0.7))
+                cg.addEllipse(in: CGRect(x: cx + 0.8 - 0.35, y: cy - 1.0 - 0.35, width: 0.7, height: 0.7))
+                cg.fillPath()
+            }
+            drawPaw(cx: 12.8, svgY: 22.8)
+            drawPaw(cx: 19.2, svgY: 22.8)
+
+            return true
+        }
+        image.isTemplate = false
+        return image
     }
     
     public func updateMenu() {
@@ -499,9 +649,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         
         // 3b. Pinned Quick Apps Header
         changeAppSubmenu.addItem(NSMenuItem.separator())
-        let pinnedHeader = NSMenuItem(title: "Pinned Quick Apps (up to 5):", action: nil, keyEquivalent: "")
+        let pinnedHeader = NSMenuItem(title: "Pinned Quick Apps (up to 4):", action: nil, keyEquivalent: "")
         pinnedHeader.attributedTitle = NSAttributedString(
-            string: "Pinned Quick Apps (up to 5):",
+            string: "Pinned Quick Apps (up to 4):",
             attributes: [.font: NSFont.boldSystemFont(ofSize: 11)]
         )
         pinnedHeader.isEnabled = false
@@ -613,8 +763,52 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     
     @objc private func handleChangeProfileClick(_ sender: NSMenuItem) {
         guard let dir = sender.representedObject as? String else { return }
-        ChromeProfileEngine.shared.toggleProfileSelection(dir: dir)
-        updateMenu()
+        let profileEngine = ChromeProfileEngine.shared
+        if profileEngine.isProfileSelected(dir: dir) {
+            profileEngine.deselectProfile(dir: dir)
+            updateMenu()
+        } else {
+            if profileEngine.selectedProfiles.count < 4 {
+                profileEngine.selectProfile(dir: dir)
+                updateMenu()
+            } else {
+                promptProfileReplacement(newDir: dir)
+            }
+        }
+    }
+    
+    private func promptProfileReplacement(newDir: String) {
+        let profileEngine = ChromeProfileEngine.shared
+        let newProfileName = profileEngine.profiles.first(where: { $0.dir == newDir })?.effectiveName ?? newDir
+        
+        let alert = NSAlert()
+        alert.messageText = "Chrome Profiles Limit Reached (4 of 4)"
+        alert.informativeText = "Khomyak supports up to 4 quick Chrome profiles (Caps + 1..4).\n\nAll 4 profile slots are currently in use. Choose which profile slot to replace with '\(newProfileName)':"
+        alert.alertStyle = .informational
+        
+        let popUp = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 300, height: 26))
+        for p in profileEngine.selectedProfiles {
+            popUp.addItem(withTitle: "Slot \(p.index): \(p.effectiveName)")
+            popUp.lastItem?.representedObject = p.dir
+            if let avatar = p.avatarImage?.copy() as? NSImage {
+                avatar.size = NSSize(width: 16, height: 16)
+                popUp.lastItem?.image = avatar
+            }
+        }
+        alert.accessoryView = popUp
+        
+        alert.addButton(withTitle: "Replace Profile")
+        alert.addButton(withTitle: "Cancel")
+        
+        NSApp.activate(ignoringOtherApps: true)
+        alert.window.level = .floating
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            if let oldDir = popUp.selectedItem?.representedObject as? String {
+                profileEngine.replaceProfile(oldDir: oldDir, newDir: newDir)
+                updateMenu()
+            }
+        }
     }
     
     @objc private func handleProfileClick(_ sender: NSMenuItem) {
@@ -696,9 +890,60 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     
     @objc private func handleTogglePinAppClick(_ sender: NSMenuItem) {
         guard let bundleID = sender.representedObject as? String else { return }
-        AppGroupEngine.toggleApp(bundleID: bundleID)
-        updateDynamicShortcuts()
-        updateMenu()
+        if AppGroupEngine.isAppSelected(bundleID: bundleID) {
+            AppGroupEngine.deselectApp(bundleID: bundleID)
+            updateDynamicShortcuts()
+            updateMenu()
+        } else {
+            if AppGroupEngine.canPinMoreApps {
+                AppGroupEngine.selectApp(bundleID: bundleID)
+                updateDynamicShortcuts()
+                updateMenu()
+            } else {
+                promptAppReplacement(newBundleID: bundleID)
+            }
+        }
+    }
+    
+    private func promptAppReplacement(newBundleID: String) {
+        let allDiscovered = AppGroupEngine.allDiscoveredItems()
+        let newAppName = allDiscovered.first(where: { $0.bundleID == newBundleID })?.name
+            ?? (Bundle(identifier: newBundleID)?.infoDictionary?["CFBundleName"] as? String)
+            ?? newBundleID
+        
+        let alert = NSAlert()
+        alert.messageText = "Quick Apps Limit Reached (4 of 4)"
+        alert.informativeText = "Khomyak supports 5 quick apps in total (Chrome + 4 pinned apps).\n\nAll 4 pinned slots are currently in use. Choose which application to replace with '\(newAppName)':"
+        alert.alertStyle = .informational
+        
+        let popUp = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 300, height: 26))
+        let currentPinned = AppGroupEngine.pinnedAppItems()
+        for item in currentPinned {
+            let char = item.name.first(where: { $0.isLetter })?.uppercased() ?? "A"
+            popUp.addItem(withTitle: "\(item.name) (Caps + \(char))")
+            popUp.lastItem?.representedObject = item.bundleID
+            if let icon = item.icon.copy() as? NSImage {
+                icon.size = NSSize(width: 16, height: 16)
+                popUp.lastItem?.image = icon
+            }
+        }
+        alert.accessoryView = popUp
+        
+        alert.addButton(withTitle: "Replace App")
+        alert.addButton(withTitle: "Cancel")
+        
+        NSApp.activate(ignoringOtherApps: true)
+        alert.window.level = .floating
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            if let oldBundleID = popUp.selectedItem?.representedObject as? String {
+                let oldName = popUp.selectedItem?.title ?? oldBundleID
+                logger.info("User explicitly replaced '\(oldName)' with '\(newAppName)'.")
+                AppGroupEngine.replaceApp(oldBundleID: oldBundleID, newBundleID: newBundleID)
+                updateDynamicShortcuts()
+                updateMenu()
+            }
+        }
     }
     
     @objc private func handleChooseOtherApp() {
@@ -712,11 +957,19 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.message = "Choose an application to pin to Khomyak Quick Apps:"
         
         NSApp.activate(ignoringOtherApps: true)
+        panel.level = .floating
         if panel.runModal() == .OK, let url = panel.url {
             if let item = AppGroupEngine.registerCustomApp(url: url) {
-                AppGroupEngine.selectApp(bundleID: item.bundleID)
-                updateDynamicShortcuts()
-                updateMenu()
+                if AppGroupEngine.isAppSelected(bundleID: item.bundleID) {
+                    return
+                }
+                if AppGroupEngine.canPinMoreApps {
+                    AppGroupEngine.selectApp(bundleID: item.bundleID)
+                    updateDynamicShortcuts()
+                    updateMenu()
+                } else {
+                    promptAppReplacement(newBundleID: item.bundleID)
+                }
             }
         }
     }
