@@ -1,5 +1,6 @@
 import Cocoa
 import AppKit
+import UniformTypeIdentifiers
 import os
 
 @MainActor
@@ -123,29 +124,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
-    /// Re-evaluates and binds dynamic hotkeys based strictly on the first letter of each selected application's name.
+    /// Re-evaluates and binds dynamic hotkeys based strictly on the first letter of each pinned application's name.
     public func updateDynamicShortcuts() {
-        var letterToItems: [Character: [AntigravityItem]] = [:]
-        
-        let engines = [
-            AppGroupEngine.terminal,
-            AppGroupEngine.aiAgent,
-            AppGroupEngine.ide,
-            AppGroupEngine.notes
-        ]
-        
-        for engine in engines {
-            if let item = engine.selectedItem {
-                let char = engine.activeShortcutChar
-                if letterToItems[char] == nil {
-                    letterToItems[char] = []
-                }
-                if !letterToItems[char]!.contains(where: { $0.bundleID == item.bundleID }) {
-                    letterToItems[char]!.append(item)
-                }
-            }
-        }
-        
+        let groups = AppGroupEngine.pinnedAppsGroupedByLetter()
         var triggers: [UInt32: @MainActor () -> Void] = [:]
         
         // 1. Chrome browser is 'C'
@@ -153,12 +134,13 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.handleChromeTrigger()
         }
         
-        // 2. Register every letter's items
-        for (char, items) in letterToItems {
-            // 'C' is already handled by Chrome profile switcher
-            if char == "C" { continue }
+        // 2. Register every pinned letter's items
+        for group in groups {
+            let char = group.letter
+            if char == "C" { continue } // 'C' is reserved for Chrome profile switcher
             
             if let code = KeyCodes.keyCode(for: char) {
+                let items = group.items
                 triggers[code] = { [weak self] in
                     self?.handleAppLetterTrigger(char: char, items: items)
                 }
@@ -166,7 +148,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         
         CapsLockEngine.shared.dynamicKeyTriggers = triggers
-        logger.info("Dynamic app shortcuts updated: \(letterToItems.map { "\($0.key): \($0.value.map { $0.name })" })")
+        logger.info("Dynamic app shortcuts updated for pinned apps: \(groups.map { "\($0.letter): \($0.items.map { $0.name })" })")
     }
     
     private func setupEngineCallbacks() {
@@ -397,7 +379,6 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                     target: self,
                     representedObject: p.dir
                 )
-                pItem.toolTip = "Slot #\(p.index): \(p.effectiveName). Click to switch, ⌥-click to deselect."
                 menu.addItem(pItem)
             }
         } else if let firstProfile = profileEngine.profiles.first {
@@ -414,38 +395,69 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         
         menu.addItem(NSMenuItem.separator())
         
-        // 2. Toolkit section (caps lock)
-        let toolkitIcon = NSImage(systemSymbolName: "wrench.and.screwdriver.fill", accessibilityDescription: nil) ?? NSImage()
-        let toolkitHeader = makeAlignedMenuItem(
-            title: "Toolkit (Caps-Lock)",
+        // 2. Quick Apps section (Caps-Lock)
+        let quickAppsIcon = NSImage(systemSymbolName: "square.grid.2x2.fill", accessibilityDescription: nil)
+            ?? NSImage(systemSymbolName: "wrench.and.screwdriver.fill", accessibilityDescription: nil)
+            ?? NSImage()
+        let quickAppsHeader = makeAlignedMenuItem(
+            title: "Quick Apps (Caps-Lock)",
             isHeader: true,
-            icon: toolkitIcon,
+            icon: quickAppsIcon,
             action: nil,
             target: nil
         )
-        toolkitHeader.isEnabled = false
-        menu.addItem(toolkitHeader)
+        quickAppsHeader.isEnabled = false
+        menu.addItem(quickAppsHeader)
         
-        let toolkitConfigs: [(category: String, engine: AppGroupEngine)] = [
-            ("Terminal", AppGroupEngine.terminal),
-            ("IDE", AppGroupEngine.ide),
-            ("AI Agent", AppGroupEngine.aiAgent),
-            ("Notes", AppGroupEngine.notes)
-        ]
-        
-        for config in toolkitConfigs {
-            let engine = config.engine
-            if let item = engine.selectedItem {
-                let char = engine.activeShortcutChar
+        let pinnedGroups = AppGroupEngine.pinnedAppsGroupedByLetter()
+        for group in pinnedGroups {
+            let char = group.letter
+            let charStr = String(char).lowercased()
+            
+            if group.items.count == 1 {
+                let item = group.items[0]
                 let rowItem = makeAlignedMenuItem(
                     title: item.name,
-                    keyEquivalent: String(char).lowercased(),
+                    keyEquivalent: charStr,
                     icon: item.icon,
                     action: #selector(handleCoreAppClick(_:)),
                     target: self,
                     representedObject: item.bundleID
                 )
-                rowItem.toolTip = "\(config.category): \(item.name) (Caps-Lock + \(char)). Click to switch."
+                menu.addItem(rowItem)
+            } else {
+                let firstName = group.items.first?.name ?? "App"
+                let title = "\(firstName) (\(char) • \(group.items.count) apps)"
+                let firstIcon = group.items.first?.icon
+                let rowItem = makeAlignedMenuItem(
+                    title: title,
+                    keyEquivalent: "",
+                    icon: firstIcon,
+                    action: nil,
+                    target: nil
+                )
+                
+                let cycleSubmenu = NSMenu(title: title)
+                let header = NSMenuItem(title: "Caps-Lock + \(char) to cycle:", action: nil, keyEquivalent: "")
+                header.attributedTitle = NSAttributedString(
+                    string: "Caps-Lock + \(char) to cycle:",
+                    attributes: [.font: NSFont.boldSystemFont(ofSize: 11)]
+                )
+                header.isEnabled = false
+                cycleSubmenu.addItem(header)
+                
+                for item in group.items {
+                    let subItem = makeAlignedMenuItem(
+                        title: item.name,
+                        icon: item.icon,
+                        action: #selector(handleCoreAppClick(_:)),
+                        target: self,
+                        representedObject: item.bundleID
+                    )
+                    cycleSubmenu.addItem(subItem)
+                }
+                
+                rowItem.submenu = cycleSubmenu
                 menu.addItem(rowItem)
             }
         }
@@ -482,42 +494,76 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             if !isSelected {
                 pItem.offStateImage = transparentOffImage
             }
-            pItem.toolTip = isSelected ? "Active slot #\(slot!). Click to deselect." : "Click to select into active slots."
             changeAppSubmenu.addItem(pItem)
         }
         
-        // 3b. Toolkit categories in Change App
-        for config in toolkitConfigs {
+        // 3b. Pinned Quick Apps Header
+        changeAppSubmenu.addItem(NSMenuItem.separator())
+        let pinnedHeader = NSMenuItem(title: "Pinned Quick Apps (up to 5):", action: nil, keyEquivalent: "")
+        pinnedHeader.attributedTitle = NSAttributedString(
+            string: "Pinned Quick Apps (up to 5):",
+            attributes: [.font: NSFont.boldSystemFont(ofSize: 11)]
+        )
+        pinnedHeader.isEnabled = false
+        changeAppSubmenu.addItem(pinnedHeader)
+        
+        let pinnedItems = AppGroupEngine.pinnedAppItems()
+        for item in pinnedItems {
+            let char = Character((item.name.first(where: { $0.isLetter }) ?? "A").uppercased())
+            let pItem = makeAlignedMenuItem(
+                title: "\(item.name) (\(char))",
+                keyEquivalent: String(char).lowercased(),
+                icon: item.icon,
+                action: #selector(handleUnpinAppClick(_:)),
+                target: self,
+                representedObject: item.bundleID
+            )
+            pItem.state = .on
+            changeAppSubmenu.addItem(pItem)
+        }
+        
+        // 3c. Catalog Categories in Change App
+        let catalogCategories = AppGroupEngine.catalogCategories
+        for cat in catalogCategories {
             changeAppSubmenu.addItem(NSMenuItem.separator())
             
-            let catHeader = NSMenuItem(title: "\(config.category):", action: nil, keyEquivalent: "")
+            let catHeader = NSMenuItem(title: "\(cat.category):", action: nil, keyEquivalent: "")
             catHeader.attributedTitle = NSAttributedString(
-                string: "\(config.category):",
+                string: "\(cat.category):",
                 attributes: [.font: NSFont.boldSystemFont(ofSize: 11)]
             )
             catHeader.isEnabled = false
             changeAppSubmenu.addItem(catHeader)
             
-            let engine = config.engine
-            for item in engine.items {
-                let isSelected = engine.isSelected(bundleID: item.bundleID)
+            for item in cat.items {
+                let isPinned = AppGroupEngine.isAppSelected(bundleID: item.bundleID)
                 let char = Character((item.name.first(where: { $0.isLetter }) ?? "A").uppercased())
                 let menuItem = makeAlignedMenuItem(
                     title: item.name,
                     keyEquivalent: String(char).lowercased(),
                     icon: item.icon,
-                    action: #selector(handleChangeAppItemClick(_:)),
+                    action: #selector(handleTogglePinAppClick(_:)),
                     target: self,
-                    representedObject: "\(engine.category):\(item.bundleID)"
+                    representedObject: item.bundleID
                 )
-                menuItem.state = isSelected ? .on : .off
-                if !isSelected {
+                menuItem.state = isPinned ? .on : .off
+                if !isPinned {
                     menuItem.offStateImage = transparentOffImage
                 }
-                menuItem.toolTip = "Set \(item.name) as active \(config.category) (Caps-Lock + \(char))."
                 changeAppSubmenu.addItem(menuItem)
             }
         }
+        
+        // 3d. Choose Other App...
+        changeAppSubmenu.addItem(NSMenuItem.separator())
+        let customAppItem = makeAlignedMenuItem(
+            title: "Choose Other App...",
+            keyEquivalent: "o",
+            modifierMask: [.command],
+            action: #selector(handleChooseOtherApp),
+            target: self
+        )
+        changeAppSubmenu.addItem(customAppItem)
         
         changeAppItem.submenu = changeAppSubmenu
         menu.addItem(changeAppItem)
@@ -634,6 +680,47 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         handleAppItemClick(sender)
     }
     
+    @objc private func handleMultiAppCycleClick(_ sender: NSMenuItem) {
+        guard let repr = sender.representedObject as? String else { return }
+        let bundleIDs = repr.split(separator: ",").map(String.init)
+        guard let first = bundleIDs.first else { return }
+        self.focusApp(bundleID: first)
+    }
+    
+    @objc private func handleUnpinAppClick(_ sender: NSMenuItem) {
+        guard let bundleID = sender.representedObject as? String else { return }
+        AppGroupEngine.deselectApp(bundleID: bundleID)
+        updateDynamicShortcuts()
+        updateMenu()
+    }
+    
+    @objc private func handleTogglePinAppClick(_ sender: NSMenuItem) {
+        guard let bundleID = sender.representedObject as? String else { return }
+        AppGroupEngine.toggleApp(bundleID: bundleID)
+        updateDynamicShortcuts()
+        updateMenu()
+    }
+    
+    @objc private func handleChooseOtherApp() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.application]
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.prompt = "Pin App"
+        panel.message = "Choose an application to pin to Khomyak Quick Apps:"
+        
+        NSApp.activate(ignoringOtherApps: true)
+        if panel.runModal() == .OK, let url = panel.url {
+            if let item = AppGroupEngine.registerCustomApp(url: url) {
+                AppGroupEngine.selectApp(bundleID: item.bundleID)
+                updateDynamicShortcuts()
+                updateMenu()
+            }
+        }
+    }
+    
     @objc private func handleRefreshProfiles() {
         if AXIsProcessTrusted() {
             if !CapsLockEngine.shared.isStarted {
@@ -645,10 +732,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         ChromeProfileEngine.shared.refreshProfiles()
         AntigravityEngine.shared.refreshItems()
-        AppGroupEngine.aiAgent.refreshItems()
-        AppGroupEngine.terminal.refreshItems()
-        AppGroupEngine.notes.refreshItems()
-        AppGroupEngine.ide.refreshItems()
+        for engine in AppGroupEngine.allEngines {
+            engine.refreshItems()
+        }
+        updateDynamicShortcuts()
         updateMenu()
     }
     

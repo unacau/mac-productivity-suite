@@ -36,6 +36,7 @@ FRAMEWORKS=(
     "-framework" "SwiftUI"
     "-framework" "ApplicationServices"
     "-framework" "CoreGraphics"
+    "-framework" "UniformTypeIdentifiers"
 )
 
 echo "[1/5] Compiling arm64 slice (Apple Silicon)..."

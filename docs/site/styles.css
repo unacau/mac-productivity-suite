@@ -4,15 +4,128 @@
    ========================================================================== */
 
 :root {
-  --bg-liminal: #FDF8FA;
-  --amber-accent: #F59E0B;
-  --pink-accent: #EC4899;
-  --pink-light: #FBCFE8;
-
+  --bg-canvas: #FDF8FA;
   --text-primary: #0F172A;
   --text-muted: #475569;
+  --brand-color: #0F172A;
+
+  --glass-bg: rgba(255, 255, 255, 0.82);
+  --glass-border: rgba(0, 0, 0, 0.06);
+  --glass-shadow: 0 8px 25px rgba(0, 0, 0, 0.05);
+  --glass-btn-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+  --glass-hover-bg: rgba(255, 255, 255, 0.98);
+  --glass-hover-text: #0F172A;
+
+  --kbd-bg: rgba(0, 0, 0, 0.06);
+  --kbd-border: rgba(0, 0, 0, 0.15);
+  --kbd-border-b: rgba(0, 0, 0, 0.3);
+  --kbd-text: #0F172A;
+
+  --glow-kbd-text: #9D174D;
+  --glow-kbd-border: #F472B6;
+  --glow-kbd-bg: #FCE7F3;
+  --glow-kbd-shadow: rgba(244, 114, 182, 0.4);
+  --glow-kbd-pulse: rgba(244, 114, 182, 0.6);
+
+  --download-bg: linear-gradient(135deg, #F472B6 0%, #DB2777 100%);
+  --download-hover-bg: linear-gradient(135deg, #FB7185 0%, #E11D48 100%);
+  --download-shadow: 0 8px 24px rgba(219, 39, 119, 0.35);
+  --download-shadow-hover: 0 12px 30px rgba(219, 39, 119, 0.5);
+
+  --vignette-radial: radial-gradient(circle at 50% 50%, transparent 65%, rgba(253, 232, 238, 0.4) 100%);
+  --vignette-linear: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, transparent 15%, transparent 85%, rgba(253, 232, 238, 0.5) 100%);
+
+  --card-bg: rgba(255, 255, 255, 0.88);
+  --card-border: rgba(0, 0, 0, 0.08);
+  --card-shadow: 0 16px 40px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+  --card-title: #0F172A;
+  --card-desc: #64748B;
+  --card-close-color: #94A3B8;
+  --card-close-hover-bg: rgba(0, 0, 0, 0.04);
+  --card-badge-bg: rgba(2, 132, 199, 0.1);
+  --card-badge-text: #0284C7;
+
+  --compare-row-bg: rgba(0, 0, 0, 0.025);
+  --compare-row-border: rgba(0, 0, 0, 0.04);
+  --compare-target-color: #0F172A;
+  --compare-method-color: #64748B;
+
+  --mnemonic-bg: rgba(255, 255, 255, 0.88);
+  --mnemonic-border: rgba(0, 0, 0, 0.08);
+  --mnemonic-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+  --mnemonic-label-color: #334155;
+  --pill-bg: rgba(241, 245, 249, 0.85);
+  --pill-border: rgba(0, 0, 0, 0.08);
+  --pill-text: #1E293B;
+  --pill-hover-bg: #FFFFFF;
+  --pill-hover-border: #38BDF8;
+  --pill-kbd-bg: #FFFFFF;
+  --pill-kbd-border: rgba(0, 0, 0, 0.16);
+  --pill-kbd-border-b: rgba(0, 0, 0, 0.28);
+
   --font-system: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+[data-theme="dark"] {
+  --bg-canvas: #0B1120;
+  --text-primary: #F8FAFC;
+  --text-muted: #94A3B8;
+  --brand-color: #F8FAFC;
+
+  --glass-bg: rgba(15, 23, 42, 0.82);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  --glass-btn-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+  --glass-hover-bg: rgba(30, 41, 59, 0.95);
+  --glass-hover-text: #38BDF8;
+
+  --kbd-bg: rgba(255, 255, 255, 0.08);
+  --kbd-border: rgba(255, 255, 255, 0.18);
+  --kbd-border-b: rgba(255, 255, 255, 0.35);
+  --kbd-text: #F8FAFC;
+
+  --glow-kbd-text: #38BDF8;
+  --glow-kbd-border: #38BDF8;
+  --glow-kbd-bg: rgba(56, 189, 248, 0.18);
+  --glow-kbd-shadow: rgba(56, 189, 248, 0.45);
+  --glow-kbd-pulse: rgba(56, 189, 248, 0.75);
+
+  --download-bg: linear-gradient(135deg, #38BDF8 0%, #0284C7 100%);
+  --download-hover-bg: linear-gradient(135deg, #60A5FA 0%, #0369A1 100%);
+  --download-shadow: 0 8px 24px rgba(56, 189, 248, 0.38);
+  --download-shadow-hover: 0 12px 30px rgba(56, 189, 248, 0.55);
+
+  --vignette-radial: radial-gradient(circle at 50% 50%, transparent 55%, rgba(11, 17, 32, 0.85) 100%);
+  --vignette-linear: linear-gradient(180deg, rgba(11, 17, 32, 0.65) 0%, transparent 15%, transparent 80%, rgba(11, 17, 32, 0.85) 100%);
+
+  --card-bg: rgba(15, 23, 42, 0.88);
+  --card-border: rgba(255, 255, 255, 0.12);
+  --card-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+  --card-title: #F8FAFC;
+  --card-desc: #94A3B8;
+  --card-close-color: #64748B;
+  --card-close-hover-bg: rgba(255, 255, 255, 0.08);
+  --card-badge-bg: rgba(56, 189, 248, 0.16);
+  --card-badge-text: #38BDF8;
+
+  --compare-row-bg: rgba(255, 255, 255, 0.035);
+  --compare-row-border: rgba(255, 255, 255, 0.08);
+  --compare-target-color: #F8FAFC;
+  --compare-method-color: #94A3B8;
+
+  --mnemonic-bg: rgba(15, 23, 42, 0.85);
+  --mnemonic-border: rgba(255, 255, 255, 0.12);
+  --mnemonic-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --mnemonic-label-color: #E2E8F0;
+  --pill-bg: rgba(255, 255, 255, 0.06);
+  --pill-border: rgba(255, 255, 255, 0.12);
+  --pill-text: #F1F5F9;
+  --pill-hover-bg: rgba(255, 255, 255, 0.12);
+  --pill-hover-border: #38BDF8;
+  --pill-kbd-bg: rgba(255, 255, 255, 0.10);
+  --pill-kbd-border: rgba(255, 255, 255, 0.18);
+  --pill-kbd-border-b: rgba(255, 255, 255, 0.30);
 }
 
 * {
@@ -27,11 +140,12 @@ body.liminal-body {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background-color: var(--bg-liminal);
+  background-color: var(--bg-canvas);
   font-family: var(--font-system);
   color: var(--text-primary);
   position: relative;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.4s ease, color 0.4s ease;
 }
 
 /* 1. Fullscreen 3D WebGL Canvas */
@@ -49,7 +163,7 @@ body.liminal-body {
   cursor: grabbing;
 }
 
-/* Soft Ethereal Vignette (Light & Dreamy) */
+/* Dynamic Vignette (Light Liminal or Deep Midnight Obsidian) */
 #canvas-container::after {
   content: "";
   position: absolute;
@@ -58,8 +172,8 @@ body.liminal-body {
   width: 100%;
   height: 100%;
   pointer-events: none;
-  background: radial-gradient(circle at 50% 50%, transparent 65%, rgba(253, 232, 238, 0.4) 100%),
-              linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, transparent 15%, transparent 85%, rgba(253, 232, 238, 0.5) 100%);
+  background: var(--vignette-radial), var(--vignette-linear);
+  transition: opacity 0.4s ease;
 }
 
 /* 2. Ultra-Clean UI Overlay */
@@ -92,25 +206,26 @@ kbd {
   padding: 2px 8px;
   font-size: 0.82em;
   font-weight: 700;
-  color: #0F172A;
-  background: rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  border-bottom: 2px solid rgba(0, 0, 0, 0.3);
+  color: var(--kbd-text);
+  background: var(--kbd-bg);
+  border: 1px solid var(--kbd-border);
+  border-bottom: 2px solid var(--kbd-border-b);
   border-radius: 6px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
 }
 
 .glow-kbd {
-  color: #9D174D;
-  border-color: #F472B6;
-  background: #FCE7F3;
-  box-shadow: 0 0 12px rgba(244, 114, 182, 0.4);
+  color: var(--glow-kbd-text);
+  border-color: var(--glow-kbd-border);
+  background: var(--glow-kbd-bg);
+  box-shadow: 0 0 12px var(--glow-kbd-shadow);
   animation: kbd-pulse 2s infinite ease-in-out;
 }
 
 @keyframes kbd-pulse {
-  0%, 100% { transform: scale(1); box-shadow: 0 0 8px rgba(244, 114, 182, 0.3); }
-  50% { transform: scale(1.08); box-shadow: 0 0 18px rgba(244, 114, 182, 0.6); }
+  0%, 100% { transform: scale(1); box-shadow: 0 0 8px var(--glow-kbd-shadow); }
+  50% { transform: scale(1.08); box-shadow: 0 0 18px var(--glow-kbd-pulse); }
 }
 
 /* Minimal Top Bar */
@@ -125,13 +240,14 @@ kbd {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--glass-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   padding: 8px 18px;
   border-radius: 999px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  transition: all 0.3s ease;
 }
 
 .brand-icon {
@@ -144,7 +260,8 @@ kbd {
   font-weight: 800;
   font-size: 0.95rem;
   letter-spacing: 0.08em;
-  color: #0F172A;
+  color: var(--brand-color);
+  transition: color 0.3s ease;
 }
 
 .nav-controls {
@@ -154,60 +271,70 @@ kbd {
 }
 
 .glass-btn {
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--glass-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--glass-border);
   padding: 9px 14px;
   border-radius: 999px;
   font-size: 0.9rem;
   color: var(--text-muted);
-  transition: all 0.2s;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+  transition: all 0.25s ease;
+  box-shadow: var(--glass-btn-shadow);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .glass-btn:hover {
-  background: rgba(255, 255, 255, 0.98);
-  color: #0F172A;
+  background: var(--glass-hover-bg);
+  color: var(--glass-hover-text);
+  transform: translateY(-1px);
+}
+
+.theme-btn {
+  font-size: 1rem;
+  padding: 8px 13px;
 }
 
 .glass-link {
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--glass-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--glass-border);
   padding: 9px 18px;
   border-radius: 999px;
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-muted);
-  transition: all 0.2s;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+  transition: all 0.25s ease;
+  box-shadow: var(--glass-btn-shadow);
 }
 
 .glass-link:hover {
-  color: #0F172A;
-  background: rgba(255, 255, 255, 0.98);
+  color: var(--glass-hover-text);
+  background: var(--glass-hover-bg);
+  transform: translateY(-1px);
 }
 
 .download-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: linear-gradient(135deg, #F472B6 0%, #DB2777 100%);
+  background: var(--download-bg);
   color: #FFFFFF;
   padding: 9px 22px;
   border-radius: 999px;
   font-size: 0.88rem;
   font-weight: 700;
-  box-shadow: 0 8px 24px rgba(219, 39, 119, 0.35);
+  box-shadow: var(--download-shadow);
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .download-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 30px rgba(219, 39, 119, 0.5);
-  background: linear-gradient(135deg, #FB7185 0%, #E11D48 100%);
+  box-shadow: var(--download-shadow-hover);
+  background: var(--download-hover-bg);
 }
 
 .dmg-size {
@@ -240,15 +367,16 @@ kbd {
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--glass-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--glass-border);
   padding: 8px 20px;
   border-radius: 999px;
   font-size: 0.82rem;
   color: var(--text-muted);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--glass-shadow);
+  transition: all 0.3s ease;
 }
 
 /* 3. Insight 1: Mnemonic Thought-to-Key Bar */
@@ -257,20 +385,22 @@ kbd {
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  background: rgba(255, 255, 255, 0.88);
+  background: var(--mnemonic-bg);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--mnemonic-border);
   padding: 6px 16px;
   border-radius: 999px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--mnemonic-shadow);
+  transition: all 0.3s ease;
 }
 
 .mnemonic-label {
   font-size: 0.78rem;
   font-weight: 700;
-  color: #334155;
+  color: var(--mnemonic-label-color);
   letter-spacing: 0.02em;
+  transition: color 0.3s ease;
 }
 
 .mnemonic-buttons {
@@ -283,20 +413,20 @@ kbd {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(241, 245, 249, 0.85);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--pill-bg);
+  border: 1px solid var(--pill-border);
   padding: 4px 10px;
   border-radius: 999px;
   font-size: 0.76rem;
-  color: #1E293B;
+  color: var(--pill-text);
   transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .mnemonic-pill:hover {
-  background: #FFFFFF;
+  background: var(--pill-hover-bg);
   transform: translateY(-2px);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
-  border-color: #38BDF8;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  border-color: var(--pill-hover-border);
 }
 
 .mnemonic-pill:active {
@@ -304,31 +434,31 @@ kbd {
 }
 
 .pill-word strong {
-  color: #0284C7;
+  color: #38BDF8;
   font-weight: 800;
 }
 
 .pill-kbd {
   padding: 1px 6px;
   font-size: 0.72rem;
-  background: #FFFFFF;
-  border: 1px solid rgba(0, 0, 0, 0.16);
-  border-bottom: 2px solid rgba(0, 0, 0, 0.28);
+  background: var(--pill-kbd-bg);
+  border: 1px solid var(--pill-kbd-border);
+  border-bottom: 2px solid var(--pill-kbd-border-b);
 }
 
 /* 4. Insight 2: Spotlight Paradox Floating Card */
 .badge-btn {
   font-size: 0.82rem;
   font-weight: 700;
-  color: #0284C7;
-  border: 1px solid rgba(2, 132, 199, 0.22);
-  background: rgba(240, 249, 255, 0.85);
+  color: var(--card-badge-text);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
 }
 
 .badge-btn:hover {
-  background: #FFFFFF;
-  border-color: #0284C7;
-  box-shadow: 0 4px 16px rgba(2, 132, 199, 0.2);
+  background: var(--glass-hover-bg);
+  color: var(--glass-hover-text);
+  box-shadow: 0 4px 16px rgba(56, 189, 248, 0.25);
 }
 
 .insight-card.paradox-card {
@@ -337,13 +467,13 @@ kbd {
   right: 32px;
   width: 380px;
   max-width: calc(100vw - 64px);
-  background: rgba(255, 255, 255, 0.88);
+  background: var(--card-bg);
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--card-border);
   border-radius: 20px;
   padding: 18px 20px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+  box-shadow: var(--card-shadow);
   pointer-events: auto;
   z-index: 20;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -370,15 +500,15 @@ kbd {
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #0284C7;
-  background: rgba(2, 132, 199, 0.1);
+  color: var(--card-badge-text);
+  background: var(--card-badge-bg);
   padding: 3px 8px;
   border-radius: 6px;
 }
 
 .card-close {
   background: transparent;
-  color: #94A3B8;
+  color: var(--card-close-color);
   font-size: 0.88rem;
   font-weight: bold;
   padding: 2px 6px;
@@ -387,23 +517,25 @@ kbd {
 }
 
 .card-close:hover {
-  color: #0F172A;
-  background: rgba(0, 0, 0, 0.04);
+  color: var(--card-title);
+  background: var(--card-close-hover-bg);
 }
 
 .card-title {
   font-size: 1.02rem;
   font-weight: 800;
-  color: #0F172A;
+  color: var(--card-title);
   line-height: 1.25;
   margin-bottom: 4px;
+  transition: color 0.3s ease;
 }
 
 .card-desc {
   font-size: 0.78rem;
-  color: #64748B;
+  color: var(--card-desc);
   line-height: 1.35;
   margin-bottom: 12px;
+  transition: color 0.3s ease;
 }
 
 /* Compare Matrix */
@@ -420,8 +552,9 @@ kbd {
   justify-content: space-between;
   padding: 7px 10px;
   border-radius: 10px;
-  background: rgba(0, 0, 0, 0.025);
-  border: 1px solid rgba(0, 0, 0, 0.04);
+  background: var(--compare-row-bg);
+  border: 1px solid var(--compare-row-border);
+  transition: all 0.3s ease;
 }
 
 .compare-row.app-row {
@@ -430,12 +563,10 @@ kbd {
 
 .compare-row.profile-row-manual {
   border-left: 3.5px solid #EF4444;
-  background: rgba(239, 68, 68, 0.04);
 }
 
 .compare-row.profile-row-khomyak {
-  border-left: 3.5px solid #0284C7;
-  background: rgba(2, 132, 199, 0.07);
+  border-left: 3.5px solid #38BDF8;
 }
 
 .row-info {
@@ -447,12 +578,14 @@ kbd {
 .row-target {
   font-size: 0.78rem;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--compare-target-color);
+  transition: color 0.3s ease;
 }
 
 .row-method {
   font-size: 0.68rem;
-  color: #64748B;
+  color: var(--compare-method-color);
+  transition: color 0.3s ease;
 }
 
 .row-method kbd {
@@ -467,16 +600,16 @@ kbd {
 }
 
 .row-time.success {
-  color: #059669;
+  color: #10B981;
 }
 
 .row-time.danger {
-  color: #DC2626;
+  color: #EF4444;
 }
 
 .row-time.lightning {
-  color: #0284C7;
-  text-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+  color: #38BDF8;
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.45);
 }
 
 /* Card Action Button */

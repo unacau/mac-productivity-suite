@@ -56,6 +56,46 @@ class ASMRSoundEngine {
       });
     } catch(e) {}
   }
+  playRelayClick(toDark = true) {
+    if (!this.soundOn) return;
+    try {
+      this.init();
+      const now = this.ctx.currentTime;
+      if (toDark) {
+        // Deep mechanical relay click: transient impulse + resonant sub-bass thump (lights out)
+        const osc1 = this.ctx.createOscillator();
+        const gain1 = this.ctx.createGain();
+        osc1.type = "sine";
+        osc1.frequency.setValueAtTime(420, now);
+        osc1.frequency.exponentialRampToValueAtTime(55, now + 0.08);
+        gain1.gain.setValueAtTime(0.35, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc1.connect(gain1); gain1.connect(this.ctx.destination);
+        osc1.start(now); osc1.stop(now + 0.13);
+
+        const osc2 = this.ctx.createOscillator();
+        const gain2 = this.ctx.createGain();
+        osc2.type = "triangle";
+        osc2.frequency.setValueAtTime(120, now + 0.015);
+        osc2.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+        gain2.gain.setValueAtTime(0.25, now + 0.015);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.20);
+        osc2.connect(gain2); gain2.connect(this.ctx.destination);
+        osc2.start(now + 0.015); osc2.stop(now + 0.22);
+      } else {
+        // Crisp high-frequency switch flick + upward crystalline tone (lights on)
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.06);
+        gain.gain.setValueAtTime(0.20, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.10);
+      }
+    } catch(e) {}
+  }
 }
 
 const sound = new ASMRSoundEngine();
@@ -156,7 +196,7 @@ let currentCategory = "chrome";
 let userInteracted = false;
 
 // ==========================================================================
-// 3. Three.js Scene: Luminous Liminal Space
+// 3. Three.js Scene: Luminous Liminal Space & Midnight Obsidian Studio
 // ==========================================================================
 let scene, camera, renderer, controls;
 let hamsterRoot, cheeksGroup, eyesGroup, snoutGroup;
@@ -173,15 +213,94 @@ let mouseX = 0, mouseY = 0;
 let targetHeadX = 0, targetHeadY = 0;
 let raycaster, mouseVec;
 
+// Dynamic Environment & Lighting References
+let floorMesh, floorMat;
+let panelMesh, panelMat;
+let ambientLight, keyLight, rimLightL, rimLightR, fillLight;
+let pillarMat, pillarMeshes = [];
+let chassisMesh, chassisMat, plateMesh, plateMat, glowStripMesh, glowStripMat;
+
+// Theme Engine: Concept A (Midnight Obsidian Studio) vs Bright Liminal
+let currentTheme = localStorage.getItem("khomyak_theme") || "dark";
+
+const THEMES = {
+  light: {
+    bg: 0xFDF8FA,
+    fogDensity: 0.022,
+    ambientColor: 0xFFF0F5,
+    ambientIntensity: 1.05,
+    keyLightColor: 0xFFFFFF,
+    keyLightIntensity: 1.35,
+    rimLColor: 0xF472B6,
+    rimLIntensity: 1.25,
+    rimRColor: 0xF5A623,
+    rimRIntensity: 0.0,
+    fillColor: 0xFCE7F3,
+    fillIntensity: 0.80,
+    floorColor: 0xFFFFFF,
+    floorRoughness: 0.15,
+    floorMetalness: 0.15,
+    panelColor: 0xFFFFFF,
+    pillarColor: 0xFDF2F8,
+    pillarRoughness: 0.60,
+    pillarMetalness: 0.0,
+    chassisColor: 0x161C28,
+    chassisRoughness: 0.32,
+    chassisMetalness: 0.82,
+    plateColor: 0x0F1420,
+    plateRoughness: 0.45,
+    plateMetalness: 0.65,
+    glowStripColor: 0x38BDF8
+  },
+  dark: {
+    bg: 0x0B1120, // Brandbook Midnight Navy
+    fogDensity: 0.030,
+    ambientColor: 0x1E293B,
+    ambientIntensity: 0.70,
+    keyLightColor: 0x94A3B8,
+    keyLightIntensity: 0.55,
+    rimLColor: 0x38BDF8, // Electric Cyan rim sculpting cheeks and keyboard
+    rimLIntensity: 2.80,
+    rimRColor: 0xF5A623, // Warm Hamster Gold rim contouring from right
+    rimRIntensity: 2.20,
+    fillColor: 0x0F172A,
+    fillIntensity: 0.35,
+    floorColor: 0x070B14, // Smoked Obsidian Mirror Floor
+    floorRoughness: 0.08,
+    floorMetalness: 0.85,
+    panelColor: 0x0F172A, // Softbox shut down
+    pillarColor: 0x0B1222,
+    pillarRoughness: 0.70,
+    pillarMetalness: 0.30,
+    chassisColor: 0x0A0F1D,
+    chassisRoughness: 0.28,
+    chassisMetalness: 0.90,
+    plateColor: 0x060911,
+    plateRoughness: 0.35,
+    plateMetalness: 0.80,
+    glowStripColor: 0x38BDF8
+  }
+};
+
+let themeTransition = {
+  active: false,
+  progress: 1.0,
+  duration: 0.45,
+  from: {},
+  to: {}
+};
+
 function initThreeJS() {
   const container = document.getElementById("canvas-container");
   const width = window.innerWidth;
   const height = window.innerHeight;
 
-  // Scene & Luminous Dreamy Liminal Fog (Light, White, Soft Pinkish)
+  const initTheme = THEMES[currentTheme] || THEMES.dark;
+
+  // Scene & Atmosphere
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xFDF8FA);
-  scene.fog = new THREE.FogExp2(0xFDF8FA, 0.022);
+  scene.background = new THREE.Color(initTheme.bg);
+  scene.fog = new THREE.FogExp2(initTheme.bg, initTheme.fogDensity);
 
   // Camera: Placed directly facing the giant hamster face and cheeks
   camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 1000);
@@ -228,32 +347,34 @@ function initThreeJS() {
 // Luminous Liminal Environment
 // --------------------------------------------------------------------------
 function buildBrightLiminalEnvironment() {
-  // Luminous Marble Floor
+  const t = THEMES[currentTheme] || THEMES.dark;
+
+  // Luminous Marble / Smoked Obsidian Floor
   const floorGeo = new THREE.PlaneGeometry(250, 250);
-  const floorMat = new THREE.MeshStandardMaterial({
-    color: 0xFFFFFF,
-    roughness: 0.15,
-    metalness: 0.15
+  floorMat = new THREE.MeshStandardMaterial({
+    color: t.floorColor,
+    roughness: t.floorRoughness,
+    metalness: t.floorMetalness
   });
-  const floor = new THREE.Mesh(floorGeo, floorMat);
-  floor.position.y = -0.6;
-  floor.rotation.x = -Math.PI / 2;
-  floor.receiveShadow = true;
-  scene.add(floor);
+  floorMesh = new THREE.Mesh(floorGeo, floorMat);
+  floorMesh.position.y = -0.6;
+  floorMesh.rotation.x = -Math.PI / 2;
+  floorMesh.receiveShadow = true;
+  scene.add(floorMesh);
 
-  // Overhead Luminous Softbox
+  // Overhead Luminous Softbox Panel
   const panelGeo = new THREE.BoxGeometry(12, 0.1, 5);
-  const panelMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
-  const panel = new THREE.Mesh(panelGeo, panelMat);
-  panel.position.set(0, 7.5, 0);
-  scene.add(panel);
+  panelMat = new THREE.MeshBasicMaterial({ color: t.panelColor });
+  panelMesh = new THREE.Mesh(panelGeo, panelMat);
+  panelMesh.position.set(0, 7.5, 0);
+  scene.add(panelMesh);
 
-  // Ambient Light: Bright, Radiant, Balanced (Zero Washout)
-  const ambient = new THREE.AmbientLight(0xFFF0F5, 1.05);
-  scene.add(ambient);
+  // Ambient Light: Bright Radiant or Deep Midnight Indigo
+  ambientLight = new THREE.AmbientLight(t.ambientColor, t.ambientIntensity);
+  scene.add(ambientLight);
 
   // Studio Key Light
-  const keyLight = new THREE.DirectionalLight(0xFFFFFF, 1.35);
+  keyLight = new THREE.DirectionalLight(t.keyLightColor, t.keyLightIntensity);
   keyLight.position.set(4, 8, 6);
   keyLight.castShadow = true;
   keyLight.shadow.mapSize.width = 2048;
@@ -261,19 +382,30 @@ function buildBrightLiminalEnvironment() {
   keyLight.shadow.bias = -0.0004;
   scene.add(keyLight);
 
-  // Soft Rosy-Pink Rim Light
-  const rimLight = new THREE.DirectionalLight(0xF472B6, 1.25);
-  rimLight.position.set(-5, 4.5, -5);
-  scene.add(rimLight);
+  // Dual Sculpting Rim Lights
+  // Left Rim Light (Pink in light, Electric Cyan in dark)
+  rimLightL = new THREE.DirectionalLight(t.rimLColor, t.rimLIntensity);
+  rimLightL.position.set(-5, 4.5, -5);
+  scene.add(rimLightL);
+
+  // Right Rim Light (Warm Hamster Gold in dark)
+  rimLightR = new THREE.DirectionalLight(t.rimRColor, t.rimRIntensity);
+  rimLightR.position.set(5, 4.0, -4);
+  scene.add(rimLightR);
 
   // Front Soft Fill
-  const fillLight = new THREE.PointLight(0xFCE7F3, 0.8, 12);
+  fillLight = new THREE.PointLight(t.fillColor, t.fillIntensity, 12);
   fillLight.position.set(0, 1.2, 3.5);
   scene.add(fillLight);
 
-  // Pale Liminal Pillars in White Haze
+  // Architectural Pillars in Haze
   const pillarGeo = new THREE.BoxGeometry(2.0, 20, 2.0);
-  const pillarMat = new THREE.MeshStandardMaterial({ color: 0xFDF2F8, roughness: 0.6 });
+  pillarMat = new THREE.MeshStandardMaterial({
+    color: t.pillarColor,
+    roughness: t.pillarRoughness,
+    metalness: t.pillarMetalness
+  });
+  pillarMeshes = [];
   [
     [-12, 8, -14], [12, 8, -14],
     [-18, 8, -6], [18, 8, -6]
@@ -281,6 +413,7 @@ function buildBrightLiminalEnvironment() {
     const pillar = new THREE.Mesh(pillarGeo, pillarMat);
     pillar.position.set(...pos);
     scene.add(pillar);
+    pillarMeshes.push(pillar);
   });
 }
 
@@ -701,38 +834,45 @@ function createKeycapTexture(label, isInteractive, accentColor, hasLed, isCaps) 
 function buildMechanicalKeyboardDeck() {
   keyboardGroup = new THREE.Group();
   keyboardGroup.position.set(0, -0.06, 1.70);
-  keyboardGroup.rotation.x = -0.22; // 12.5° ergonomic tilt toward camera
+  keyboardGroup.rotation.y = Math.PI; // Oriented facing the hamster typist
+  keyboardGroup.rotation.x = -0.12;   // ~7° natural ergonomic tilt facing toward the hamster (back propped up, spacebar low)
+
+  const t = THEMES[currentTheme] || THEMES.dark;
 
   // 1. Keyboard Chassis (Dark Anodized Aluminum / Slate)
   const chassisGeo = new THREE.BoxGeometry(2.78, 0.11, 1.10);
-  const chassisMat = new THREE.MeshStandardMaterial({
-    color: 0x161C28,
-    roughness: 0.32,
-    metalness: 0.82
+  chassisMat = new THREE.MeshStandardMaterial({
+    color: t.chassisColor,
+    roughness: t.chassisRoughness,
+    metalness: t.chassisMetalness
   });
-  const chassis = new THREE.Mesh(chassisGeo, chassisMat);
-  chassis.position.y = -0.055;
-  chassis.castShadow = true;
-  chassis.receiveShadow = true;
-  keyboardGroup.add(chassis);
+  chassisMesh = new THREE.Mesh(chassisGeo, chassisMat);
+  chassisMesh.position.y = -0.055;
+  chassisMesh.castShadow = true;
+  chassisMesh.receiveShadow = true;
+  keyboardGroup.add(chassisMesh);
 
   // Top Plate Inset
   const plateGeo = new THREE.BoxGeometry(2.70, 0.03, 1.02);
-  const plateMat = new THREE.MeshStandardMaterial({
-    color: 0x0F1420,
-    roughness: 0.45,
-    metalness: 0.65
+  plateMat = new THREE.MeshStandardMaterial({
+    color: t.plateColor,
+    roughness: t.plateRoughness,
+    metalness: t.plateMetalness
   });
-  const plate = new THREE.Mesh(plateGeo, plateMat);
-  plate.position.y = 0.005;
-  keyboardGroup.add(plate);
+  plateMesh = new THREE.Mesh(plateGeo, plateMat);
+  plateMesh.position.y = 0.005;
+  keyboardGroup.add(plateMesh);
 
-  // Front Neon Underglow Strip
+  // Neon Underglow Strips (Front edge facing viewer and rear edge facing hamster)
   const glowStripGeo = new THREE.BoxGeometry(2.68, 0.015, 0.015);
-  const glowStripMat = new THREE.MeshBasicMaterial({ color: 0x38BDF8 });
-  const glowStrip = new THREE.Mesh(glowStripGeo, glowStripMat);
-  glowStrip.position.set(0, -0.01, 0.54);
-  keyboardGroup.add(glowStrip);
+  glowStripMat = new THREE.MeshBasicMaterial({ color: t.glowStripColor });
+  glowStripMesh = new THREE.Mesh(glowStripGeo, glowStripMat);
+  glowStripMesh.position.set(0, -0.01, -0.54); // Facing viewer along front deck edge
+  keyboardGroup.add(glowStripMesh);
+
+  const glowStripRear = new THREE.Mesh(glowStripGeo, glowStripMat);
+  glowStripRear.position.set(0, -0.01, 0.54); // Facing hamster under spacebar
+  keyboardGroup.add(glowStripRear);
 
   // 2. Key Matrix Layout
   const unitSize = 0.155;
@@ -1399,6 +1539,141 @@ function onWindowResize() {
 }
 
 // --------------------------------------------------------------------------
+// Theme Transition & Dynamic Lighting Engine
+// --------------------------------------------------------------------------
+function applyTheme(themeName, animate = true) {
+  currentTheme = themeName;
+  const target = THEMES[themeName] || THEMES.dark;
+
+  // Update DOM tokens & persistence
+  document.documentElement.setAttribute("data-theme", themeName);
+  const themeIcon = document.getElementById("theme-icon");
+  if (themeIcon) themeIcon.textContent = themeName === "dark" ? "☀️" : "🌙";
+  try {
+    localStorage.setItem("khomyak_theme", themeName);
+  } catch(e) {}
+
+  if (!scene || !floorMat) return;
+
+  if (!animate) {
+    scene.background.setHex(target.bg);
+    if (scene.fog) {
+      scene.fog.color.setHex(target.bg);
+      scene.fog.density = target.fogDensity;
+    }
+    if (ambientLight) {
+      ambientLight.color.setHex(target.ambientColor);
+      ambientLight.intensity = target.ambientIntensity;
+    }
+    if (keyLight) {
+      keyLight.color.setHex(target.keyLightColor);
+      keyLight.intensity = target.keyLightIntensity;
+    }
+    if (rimLightL) {
+      rimLightL.color.setHex(target.rimLColor);
+      rimLightL.intensity = target.rimLIntensity;
+    }
+    if (rimLightR) {
+      rimLightR.color.setHex(target.rimRColor);
+      rimLightR.intensity = target.rimRIntensity;
+    }
+    if (fillLight) {
+      fillLight.color.setHex(target.fillColor);
+      fillLight.intensity = target.fillIntensity;
+    }
+    if (floorMat) {
+      floorMat.color.setHex(target.floorColor);
+      floorMat.roughness = target.floorRoughness;
+      floorMat.metalness = target.floorMetalness;
+    }
+    if (panelMat) panelMat.color.setHex(target.panelColor);
+    if (pillarMat) {
+      pillarMat.color.setHex(target.pillarColor);
+      pillarMat.roughness = target.pillarRoughness;
+      pillarMat.metalness = target.pillarMetalness;
+    }
+    if (chassisMat) {
+      chassisMat.color.setHex(target.chassisColor);
+      chassisMat.roughness = target.chassisRoughness;
+      chassisMat.metalness = target.chassisMetalness;
+    }
+    if (plateMat) {
+      plateMat.color.setHex(target.plateColor);
+      plateMat.roughness = target.plateRoughness;
+      plateMat.metalness = target.plateMetalness;
+    }
+    if (glowStripMat) glowStripMat.color.setHex(target.glowStripColor);
+    return;
+  }
+
+  // Animate lerp transition
+  themeTransition.from = {
+    bgColor: scene.background.clone(),
+    fogDensity: scene.fog ? scene.fog.density : target.fogDensity,
+    ambientColor: ambientLight ? ambientLight.color.clone() : new THREE.Color(target.ambientColor),
+    ambientIntensity: ambientLight ? ambientLight.intensity : target.ambientIntensity,
+    keyLightColor: keyLight ? keyLight.color.clone() : new THREE.Color(target.keyLightColor),
+    keyLightIntensity: keyLight ? keyLight.intensity : target.keyLightIntensity,
+    rimLColor: rimLightL ? rimLightL.color.clone() : new THREE.Color(target.rimLColor),
+    rimLIntensity: rimLightL ? rimLightL.intensity : target.rimLIntensity,
+    rimRColor: rimLightR ? rimLightR.color.clone() : new THREE.Color(target.rimRColor),
+    rimRIntensity: rimLightR ? rimLightR.intensity : target.rimRIntensity,
+    fillColor: fillLight ? fillLight.color.clone() : new THREE.Color(target.fillColor),
+    fillIntensity: fillLight ? fillLight.intensity : target.fillIntensity,
+    floorColor: floorMat ? floorMat.color.clone() : new THREE.Color(target.floorColor),
+    floorRoughness: floorMat ? floorMat.roughness : target.floorRoughness,
+    floorMetalness: floorMat ? floorMat.metalness : target.floorMetalness,
+    panelColor: panelMat ? panelMat.color.clone() : new THREE.Color(target.panelColor),
+    pillarColor: pillarMat ? pillarMat.color.clone() : new THREE.Color(target.pillarColor),
+    pillarRoughness: pillarMat ? pillarMat.roughness : target.pillarRoughness,
+    pillarMetalness: pillarMat ? pillarMat.metalness : target.pillarMetalness,
+    chassisColor: chassisMat ? chassisMat.color.clone() : new THREE.Color(target.chassisColor),
+    chassisRoughness: chassisMat ? chassisMat.roughness : target.chassisRoughness,
+    chassisMetalness: chassisMat ? chassisMat.metalness : target.chassisMetalness,
+    plateColor: plateMat ? plateMat.color.clone() : new THREE.Color(target.plateColor),
+    plateRoughness: plateMat ? plateMat.roughness : target.plateRoughness,
+    plateMetalness: plateMat ? plateMat.metalness : target.plateMetalness
+  };
+
+  themeTransition.to = {
+    bgColor: new THREE.Color(target.bg),
+    fogDensity: target.fogDensity,
+    ambientColor: new THREE.Color(target.ambientColor),
+    ambientIntensity: target.ambientIntensity,
+    keyLightColor: new THREE.Color(target.keyLightColor),
+    keyLightIntensity: target.keyLightIntensity,
+    rimLColor: new THREE.Color(target.rimLColor),
+    rimLIntensity: target.rimLIntensity,
+    rimRColor: new THREE.Color(target.rimRColor),
+    rimRIntensity: target.rimRIntensity,
+    fillColor: new THREE.Color(target.fillColor),
+    fillIntensity: target.fillIntensity,
+    floorColor: new THREE.Color(target.floorColor),
+    floorRoughness: target.floorRoughness,
+    floorMetalness: target.floorMetalness,
+    panelColor: new THREE.Color(target.panelColor),
+    pillarColor: new THREE.Color(target.pillarColor),
+    pillarRoughness: target.pillarRoughness,
+    pillarMetalness: target.pillarMetalness,
+    chassisColor: new THREE.Color(target.chassisColor),
+    chassisRoughness: target.chassisRoughness,
+    chassisMetalness: target.chassisMetalness,
+    plateColor: new THREE.Color(target.plateColor),
+    plateRoughness: target.plateRoughness,
+    plateMetalness: target.plateMetalness
+  };
+
+  themeTransition.progress = 0;
+  themeTransition.active = true;
+}
+
+function switchTheme(targetTheme = null) {
+  const next = targetTheme || (currentTheme === "dark" ? "light" : "dark");
+  sound.playRelayClick(next === "dark");
+  applyTheme(next, true);
+}
+
+// --------------------------------------------------------------------------
 // Animation Loop
 // --------------------------------------------------------------------------
 let clock = new THREE.Clock();
@@ -1410,6 +1685,69 @@ function animate() {
   const time = clock.getElapsedTime();
 
   controls.update();
+
+  // Dynamic Theme Transition Interpolation (Cubic Ease)
+  if (themeTransition.active) {
+    themeTransition.progress += delta / themeTransition.duration;
+    const p = Math.min(1.0, themeTransition.progress);
+    const ease = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+
+    const f = themeTransition.from;
+    const t = themeTransition.to;
+
+    scene.background.copy(f.bgColor).lerp(t.bgColor, ease);
+    if (scene.fog) {
+      scene.fog.color.copy(f.bgColor).lerp(t.bgColor, ease);
+      scene.fog.density = THREE.MathUtils.lerp(f.fogDensity, t.fogDensity, ease);
+    }
+    if (ambientLight) {
+      ambientLight.color.copy(f.ambientColor).lerp(t.ambientColor, ease);
+      ambientLight.intensity = THREE.MathUtils.lerp(f.ambientIntensity, t.ambientIntensity, ease);
+    }
+    if (keyLight) {
+      keyLight.color.copy(f.keyLightColor).lerp(t.keyLightColor, ease);
+      keyLight.intensity = THREE.MathUtils.lerp(f.keyLightIntensity, t.keyLightIntensity, ease);
+    }
+    if (rimLightL) {
+      rimLightL.color.copy(f.rimLColor).lerp(t.rimLColor, ease);
+      rimLightL.intensity = THREE.MathUtils.lerp(f.rimLIntensity, t.rimLIntensity, ease);
+    }
+    if (rimLightR) {
+      rimLightR.color.copy(f.rimRColor).lerp(t.rimRColor, ease);
+      rimLightR.intensity = THREE.MathUtils.lerp(f.rimRIntensity, t.rimRIntensity, ease);
+    }
+    if (fillLight) {
+      fillLight.color.copy(f.fillColor).lerp(t.fillColor, ease);
+      fillLight.intensity = THREE.MathUtils.lerp(f.fillIntensity, t.fillIntensity, ease);
+    }
+    if (floorMat) {
+      floorMat.color.copy(f.floorColor).lerp(t.floorColor, ease);
+      floorMat.roughness = THREE.MathUtils.lerp(f.floorRoughness, t.floorRoughness, ease);
+      floorMat.metalness = THREE.MathUtils.lerp(f.floorMetalness, t.floorMetalness, ease);
+    }
+    if (panelMat) {
+      panelMat.color.copy(f.panelColor).lerp(t.panelColor, ease);
+    }
+    if (pillarMat) {
+      pillarMat.color.copy(f.pillarColor).lerp(t.pillarColor, ease);
+      pillarMat.roughness = THREE.MathUtils.lerp(f.pillarRoughness, t.pillarRoughness, ease);
+      pillarMat.metalness = THREE.MathUtils.lerp(f.pillarMetalness, t.pillarMetalness, ease);
+    }
+    if (chassisMat) {
+      chassisMat.color.copy(f.chassisColor).lerp(t.chassisColor, ease);
+      chassisMat.roughness = THREE.MathUtils.lerp(f.chassisRoughness, t.chassisRoughness, ease);
+      chassisMat.metalness = THREE.MathUtils.lerp(f.chassisMetalness, t.chassisMetalness, ease);
+    }
+    if (plateMat) {
+      plateMat.color.copy(f.plateColor).lerp(t.plateColor, ease);
+      plateMat.roughness = THREE.MathUtils.lerp(f.plateRoughness, t.plateRoughness, ease);
+      plateMat.metalness = THREE.MathUtils.lerp(f.plateMetalness, t.plateMetalness, ease);
+    }
+
+    if (p >= 1.0) {
+      themeTransition.active = false;
+    }
+  }
 
   // Giant Hamster Breathing Motion
   const breath = Math.sin(time * 2.8) * 0.02;
@@ -1462,6 +1800,17 @@ function animate() {
 document.addEventListener("DOMContentLoaded", () => {
   initThreeJS();
 
+  // Apply Initial Theme
+  applyTheme(currentTheme, false);
+
+  // Theme Toggle Button
+  const themeBtn = document.getElementById("theme-toggle");
+  if (themeBtn) {
+    themeBtn.addEventListener("click", () => {
+      switchTheme();
+    });
+  }
+
   // Sound Toggle Button
   const soundBtn = document.getElementById("sound-toggle");
   if (soundBtn) {
@@ -1509,12 +1858,14 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Keyboard Navigation: [C], [1..4], [T], [I], [A], [N], [Space]
+  // Keyboard Navigation: [C], [1..4], [T], [I], [A], [N], [Space], [M]
   window.addEventListener("keydown", (e) => {
     if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
 
     const key = e.key.toLowerCase();
-    if (key === "c" || key === " ") {
+    if (key === "m") {
+      switchTheme();
+    } else if (key === "c" || key === " ") {
       e.preventDefault();
       activateCategory("chrome", (activeIndex + 1) % PROFILES.length, "c", true);
     } else if (["1", "2", "3", "4"].includes(key)) {

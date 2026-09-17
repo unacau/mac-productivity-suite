@@ -1003,24 +1003,21 @@ struct ChromeQuickAccessUnitTests {
         #expect(chromeHeader?.isEnabled == false)
         #expect(chromeHeader?.action == nil)
         
-        // Section 2: Toolkit header present and strictly non-clickable
-        let toolkitHeader = menu.items.first(where: { $0.title.contains("Toolkit (Caps-Lock)") })
-        #expect(toolkitHeader != nil)
-        #expect(toolkitHeader?.isEnabled == false)
-        #expect(toolkitHeader?.action == nil)
+        // Section 2: Quick Apps header present and strictly non-clickable
+        let quickAppsHeader = menu.items.first(where: { $0.title.contains("Quick Apps (Caps-Lock)") || $0.title.contains("Toolkit (Caps-Lock)") })
+        #expect(quickAppsHeader != nil)
+        #expect(quickAppsHeader?.isEnabled == false)
+        #expect(quickAppsHeader?.action == nil)
         
-        // Active Toolkit items present in expected order with clean app names
+        // Active Quick Apps items present with valid keyEquivalent
         let termMatch = menu.items.first(where: { $0.title.contains("iTerm") || $0.title.contains("Terminal") })
         #expect(termMatch != nil)
         #expect(!termMatch!.keyEquivalent.isEmpty)
         
-        let ideMatch = menu.items.first(where: { $0.title.contains("IDE") || $0.title.contains("IntelliJ") || $0.title.contains("Cursor") })
-        #expect(ideMatch != nil)
-        #expect(!ideMatch!.keyEquivalent.isEmpty)
-        
-        let agentMatch = menu.items.first(where: { $0.title.contains("Antigravity") || $0.title.contains("Claude") })
-        #expect(agentMatch != nil)
-        #expect(!agentMatch!.keyEquivalent.isEmpty)
+        let agentOrIdeMatch = menu.items.first(where: { $0.title.contains("Antigravity") || $0.title.contains("IDE") })
+        #expect(agentOrIdeMatch != nil)
+        #expect(agentOrIdeMatch?.submenu != nil)
+        #expect((agentOrIdeMatch?.submenu?.items.count ?? 0) >= 2)
         
         let notesMatch = menu.items.first(where: { $0.title.contains("Notes") || $0.title.contains("Obsidian") })
         #expect(notesMatch != nil)
@@ -1036,18 +1033,12 @@ struct ChromeQuickAccessUnitTests {
         
         // Headers present in Change App submenu
         #expect(subTitles.contains("Chrome Profiles (up to 4):"))
-        #expect(subTitles.contains("Terminal:"))
-        #expect(subTitles.contains("IDE:"))
-        #expect(subTitles.contains("AI Agent:"))
-        #expect(subTitles.contains("Notes:"))
-        
-        // IntelliJ IDEA is in IDE candidates
-        let ideCandidateNames = AppGroupEngine.ide.candidates.map { $0.name }
-        #expect(ideCandidateNames.contains("IntelliJ IDEA"))
+        #expect(subTitles.contains("Pinned Quick Apps (up to 5):"))
+        #expect(subTitles.contains("Choose Other App..."))
         
         // App shortcuts derive strictly from first letter of app name (or slot digit for Chrome)
         for item in menu.items {
-            if item.isSeparatorItem || item.title.hasSuffix(":") || item.title.hasPrefix("Chrome") || item.title.hasPrefix("Toolkit") { continue }
+            if item.isSeparatorItem || item.title.hasSuffix(":") || item.title.hasPrefix("Chrome") || item.title.hasPrefix("Quick Apps") || item.title.hasPrefix("Toolkit") { continue }
             if !item.keyEquivalent.isEmpty && item.keyEquivalentModifierMask == [] {
                 let appName = item.title.trimmingCharacters(in: .whitespaces)
                 let key = item.keyEquivalent
@@ -1057,6 +1048,43 @@ struct ChromeQuickAccessUnitTests {
                 } else if let firstChar = key.first, firstChar.isNumber {
                     #expect("1234".contains(firstChar))
                 }
+            }
+        }
+    }
+    
+    @Test @MainActor
+    func testUniversalCatalogCategoriesAndExpansion() {
+        let categories = AppGroupEngine.catalogCategories
+        #expect(!categories.isEmpty)
+        
+        let catNames = categories.map { $0.category }
+        #expect(catNames.contains("Terminal") || catNames.contains("IDE") || catNames.contains("AI Agent") || catNames.contains("Notes") || catNames.contains("Communication"))
+        
+        // Ensure new candidates exist in catalog
+        let commCandidates = AppGroupEngine.communication.candidates.map { $0.name }
+        #expect(commCandidates.contains("Telegram"))
+        #expect(commCandidates.contains("Slack"))
+        
+        let ideCandidates = AppGroupEngine.ide.candidates.map { $0.name }
+        #expect(ideCandidates.contains("Zed"))
+        #expect(ideCandidates.contains("IntelliJ IDEA"))
+        
+        let aiCandidates = AppGroupEngine.aiAgent.candidates.map { $0.name }
+        #expect(aiCandidates.contains("Gemini"))
+        #expect(aiCandidates.contains("Antigravity"))
+    }
+    
+    @Test @MainActor
+    func testPinnedAppsMaxLimitAndGrouping() {
+        let initialPinned = AppGroupEngine.pinnedAppItems()
+        #expect(initialPinned.count <= 5)
+        
+        // Grouped by letter
+        let grouped = AppGroupEngine.pinnedAppsGroupedByLetter()
+        for group in grouped {
+            for item in group.items {
+                let firstChar = Character((item.name.first(where: { $0.isLetter }) ?? "A").uppercased())
+                #expect(firstChar == group.letter)
             }
         }
     }

@@ -2,6 +2,7 @@ import Foundation
 import Cocoa
 import AppKit
 import ApplicationServices
+import UniformTypeIdentifiers
 import os
 
 // MARK: - App Candidate
@@ -86,6 +87,92 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
     
     // MARK: - Pre-configured Shared Engines
     
+    /// Communication Engine: Telegram, Slack, Discord, WhatsApp, Messages, Mail
+    public static let communication = AppGroupEngine(
+        category: "Communication",
+        candidates: [
+            AppCandidate(
+                name: "Telegram",
+                bundleID: "com.tdesktop.Telegram",
+                defaultPaths: [
+                    "/Applications/Telegram.app",
+                    "\(NSHomeDirectory())/Applications/Telegram.app"
+                ]
+            ),
+            AppCandidate(
+                name: "Slack",
+                bundleID: "com.tinyspeck.slackmacgap",
+                defaultPaths: [
+                    "/Applications/Slack.app",
+                    "\(NSHomeDirectory())/Applications/Slack.app"
+                ]
+            ),
+            AppCandidate(
+                name: "Discord",
+                bundleID: "com.hnc.Discord",
+                defaultPaths: [
+                    "/Applications/Discord.app",
+                    "\(NSHomeDirectory())/Applications/Discord.app"
+                ]
+            ),
+            AppCandidate(
+                name: "WhatsApp",
+                bundleID: "net.whatsapp.WhatsApp",
+                defaultPaths: [
+                    "/Applications/WhatsApp.app",
+                    "\(NSHomeDirectory())/Applications/WhatsApp.app"
+                ]
+            ),
+            AppCandidate(
+                name: "Messages",
+                bundleID: "com.apple.MobileSMS",
+                defaultPaths: [
+                    "/System/Applications/Messages.app",
+                    "/Applications/Messages.app"
+                ]
+            ),
+            AppCandidate(
+                name: "Mail",
+                bundleID: "com.apple.mail",
+                defaultPaths: [
+                    "/System/Applications/Mail.app",
+                    "/Applications/Mail.app"
+                ]
+            )
+        ]
+    )
+    
+    /// Design & Media Engine: Figma, Spotify, Canva
+    public static let design = AppGroupEngine(
+        category: "Design & Media",
+        candidates: [
+            AppCandidate(
+                name: "Figma",
+                bundleID: "com.figma.Desktop",
+                defaultPaths: [
+                    "/Applications/Figma.app",
+                    "\(NSHomeDirectory())/Applications/Figma.app"
+                ]
+            ),
+            AppCandidate(
+                name: "Spotify",
+                bundleID: "com.spotify.client",
+                defaultPaths: [
+                    "/Applications/Spotify.app",
+                    "\(NSHomeDirectory())/Applications/Spotify.app"
+                ]
+            ),
+            AppCandidate(
+                name: "Canva",
+                bundleID: "com.canva.canvadesktop",
+                defaultPaths: [
+                    "/Applications/Canva.app",
+                    "\(NSHomeDirectory())/Applications/Canva.app"
+                ]
+            )
+        ]
+    )
+    
     /// Terminal Engine: iTerm2 (I), Ghostty (G), Warp (W), macOS Terminal (T)
     public static let terminal = AppGroupEngine(
         category: "Terminal",
@@ -125,7 +212,7 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
         ]
     )
     
-    /// Notes Engine: Obsidian (O), Apple Notes (N), Notion (N), Bear (B)
+    /// Notes & Productivity Engine: Obsidian (O), Apple Notes (N), Notion (N), Linear (L), Keynote (K), Bear (B)
     public static let notes = AppGroupEngine(
         category: "Notes",
         candidates: [
@@ -154,6 +241,22 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
                 ]
             ),
             AppCandidate(
+                name: "Linear",
+                bundleID: "com.linear",
+                defaultPaths: [
+                    "/Applications/Linear.app",
+                    "\(NSHomeDirectory())/Applications/Linear.app"
+                ]
+            ),
+            AppCandidate(
+                name: "Keynote",
+                bundleID: "com.apple.iWork.Keynote",
+                defaultPaths: [
+                    "/Applications/Keynote.app",
+                    "\(NSHomeDirectory())/Applications/Keynote.app"
+                ]
+            ),
+            AppCandidate(
                 name: "Bear",
                 bundleID: "net.shinyfrog.bear",
                 defaultPaths: [
@@ -164,7 +267,7 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
         ]
     )
     
-    /// IDE Engine: Antigravity IDE (A), Cursor (C), VS Code (V), Xcode (X)
+    /// IDE Engine: Antigravity IDE (A), Cursor (C), VS Code (V), Zed (Z), Xcode (X), IntelliJ IDEA (I)
     public static let ide = AppGroupEngine(
         category: "IDE",
         candidates: [
@@ -213,6 +316,14 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
                 ]
             ),
             AppCandidate(
+                name: "Zed",
+                bundleID: "dev.zed.Zed",
+                defaultPaths: [
+                    "/Applications/Zed.app",
+                    "\(NSHomeDirectory())/Applications/Zed.app"
+                ]
+            ),
+            AppCandidate(
                 name: "Xcode",
                 bundleID: "com.apple.dt.Xcode",
                 defaultPaths: [
@@ -222,7 +333,7 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
         ]
     )
     
-    /// AI Agent Engine: Antigravity (A), Claude (C), ChatGPT (C)
+    /// AI Agent Engine: Antigravity (A), Gemini (G), Claude (C), ChatGPT (C)
     public static let aiAgent = AppGroupEngine(
         category: "AI Agent",
         candidates: [
@@ -232,6 +343,14 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
                 defaultPaths: [
                     "/Applications/Antigravity.app",
                     "\(NSHomeDirectory())/Applications/Antigravity.app"
+                ]
+            ),
+            AppCandidate(
+                name: "Gemini",
+                bundleID: "com.google.GeminiMacOS",
+                defaultPaths: [
+                    "/Applications/Gemini.app",
+                    "\(NSHomeDirectory())/Applications/Gemini.app"
                 ]
             ),
             AppCandidate(
@@ -251,6 +370,22 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
                 ]
             )
         ]
+    )
+    
+    private static func loadCustomAppCandidates() -> [AppCandidate] {
+        let paths = UserDefaults.standard.stringArray(forKey: "CustomAppPaths") ?? []
+        return paths.compactMap { path in
+            guard FileManager.default.fileExists(atPath: path) else { return nil }
+            let name = (path as NSString).lastPathComponent.replacingOccurrences(of: ".app", with: "")
+            let bundleID = Bundle(path: path)?.bundleIdentifier ?? "custom.\(name.lowercased())"
+            return AppCandidate(name: name, bundleID: bundleID, defaultPaths: [path])
+        }
+    }
+    
+    /// Custom / User-Added Apps Engine
+    public static let custom = AppGroupEngine(
+        category: "Custom",
+        candidates: loadCustomAppCandidates()
     )
     
     // MARK: - Discovery & Refresh
@@ -460,18 +595,39 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
     // MARK: - Unified Letter-Based Discovery & Selection
     
     public static var allEngines: [AppGroupEngine] {
-        [aiAgent, ide, terminal, notes]
+        [communication, notes, design, aiAgent, ide, terminal, custom]
+    }
+    
+    public static var catalogCategories: [(category: String, items: [AntigravityItem])] {
+        allEngines.compactMap { engine in
+            let discovered = engine.items
+            guard !discovered.isEmpty else { return nil }
+            return (category: engine.category, items: discovered)
+        }
     }
     
     public static var selectedBundleIDs: Set<String> {
         get {
-            if let saved = UserDefaults.standard.stringArray(forKey: "SelectedAppBundleIDs") {
+            if let saved = UserDefaults.standard.stringArray(forKey: "SelectedAppBundleIDs"), !saved.isEmpty {
                 return Set(saved)
             }
             var initial = Set<String>()
-            for engine in allEngines {
-                if let id = engine.selectedBundleID {
-                    initial.insert(id)
+            let legacyKeys = [
+                "SelectedApp_AI Agent",
+                "SelectedApp_IDE",
+                "SelectedApp_Terminal",
+                "SelectedApp_Notes"
+            ]
+            for key in legacyKeys {
+                if let val = UserDefaults.standard.string(forKey: key) {
+                    initial.insert(val)
+                }
+            }
+            if initial.isEmpty {
+                for engine in allEngines {
+                    if let id = engine.selectedBundleID {
+                        initial.insert(id)
+                    }
                 }
             }
             if initial.isEmpty {
@@ -482,11 +638,13 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
                     "com.apple.Notes"
                 ]
             }
-            UserDefaults.standard.set(Array(initial), forKey: "SelectedAppBundleIDs")
-            return initial
+            let list = Array(initial.prefix(5))
+            UserDefaults.standard.set(list, forKey: "SelectedAppBundleIDs")
+            return Set(list)
         }
         set {
-            UserDefaults.standard.set(Array(newValue), forKey: "SelectedAppBundleIDs")
+            let list = Array(newValue.prefix(5))
+            UserDefaults.standard.set(list, forKey: "SelectedAppBundleIDs")
         }
     }
     
@@ -495,25 +653,70 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
     }
     
     public static func selectApp(bundleID: String) {
-        var set = selectedBundleIDs
-        set.insert(bundleID)
-        selectedBundleIDs = set
+        var list = UserDefaults.standard.stringArray(forKey: "SelectedAppBundleIDs") ?? Array(selectedBundleIDs)
+        if !list.contains(bundleID) {
+            if list.count >= 5 {
+                list.removeLast()
+            }
+            list.append(bundleID)
+            selectedBundleIDs = Set(list)
+        }
     }
     
     public static func deselectApp(bundleID: String) {
         var set = selectedBundleIDs
-        set.remove(bundleID)
-        selectedBundleIDs = set
+        if set.count > 1 {
+            set.remove(bundleID)
+            selectedBundleIDs = set
+            var list = UserDefaults.standard.stringArray(forKey: "SelectedAppBundleIDs") ?? []
+            list.removeAll(where: { $0 == bundleID })
+            UserDefaults.standard.set(list, forKey: "SelectedAppBundleIDs")
+        }
     }
     
     public static func toggleApp(bundleID: String) {
-        var set = selectedBundleIDs
-        if set.contains(bundleID) {
-            set.remove(bundleID)
+        if isAppSelected(bundleID: bundleID) {
+            deselectApp(bundleID: bundleID)
         } else {
-            set.insert(bundleID)
+            selectApp(bundleID: bundleID)
         }
-        selectedBundleIDs = set
+    }
+    
+    public static func allDiscoveredItems() -> [AntigravityItem] {
+        var seen = Set<String>()
+        var result: [AntigravityItem] = []
+        for engine in allEngines {
+            for item in engine.items {
+                guard !seen.contains(item.bundleID) else { continue }
+                seen.insert(item.bundleID)
+                result.append(item)
+            }
+        }
+        return result
+    }
+    
+    public static func pinnedAppItems() -> [AntigravityItem] {
+        let selected = selectedBundleIDs
+        let all = allDiscoveredItems()
+        let matched = all.filter { selected.contains($0.bundleID) }
+        return Array(matched.prefix(5))
+    }
+    
+    /// Returns pinned apps grouped by their first letter, sorted alphabetically.
+    public static func pinnedAppsGroupedByLetter() -> [(letter: Character, items: [AntigravityItem])] {
+        let pinned = pinnedAppItems()
+        var letterMap: [Character: [AntigravityItem]] = [:]
+        for item in pinned {
+            let char = Character((item.name.first(where: { $0.isLetter }) ?? "A").uppercased())
+            if letterMap[char] == nil {
+                letterMap[char] = []
+            }
+            letterMap[char]!.append(item)
+        }
+        
+        return letterMap.keys.sorted().map { char in
+            (letter: char, items: letterMap[char]!)
+        }
     }
     
     /// Discovers and groups all available application items strictly by their first letter.
@@ -535,6 +738,38 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
         }
         
         return result
+    }
+    
+    /// Register an external custom app by URL and pin it immediately.
+    @discardableResult
+    public static func registerCustomApp(url: URL) -> AntigravityItem? {
+        let path = url.path
+        guard FileManager.default.fileExists(atPath: path) else { return nil }
+        var paths = UserDefaults.standard.stringArray(forKey: "CustomAppPaths") ?? []
+        if !paths.contains(path) {
+            paths.append(path)
+            UserDefaults.standard.set(paths, forKey: "CustomAppPaths")
+        }
+        
+        let name = (path as NSString).lastPathComponent.replacingOccurrences(of: ".app", with: "")
+        let bundleID = Bundle(path: path)?.bundleIdentifier ?? "custom.\(name.lowercased())"
+        let icon = NSWorkspace.shared.icon(forFile: path)
+        icon.size = NSSize(width: 64, height: 64)
+        
+        let item = AntigravityItem(
+            name: name,
+            bundleID: bundleID,
+            path: path,
+            icon: icon,
+            index: custom.items.count + 1
+        )
+        
+        if !custom.items.contains(where: { $0.bundleID == bundleID }) {
+            custom.items.append(item)
+        }
+        
+        selectApp(bundleID: bundleID)
+        return item
     }
     
     /// Focus an application item across all engines.
