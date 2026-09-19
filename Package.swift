@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "ChromeQuickAccess",
+    name: "Xomsky",
     platforms: [.macOS(.v14)],
     dependencies: [
         .package(url: "https://github.com/apple/swift-testing.git", from: "0.1.0")
@@ -21,7 +21,8 @@ let package = Package(
                 .linkedFramework("AppKit"),
                 .linkedFramework("SwiftUI"),
                 .linkedFramework("ApplicationServices"),
-                .linkedFramework("CoreGraphics")
+                .linkedFramework("CoreGraphics"),
+                .linkedFramework("Security")
             ]
         ),
         .testTarget(

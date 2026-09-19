@@ -80,7 +80,7 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
     public init(category: String, candidates: [AppCandidate]) {
         self.category = category
         self.candidates = candidates
-        self.logger = Logger(subsystem: "com.almosteleven.khomyak", category: category.lowercased())
+        self.logger = Logger(subsystem: "com.almosteleven.xomsky", category: category.lowercased())
         refreshItems()
         setupAppSwitchObserver()
     }
@@ -606,8 +606,12 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
         }
     }
     
-    /// Maximum number of non-browser pinned quick apps (4 pinned + 1 Chrome/browser = 5 quick apps total)
-    public static let maxPinnedQuickApps = 4
+    /// Maximum number of non-browser pinned quick apps (4 pinned + 1 Chrome/browser = 5 quick apps total in Free tier; unlimited in Pro)
+    public static var maxPinnedQuickApps: Int {
+        LicenseEngine.shared.isPro ? 26 : LicenseEngine.freePinnedAppsLimit
+    }
+    
+    public static let freePinnedAppsLimit = 4
     
     /// Default pinned quick apps (4 core apps + 1 Chrome/browser = 5 quick apps total)
     public static let defaultPinnedBundleIDs: [String] = [

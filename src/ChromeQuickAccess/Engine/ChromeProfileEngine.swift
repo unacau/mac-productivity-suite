@@ -53,13 +53,54 @@ public struct ChromeProfile: Identifiable, Equatable {
     }
 }
 
+// MARK: - Chromium Browser Candidate Model
+public struct ChromiumBrowserCandidate: Identifiable, Equatable, Sendable {
+    public let name: String
+    public let bundleID: String
+    public let localStatePath: String
+    public let appPath: String
+    public var id: String { bundleID }
+    
+    public init(name: String, bundleID: String, localStatePath: String, appPath: String) {
+        self.name = name
+        self.bundleID = bundleID
+        self.localStatePath = localStatePath
+        self.appPath = appPath
+    }
+}
+
 // MARK: - Chrome Profile Engine
 @MainActor
 public final class ChromeProfileEngine: ObservableObject {
     public static let shared = ChromeProfileEngine()
     
     @Published public private(set) var profiles: [ChromeProfile] = []
-    public var browserBundleID: String = "com.google.Chrome"
+    @Published public private(set) var availableBrowsers: [ChromiumBrowserCandidate] = []
+    @Published public var browserBundleID: String = "com.google.Chrome"
+    
+    public var preferredBrowserBundleID: String? {
+        get { UserDefaults.standard.string(forKey: "PreferredBrowserBundleID") }
+        set {
+            if let val = newValue {
+                UserDefaults.standard.set(val, forKey: "PreferredBrowserBundleID")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "PreferredBrowserBundleID")
+            }
+        }
+    }
+    
+    public var activeBrowserName: String {
+        if let found = Self.supportedBrowsers.first(where: { $0.bundleID == browserBundleID }) {
+            return found.name
+        }
+        return "Chrome"
+    }
+    
+    public func selectBrowser(bundleID: String) {
+        self.preferredBrowserBundleID = bundleID
+        self.browserBundleID = bundleID
+        refreshProfiles()
+    }
     
     @Published public var selectedProfileDirs: [String] = [] {
         didSet {
@@ -126,114 +167,184 @@ public final class ChromeProfileEngine: ObservableObject {
     public static var localStatePathOverride: String? = nil
     
     private var cachedAvatars: [String: NSImage] = [:]
-    private let logger = Logger(subsystem: "com.almosteleven.khomyak", category: "profiles")
+    private let logger = Logger(subsystem: "com.almosteleven.xomsky", category: "profiles")
     
     public init() {
         refreshProfiles()
+    }
+    
+    public static var supportedBrowsers: [ChromiumBrowserCandidate] {
+        let home = NSHomeDirectory()
+        return [
+            ChromiumBrowserCandidate(
+                name: "Google Chrome",
+                bundleID: "com.google.Chrome",
+                localStatePath: "\(home)/Library/Application Support/Google/Chrome/Local State",
+                appPath: "/Applications/Google Chrome.app"
+            ),
+            ChromiumBrowserCandidate(
+                name: "Brave Browser",
+                bundleID: "com.brave.Browser",
+                localStatePath: "\(home)/Library/Application Support/BraveSoftware/Brave-Browser/Local State",
+                appPath: "/Applications/Brave Browser.app"
+            ),
+            ChromiumBrowserCandidate(
+                name: "Microsoft Edge",
+                bundleID: "com.microsoft.edgemac",
+                localStatePath: "\(home)/Library/Application Support/Microsoft Edge/Local State",
+                appPath: "/Applications/Microsoft Edge.app"
+            ),
+            ChromiumBrowserCandidate(
+                name: "Chromium",
+                bundleID: "org.chromium.Chromium",
+                localStatePath: "\(home)/Library/Application Support/Chromium/Local State",
+                appPath: "/Applications/Chromium.app"
+            )
+        ]
     }
     
     public var candidateLocalStatePaths: [String] {
         if let overridePath = Self.localStatePathOverride {
             return [overridePath]
         }
-        let home = NSHomeDirectory()
-        return [
-            "\(home)/Library/Application Support/Google/Chrome/Local State",
-            "\(home)/Library/Application Support/BraveSoftware/Brave-Browser/Local State",
-            "\(home)/Library/Application Support/Microsoft Edge/Local State",
-            "\(home)/Library/Application Support/Chromium/Local State"
-        ]
+        return Self.supportedBrowsers.map { $0.localStatePath }
     }
     
     public func refreshProfiles() {
         cachedAvatars.removeAll()
         let fileManager = FileManager.default
         
-        var foundProfiles: [ChromeProfile] = []
-        var discoveredBundleID = "com.google.Chrome"
+        // 1. If isolated test override path is set, parse directly
+        if let overridePath = Self.localStatePathOverride {
+            self.availableBrowsers = []
+            if overridePath.contains("Brave-Browser") { self.browserBundleID = "com.brave.Browser" }
+            else if overridePath.contains("Microsoft Edge") { self.browserBundleID = "com.microsoft.edgemac" }
+            else if overridePath.contains("Chromium") { self.browserBundleID = "org.chromium.Chromium" }
+            else { self.browserBundleID = "com.google.Chrome" }
+            
+            let loaded = parseProfiles(from: overridePath)
+            self.profiles = loaded.isEmpty ? [makeFallbackProfile()] : loaded
+            applySavedProfileSelection()
+            return
+        }
         
-        for path in candidateLocalStatePaths {
-            guard fileManager.fileExists(atPath: path),
-                  let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let profileObj = json["profile"] as? [String: Any],
-                  let infoCache = profileObj["info_cache"] as? [String: [String: Any]] else {
-                continue
+        // 2. Multi-browser discovery: scan all supported Chromium browsers
+        var discovered: [ChromiumBrowserCandidate] = []
+        for candidate in Self.supportedBrowsers {
+            if fileManager.fileExists(atPath: candidate.localStatePath) {
+                discovered.append(candidate)
             }
-            
-            let baseDir = (path as NSString).deletingLastPathComponent
-            if path.contains("Brave-Browser") { discoveredBundleID = "com.brave.Browser" }
-            else if path.contains("Microsoft Edge") { discoveredBundleID = "com.microsoft.edgemac" }
-            else if path.contains("Chromium") { discoveredBundleID = "org.chromium.Chromium" }
-            else { discoveredBundleID = "com.google.Chrome" }
-            
-            var dirKeys = Array(infoCache.keys)
-            // Sort: Default first, then alphanumeric
-            dirKeys.sort { a, b in
-                if a == "Default" { return true }
-                if b == "Default" { return false }
-                return a < b
-            }
-            
-            for (offset, dirKey) in dirKeys.enumerated() {
-                guard let info = infoCache[dirKey] else { continue }
-                
-                let name = (info["name"] as? String)
-                    ?? (info["gaia_name"] as? String)
-                    ?? (info["user_name"] as? String)
-                    ?? (dirKey == "Default" ? "Personal" : dirKey)
-                
-                let email = (info["user_name"] as? String) ?? (info["email"] as? String)
-                let gaiaName = info["gaia_name"] as? String
-                let gaiaGivenName = info["gaia_given_name"] as? String
-                let avatar = resolveAvatar(baseDir: baseDir, dirKey: dirKey, info: info)
-                
-                let profile = ChromeProfile(
-                    index: offset + 1,
-                    dir: dirKey,
-                    name: name,
-                    email: email,
-                    gaiaName: gaiaName,
-                    gaiaGivenName: gaiaGivenName,
-                    avatarImage: avatar
-                )
-                foundProfiles.append(profile)
-                if foundProfiles.count >= 8 { break }
-            }
-            
-            if !foundProfiles.isEmpty {
-                self.browserBundleID = discoveredBundleID
-                break
+        }
+        self.availableBrowsers = discovered
+        
+        // 3. Determine active browser choice (Multi-browser priority hierarchy):
+        // Priority A: Explicit user preference in UserDefaults
+        // Priority B: Currently running browser among discovered
+        // Priority C: Most recently modified Local State file (user's active browser)
+        // Priority D: First discovered candidate or fallback
+        var chosen: ChromiumBrowserCandidate? = nil
+        
+        if let preferred = preferredBrowserBundleID,
+           let match = discovered.first(where: { $0.bundleID == preferred }) {
+            chosen = match
+        } else {
+            let runningApps = NSWorkspace.shared.runningApplications
+            let runningBundles = Set(runningApps.compactMap { $0.bundleIdentifier })
+            if let runningMatch = discovered.first(where: { runningBundles.contains($0.bundleID) }) {
+                chosen = runningMatch
+            } else {
+                var latestDate: Date = .distantPast
+                var latestCandidate: ChromiumBrowserCandidate? = nil
+                for candidate in discovered {
+                    if let attrs = try? fileManager.attributesOfItem(atPath: candidate.localStatePath),
+                       let modDate = attrs[.modificationDate] as? Date,
+                       modDate > latestDate {
+                        latestDate = modDate
+                        latestCandidate = candidate
+                    }
+                }
+                chosen = latestCandidate ?? discovered.first
             }
         }
         
-        // Fallback default profile if none found
-        if foundProfiles.isEmpty {
+        if let chosen = chosen {
+            self.browserBundleID = chosen.bundleID
+            let loaded = parseProfiles(from: chosen.localStatePath)
+            self.profiles = loaded.isEmpty ? [makeFallbackProfile()] : loaded
+        } else {
             self.browserBundleID = "com.google.Chrome"
-            foundProfiles.append(
-                ChromeProfile(
-                    index: 1,
-                    dir: "Default",
-                    name: "Default Profile",
-                    email: nil,
-                    gaiaName: nil,
-                    gaiaGivenName: nil,
-                    avatarImage: makeMonogramImage(name: "Chrome")
-                )
-            )
+            self.profiles = [makeFallbackProfile()]
         }
         
-        self.profiles = foundProfiles
+        applySavedProfileSelection()
+        logger.info("Discovered \(self.availableBrowsers.count) browsers. Active: \(self.activeBrowserName) (\(self.browserBundleID)) with \(self.profiles.count) profiles.")
+    }
+    
+    private func parseProfiles(from path: String) -> [ChromeProfile] {
+        let fileManager = FileManager.default
+        guard fileManager.fileExists(atPath: path),
+              let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let profileObj = json["profile"] as? [String: Any],
+              let infoCache = profileObj["info_cache"] as? [String: [String: Any]] else {
+            return []
+        }
         
+        let baseDir = (path as NSString).deletingLastPathComponent
+        var dirKeys = Array(infoCache.keys)
+        dirKeys.sort { a, b in
+            if a == "Default" { return true }
+            if b == "Default" { return false }
+            return a < b
+        }
+        
+        var foundProfiles: [ChromeProfile] = []
+        for (offset, dirKey) in dirKeys.enumerated() {
+            guard let info = infoCache[dirKey] else { continue }
+            let name = (info["name"] as? String)
+                ?? (info["gaia_name"] as? String)
+                ?? (info["user_name"] as? String)
+                ?? (dirKey == "Default" ? "Personal" : dirKey)
+            let email = (info["user_name"] as? String) ?? (info["email"] as? String)
+            let gaiaName = info["gaia_name"] as? String
+            let gaiaGivenName = info["gaia_given_name"] as? String
+            let avatar = resolveAvatar(baseDir: baseDir, dirKey: dirKey, info: info)
+            
+            let profile = ChromeProfile(
+                index: offset + 1,
+                dir: dirKey,
+                name: name,
+                email: email,
+                gaiaName: gaiaName,
+                gaiaGivenName: gaiaGivenName,
+                avatarImage: avatar
+            )
+            foundProfiles.append(profile)
+            if foundProfiles.count >= 8 { break }
+        }
+        return foundProfiles
+    }
+    
+    private func makeFallbackProfile() -> ChromeProfile {
+        ChromeProfile(
+            index: 1,
+            dir: "Default",
+            name: "Default Profile",
+            email: nil,
+            gaiaName: nil,
+            gaiaGivenName: nil,
+            avatarImage: makeMonogramImage(name: activeBrowserName)
+        )
+    }
+    
+    private func applySavedProfileSelection() {
         let saved = UserDefaults.standard.stringArray(forKey: "SelectedBrowserProfileDirs") ?? []
-        let validSaved = saved.filter { s in foundProfiles.contains(where: { $0.dir == s }) }
+        let validSaved = saved.filter { s in profiles.contains(where: { $0.dir == s }) }
         if !validSaved.isEmpty {
             self.selectedProfileDirs = Array(validSaved.prefix(4))
         } else {
-            self.selectedProfileDirs = Array(foundProfiles.prefix(4).map { $0.dir })
+            self.selectedProfileDirs = Array(profiles.prefix(4).map { $0.dir })
         }
-        
-        logger.info("Discovered \(foundProfiles.count) browser profiles. Selected: \(self.selectedProfiles.count)")
     }
     
     // MARK: - Profile Focus & Activation

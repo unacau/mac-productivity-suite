@@ -43,7 +43,7 @@ public final class AntigravityEngine: ObservableObject, @unchecked Sendable {
     @Published public var items: [AntigravityItem] = []
     public var lastActiveIndex: Int = 0
     
-    private let logger = Logger(subsystem: "com.almosteleven.khomyak", category: "antigravity")
+    private let logger = Logger(subsystem: "com.almosteleven.xomsky", category: "antigravity")
     
     public init() {
         refreshItems()

@@ -32,10 +32,10 @@ health:
 	@./scripts/health_check.sh
 
 checksums:
-	@if [ -f "dist/Khomyak.dmg" ]; then \
-		cd dist && shasum -a 256 Khomyak.dmg > checksums.txt && echo "✅ dist/checksums.txt generated: $$(cat checksums.txt)" && cd ..; \
+	@if [ -f "dist/Xomsky.dmg" ]; then \
+		cd dist && shasum -a 256 Xomsky.dmg > checksums.txt && echo "✅ dist/checksums.txt generated: $$(cat checksums.txt)" && cd ..; \
 	else \
-		echo "ℹ️ dist/Khomyak.dmg not built yet. Run 'make native' first."; \
+		echo "ℹ️ dist/Xomsky.dmg not built yet. Run 'make native' first."; \
 	fi
 
 monitor:

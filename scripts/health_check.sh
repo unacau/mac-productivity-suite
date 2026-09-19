@@ -2,12 +2,12 @@
 set -euo pipefail
 
 # ==============================================================================
-# Khomyak (Хомяк) - System Health & Diagnostics Utility
+# Xomsky - System Health & Diagnostics Utility
 # Evaluates version consistency, binary architectures, and automated tests
 # ==============================================================================
 
 echo "=================================================="
-echo " Khomyak (Хомяк) — System Health Check            "
+echo " Xomsky — System Health Check                     "
 echo "=================================================="
 
 FAILED=0
@@ -37,9 +37,9 @@ fi
 
 # 2. Check Build Outputs & Universal Binary
 echo -n "[2/3] Checking Build Artifacts & Universal Binary... "
-APP_BUNDLE="dist/Khomyak.app"
+APP_BUNDLE="dist/Xomsky.app"
 if [ -d "$APP_BUNDLE" ]; then
-    BINARY="$APP_BUNDLE/Contents/MacOS/Khomyak"
+    BINARY="$APP_BUNDLE/Contents/MacOS/Xomsky"
     if [ -f "$BINARY" ]; then
         ARCHS=$(lipo -archs "$BINARY" 2>/dev/null || echo "Unknown")
         echo "✅ Present (Architectures: $ARCHS)"

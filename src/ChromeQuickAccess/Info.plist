@@ -5,17 +5,17 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Khomyak</string>
+	<string>Xomsky</string>
 	<key>CFBundleExecutable</key>
-	<string>Khomyak</string>
+	<string>Xomsky</string>
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.almosteleven.khomyak</string>
+	<string>com.almosteleven.xomsky</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Khomyak</string>
+	<string>Xomsky</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

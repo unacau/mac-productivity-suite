@@ -236,7 +236,7 @@ struct ChromeQuickAccessUnitTests {
     @Test @MainActor
     func testCopyOnSelectDefaultParameters() {
         let engine = CopyOnSelectEngine()
-        #expect(engine.isEnabled == true)
+        #expect(engine.isEnabled == false)
         #expect(engine.dragThreshold == 10.0)
         #expect(engine.copyDelayMs == 150)
     }
@@ -1005,7 +1005,7 @@ struct ChromeQuickAccessUnitTests {
         #expect(refreshItem?.keyEquivalent == "r")
         #expect(refreshItem?.keyEquivalentModifierMask == [.command])
         
-        let quitItem = menu.items.first(where: { $0.title.contains("Quit Khomyak") })
+        let quitItem = menu.items.first(where: { $0.title.contains("Quit Xomsky") || $0.title.contains("Quit Khomyak") })
         #expect(quitItem != nil)
         #expect(quitItem?.keyEquivalent == "q")
         #expect(quitItem?.keyEquivalentModifierMask == [.command])
@@ -1045,7 +1045,7 @@ struct ChromeQuickAccessUnitTests {
         let subTitles = submenu.items.map { $0.title }
         
         // Headers present in Change App submenu
-        #expect(subTitles.contains("Chrome Profiles (up to 4):"))
+        #expect(subTitles.contains(where: { $0.contains("Profiles (up to 4):") }))
         #expect(subTitles.contains("Pinned Quick Apps (up to 4):"))
         #expect(subTitles.contains("Choose Other App..."))
         
@@ -1154,5 +1154,178 @@ struct ChromeQuickAccessUnitTests {
         #expect(engine.isProfileSelected(dir: "Profile 4") == true)
         #expect(engine.isProfileSelected(dir: "Profile 3") == false)
     }
+    
+    @Test @MainActor
+    func testLicenseEngineValidationAndConstants() {
+        let engine = LicenseEngine.shared
+        
+        #expect(LicenseEngine.freeSlotsLimit == 5)
+        #expect(LicenseEngine.freePinnedAppsLimit == 4)
+        #expect(LicenseEngine.proPrice == "$19 Lifetime")
+        #expect(LicenseEngine.serviceName == "com.almosteleven.xomsky.license")
+        #expect(LicenseEngine.licenseAccount == "pro_license_key")
+        
+        // Invalid key checks: empty or whitespace
+        #expect(engine.validateLicenseKey("") == false)
+        #expect(engine.validateLicenseKey("   ") == false)
+        #expect(engine.validateLicenseKey("\n\t") == false)
+        
+        // Invalid key checks: shorter than 8 characters
+        #expect(engine.validateLicenseKey("ABC") == false)
+        #expect(engine.validateLicenseKey("1234567") == false)
+        #expect(engine.validateLicenseKey("   short   ") == false)
+        
+        // Valid key checks: 8 or more characters
+        #expect(engine.validateLicenseKey("12345678") == true)
+        #expect(engine.validateLicenseKey("XOMSKY-PRO-LICENSE-001") == true)
+        #expect(engine.validateLicenseKey("  XOMSKY-VALID-KEY  ") == true)
+    }
+    
+    @Test @MainActor
+    func testLicenseEngineActivationAndDeactivation() {
+        let engine = LicenseEngine.shared
+        let originalOverride = engine.testOverrideProStatus
+        defer {
+            engine.testOverrideProStatus = originalOverride
+            engine.deactivate()
+        }
+        
+        // Ensure clean state
+        engine.testOverrideProStatus = nil
+        engine.deactivate()
+        #expect(engine.isPro == false)
+        #expect(engine.activeLicenseKey == nil)
+        
+        // Attempt activation with invalid key
+        let invalidResult = engine.activate(key: "bad")
+        #expect(invalidResult == false)
+        #expect(engine.isPro == false)
+        #expect(engine.activeLicenseKey == nil)
+        
+        // Attempt activation with valid key
+        let validKey = "XOMSKY-PRO-KEY-TEST"
+        let validResult = engine.activate(key: "  \(validKey)  ")
+        #expect(validResult == true)
+        #expect(engine.isPro == true)
+        #expect(engine.activeLicenseKey == validKey)
+        
+        // Verify persistent fallback in UserDefaults
+        #expect(UserDefaults.standard.string(forKey: "XomskyProLicenseKey") == validKey)
+        
+        // Deactivation clears state
+        engine.deactivate()
+        #expect(engine.isPro == false)
+        #expect(engine.activeLicenseKey == nil)
+        #expect(UserDefaults.standard.string(forKey: "XomskyProLicenseKey") == nil)
+    }
+    
+    @Test @MainActor
+    func testLicenseEngineTestOverride() {
+        let engine = LicenseEngine.shared
+        let originalOverride = engine.testOverrideProStatus
+        defer {
+            engine.testOverrideProStatus = originalOverride
+        }
+        
+        engine.testOverrideProStatus = true
+        #expect(engine.isPro == true)
+        
+        engine.testOverrideProStatus = false
+        #expect(engine.isPro == false)
+        
+        engine.testOverrideProStatus = nil
+    }
+    
+    @Test @MainActor
+    func testSlotLimitRulesFreeVsPro() {
+        let engine = LicenseEngine.shared
+        let originalOverride = engine.testOverrideProStatus
+        let originalSaved = UserDefaults.standard.stringArray(forKey: "SelectedAppBundleIDs")
+        defer {
+            engine.testOverrideProStatus = originalOverride
+            if let saved = originalSaved {
+                UserDefaults.standard.set(saved, forKey: "SelectedAppBundleIDs")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "SelectedAppBundleIDs")
+            }
+        }
+        
+        // 1. Free Tier verification: 4 pinned apps + 1 browser = 5 free slots total
+        engine.testOverrideProStatus = false
+        #expect(LicenseEngine.freeSlotsLimit == 5)
+        #expect(LicenseEngine.freePinnedAppsLimit == 4)
+        #expect(AppGroupEngine.maxPinnedQuickApps == 4)
+        
+        // Free tier enforces 4-slot ceiling on selected bundle IDs
+        let testSixIDs = Set([
+            "com.google.antigravity",
+            "com.google.antigravity-ide",
+            "com.googlecode.iterm2",
+            "com.apple.Notes",
+            "com.tdesktop.Telegram",
+            "com.tinyspeck.slackmacgap"
+        ])
+        AppGroupEngine.selectedBundleIDs = testSixIDs
+        #expect(AppGroupEngine.selectedBundleIDs.count <= 4)
+        #expect(AppGroupEngine.pinnedAppItems().count <= 4)
+        
+        // 2. Pro Tier verification: unlimited/26 pinned quick apps
+        engine.testOverrideProStatus = true
+        #expect(AppGroupEngine.maxPinnedQuickApps == 26)
+        
+        AppGroupEngine.selectedBundleIDs = testSixIDs
+        #expect(AppGroupEngine.selectedBundleIDs.count == 6)
+        #expect(AppGroupEngine.canPinMoreApps == true)
+    }
+    
+    @Test @MainActor
+    func testLicenseEngineActivationWithOverrideClearing() {
+        let engine = LicenseEngine.shared
+        let originalOverride = engine.testOverrideProStatus
+        defer {
+            engine.testOverrideProStatus = originalOverride
+            engine.deactivate()
+        }
+        
+        // If an override was set to false, activate() should clear the override and make isPro true
+        engine.testOverrideProStatus = false
+        #expect(engine.isPro == false)
+        
+        let success = engine.activate(key: "XOMSKY-TEST-OVERRIDE-KEY")
+        #expect(success == true)
+        #expect(engine.isPro == true)
+        #expect(engine.testOverrideProStatus == nil)
+    }
+    
+    @Test @MainActor
+    func testMultiBrowserSelectionAndDiscovery() {
+        let engine = ChromeProfileEngine.shared
+        let originalBrowser = engine.browserBundleID
+        let originalPreferred = engine.preferredBrowserBundleID
+        defer {
+            engine.selectBrowser(bundleID: originalBrowser)
+            engine.preferredBrowserBundleID = originalPreferred
+        }
+        
+        #expect(!ChromeProfileEngine.supportedBrowsers.isEmpty)
+        let braveCandidate = ChromeProfileEngine.supportedBrowsers.first(where: { $0.bundleID == "com.brave.Browser" })
+        #expect(braveCandidate != nil)
+        #expect(braveCandidate?.name == "Brave Browser")
+        
+        let edgeCandidate = ChromeProfileEngine.supportedBrowsers.first(where: { $0.bundleID == "com.microsoft.edgemac" })
+        #expect(edgeCandidate != nil)
+        #expect(edgeCandidate?.name == "Microsoft Edge")
+        
+        // Test explicit selection
+        engine.selectBrowser(bundleID: "com.brave.Browser")
+        #expect(engine.browserBundleID == "com.brave.Browser")
+        #expect(engine.activeBrowserName == "Brave Browser")
+        #expect(UserDefaults.standard.string(forKey: "PreferredBrowserBundleID") == "com.brave.Browser")
+        
+        engine.selectBrowser(bundleID: "com.google.Chrome")
+        #expect(engine.browserBundleID == "com.google.Chrome")
+        #expect(engine.activeBrowserName == "Google Chrome")
+    }
 }
+
 

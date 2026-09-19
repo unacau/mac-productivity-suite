@@ -8,7 +8,7 @@ import os
 public final class CopyOnSelectEngine: @unchecked Sendable {
     public static let shared = CopyOnSelectEngine()
     
-    public var isEnabled: Bool = true
+    public var isEnabled: Bool = false
     public var dragThreshold: CGFloat = 10.0
     public var copyDelayMs: UInt64 = 150
     
@@ -32,7 +32,7 @@ public final class CopyOnSelectEngine: @unchecked Sendable {
         pendingCopyTask = nil
     }
     
-    private let logger = Logger(subsystem: "com.almosteleven.khomyak", category: "copy-on-select")
+    private let logger = Logger(subsystem: "com.almosteleven.xomsky", category: "copy-on-select")
     
     public init() {}
     

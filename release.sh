@@ -8,8 +8,8 @@ set -euo pipefail
 
 VERSION=$(cat VERSION.txt | tr -d '[:space:]')
 BUILD=$(cat BUILD.txt | tr -d '[:space:]')
-APP_NAME="Khomyak"
-DMG_FILE="dist/Khomyak.dmg"
+APP_NAME="Xomsky"
+DMG_FILE="dist/Xomsky.dmg"
 CHECKSUM_FILE="dist/checksums.txt"
 REPO="unacau/mac-productivity-suite"
 TAG="v$VERSION"
@@ -114,16 +114,19 @@ case "$MODE" in
         ./build_native_app.sh
         mkdir -p dist
         cd dist
-        shasum -a 256 ChromeQuickAccess.dmg > checksums.txt
+        shasum -a 256 Xomsky.dmg > checksums.txt
         echo "✅ Checksum computed: $(cat checksums.txt)"
         cd ..
 
         echo "[3/3] Publishing via local GitHub CLI (gh)..."
         if command -v gh >/dev/null 2>&1; then
-            gh release create "$TAG" "$DMG_FILE" "$CHECKSUM_FILE" \
+            if ! gh release create "$TAG" "$DMG_FILE" "$CHECKSUM_FILE" \
                 --title "$TAG - $APP_NAME & Productivity Suite" \
-                --notes "Release $TAG (Build $BUILD) of Chrome Quick Access featuring driverless Caps-Lock remapping, multi-profile Chrome cycling, Antigravity switcher, and universal Copy-on-Select." \
-                --repo "$REPO" || echo "ℹ️ gh release command skipped or already exists."
+                --notes "Release $TAG (Build $BUILD) of $APP_NAME featuring driverless Caps-Lock remapping, multi-profile Chrome cycling, Antigravity switcher, and universal Copy-on-Select." \
+                --repo "$REPO" 2>/dev/null; then
+                echo "ℹ️ gh release already exists for $TAG. Updating release assets with --clobber..."
+                gh release upload "$TAG" "$DMG_FILE" "$CHECKSUM_FILE" --repo "$REPO" --clobber
+            fi
         else
             echo "ℹ️ GitHub CLI (gh) not installed. Artifacts available at $DMG_FILE and $CHECKSUM_FILE."
         fi

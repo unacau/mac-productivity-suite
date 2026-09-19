@@ -6,10 +6,12 @@ import os
 @MainActor
 public final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
-    private let logger = Logger(subsystem: "com.almosteleven.khomyak", category: "app")
+    private let logger = Logger(subsystem: "com.almosteleven.xomsky", category: "app")
+    private var accessibilityPollTimer: Timer?
+    private var appSwitchObserver: Any?
     
     public func applicationDidFinishLaunching(_ notification: Notification) {
-        logger.info("Starting Khomyak...")
+        logger.info("Starting Xomsky...")
         
         // 1. Setup Menu Bar Status Item
         setupStatusItem()
@@ -17,22 +19,86 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         // 2. Wire Engine Actions
         setupEngineCallbacks()
         
-        // 3. Start Caps Lock Engine & Event Tap
-        CapsLockEngine.shared.start()
-        
-        // 4. Start Copy-on-Select Engine
-        CopyOnSelectEngine.shared.start()
-        
-        // 5. Check Accessibility
-        if !AXIsProcessTrusted() {
+        // 3. Check Accessibility & Start Services
+        if AXIsProcessTrusted() {
+            startServices()
+        } else {
+            logger.warning("Accessibility permission missing on launch. Prompting user and beginning background polling...")
             promptForAccessibilityPermissions()
+            startAccessibilityPolling()
         }
     }
     
     public func applicationWillTerminate(_ notification: Notification) {
-        logger.info("Terminating Khomyak: cleaning up event taps and restoring HID mapping.")
+        logger.info("Terminating Xomsky: cleaning up event taps and restoring HID mapping.")
+        stopAccessibilityPolling()
         CapsLockEngine.shared.stop()
         CopyOnSelectEngine.shared.stop()
+    }
+    
+    public func startServices() {
+        if !CapsLockEngine.shared.isStarted {
+            CapsLockEngine.shared.start()
+        }
+        if CopyOnSelectEngine.shared.isEnabled && !CopyOnSelectEngine.shared.isStarted {
+            CopyOnSelectEngine.shared.start()
+        }
+        updateDynamicShortcuts()
+        updateMenu()
+    }
+    
+    private func startAccessibilityPolling() {
+        guard accessibilityPollTimer == nil else { return }
+        
+        // Polling timer: check every 1.0s
+        accessibilityPollTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+            Task { @MainActor [weak self] in
+                guard let self = self else {
+                    timer.invalidate()
+                    return
+                }
+                if AXIsProcessTrusted() {
+                    self.logger.info("Accessibility permission granted via polling! Initializing services.")
+                    self.stopAccessibilityPolling()
+                    self.startServices()
+                    ChromeProfileEngine.shared.refreshProfiles()
+                    AntigravityEngine.shared.refreshItems()
+                    for engine in AppGroupEngine.allEngines {
+                        engine.refreshItems()
+                    }
+                }
+            }
+        }
+        
+        // Also listen for app activation events (e.g. user toggles setting and switches back)
+        appSwitchObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                if AXIsProcessTrusted() && !CapsLockEngine.shared.isStarted {
+                    self.logger.info("Accessibility permission granted via app switch! Initializing services.")
+                    self.stopAccessibilityPolling()
+                    self.startServices()
+                    ChromeProfileEngine.shared.refreshProfiles()
+                    AntigravityEngine.shared.refreshItems()
+                    for engine in AppGroupEngine.allEngines {
+                        engine.refreshItems()
+                    }
+                }
+            }
+        }
+    }
+    
+    private func stopAccessibilityPolling() {
+        accessibilityPollTimer?.invalidate()
+        accessibilityPollTimer = nil
+        if let observer = appSwitchObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+            appSwitchObserver = nil
+        }
     }
     
     private enum ActiveSwitcherMode: Equatable {
@@ -297,7 +363,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         let icon = makeKhomyakStatusIcon()
         button.image = icon
         button.imagePosition = .imageOnly
-        button.toolTip = "Khomyak (Хомяк) — Tap the Hamster"
+        button.toolTip = "Xomsky — Tap the Mascot"
         
         updateMenu()
     }
@@ -499,9 +565,13 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         let profileEngine = ChromeProfileEngine.shared
         let selectedList = profileEngine.selectedProfiles
         
-        // 1. Chrome section (caps lock + C)
+        // 1. Chrome / Browser section (caps lock + C)
+        let browserName = profileEngine.activeBrowserName
         let chromeIcon: NSImage
-        if let appIcon = NSWorkspace.shared.icon(forFile: "/Applications/Google Chrome.app") as NSImage? {
+        if let candidate = ChromeProfileEngine.supportedBrowsers.first(where: { $0.bundleID == profileEngine.browserBundleID }),
+           let appIcon = NSWorkspace.shared.icon(forFile: candidate.appPath) as NSImage? {
+            chromeIcon = appIcon
+        } else if let appIcon = NSWorkspace.shared.icon(forFile: "/Applications/Google Chrome.app") as NSImage? {
             chromeIcon = appIcon
         } else if let firstAvatar = profileEngine.profiles.first?.avatarImage {
             chromeIcon = firstAvatar
@@ -509,8 +579,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             chromeIcon = NSImage(systemSymbolName: "globe", accessibilityDescription: nil) ?? NSImage()
         }
         
+        let browserTitle = profileEngine.browserBundleID == "com.google.Chrome" ? "Chrome (Caps-Lock + C)" : "\(browserName) (Caps-Lock + C)"
         let chromeHeader = makeAlignedMenuItem(
-            title: "Chrome (Caps-Lock + C)",
+            title: browserTitle,
             isHeader: true,
             icon: chromeIcon,
             action: nil,
@@ -620,10 +691,38 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         
         let transparentOffImage = NSImage(size: NSSize(width: 14, height: 14))
         
-        // 3a. Chrome Profiles in Change App
-        let chromeCatHeader = NSMenuItem(title: "Chrome Profiles (up to 4):", action: nil, keyEquivalent: "")
+        // 3a. Active Browser Selection (when multiple browsers available)
+        if profileEngine.availableBrowsers.count > 1 {
+            let browserCatHeader = NSMenuItem(title: "Active Browser:", action: nil, keyEquivalent: "")
+            browserCatHeader.attributedTitle = NSAttributedString(
+                string: "Active Browser:",
+                attributes: [.font: NSFont.boldSystemFont(ofSize: 11)]
+            )
+            browserCatHeader.isEnabled = false
+            changeAppSubmenu.addItem(browserCatHeader)
+            
+            for b in profileEngine.availableBrowsers {
+                let isCurrent = profileEngine.browserBundleID == b.bundleID
+                let bItem = makeAlignedMenuItem(
+                    title: b.name,
+                    icon: NSWorkspace.shared.icon(forFile: b.appPath),
+                    action: #selector(handleSelectBrowserClick(_:)),
+                    target: self,
+                    representedObject: b.bundleID
+                )
+                bItem.state = isCurrent ? .on : .off
+                if !isCurrent {
+                    bItem.offStateImage = transparentOffImage
+                }
+                changeAppSubmenu.addItem(bItem)
+            }
+            changeAppSubmenu.addItem(NSMenuItem.separator())
+        }
+        
+        // 3b. Chrome / Browser Profiles in Change App
+        let chromeCatHeader = NSMenuItem(title: "\(profileEngine.activeBrowserName) Profiles (up to 4):", action: nil, keyEquivalent: "")
         chromeCatHeader.attributedTitle = NSAttributedString(
-            string: "Chrome Profiles (up to 4):",
+            string: "\(profileEngine.activeBrowserName) Profiles (up to 4):",
             attributes: [.font: NSFont.boldSystemFont(ofSize: 11)]
         )
         chromeCatHeader.isEnabled = false
@@ -647,17 +746,18 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             changeAppSubmenu.addItem(pItem)
         }
         
-        // 3b. Pinned Quick Apps Header
+        // 3c. Pinned Quick Apps Header
         changeAppSubmenu.addItem(NSMenuItem.separator())
-        let pinnedHeader = NSMenuItem(title: "Pinned Quick Apps (up to 4):", action: nil, keyEquivalent: "")
+        let pinnedItems = AppGroupEngine.pinnedAppItems()
+        let pinnedTitle = LicenseEngine.shared.isPro ? "Pinned Quick Apps (\(pinnedItems.count)):" : "Pinned Quick Apps (up to 4):"
+        let pinnedHeader = NSMenuItem(title: pinnedTitle, action: nil, keyEquivalent: "")
         pinnedHeader.attributedTitle = NSAttributedString(
-            string: "Pinned Quick Apps (up to 4):",
+            string: pinnedTitle,
             attributes: [.font: NSFont.boldSystemFont(ofSize: 11)]
         )
         pinnedHeader.isEnabled = false
         changeAppSubmenu.addItem(pinnedHeader)
         
-        let pinnedItems = AppGroupEngine.pinnedAppItems()
         for item in pinnedItems {
             let char = Character((item.name.first(where: { $0.isLetter }) ?? "A").uppercased())
             let pItem = makeAlignedMenuItem(
@@ -672,7 +772,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             changeAppSubmenu.addItem(pItem)
         }
         
-        // 3c. Catalog Categories in Change App
+        // 3d. Catalog Categories in Change App
         let catalogCategories = AppGroupEngine.catalogCategories
         for cat in catalogCategories {
             changeAppSubmenu.addItem(NSMenuItem.separator())
@@ -704,7 +804,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         
-        // 3d. Choose Other App...
+        // 3e. Choose Other App...
         changeAppSubmenu.addItem(NSMenuItem.separator())
         let customAppItem = makeAlignedMenuItem(
             title: "Choose Other App...",
@@ -720,7 +820,25 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         
         menu.addItem(NSMenuItem.separator())
         
-        // 4. Utility / options items
+        // 4. Utility & Pro items
+        let proItem: NSMenuItem
+        if LicenseEngine.shared.isPro {
+            proItem = makeAlignedMenuItem(
+                title: "Xomsky Pro: Active ✓",
+                icon: NSImage(systemSymbolName: "checkmark.seal.fill", accessibilityDescription: nil),
+                action: #selector(handleManageLicense),
+                target: self
+            )
+        } else {
+            proItem = makeAlignedMenuItem(
+                title: "Upgrade to Xomsky Pro (\(LicenseEngine.proPrice))...",
+                icon: NSImage(systemSymbolName: "star.fill", accessibilityDescription: nil),
+                action: #selector(handleUpgradeToPro),
+                target: self
+            )
+        }
+        menu.addItem(proItem)
+        
         let copyStatusTitle = CopyOnSelectEngine.shared.isEnabled ? "Copy-on-Select: Active ✓" : "Copy-on-Select: Disabled"
         let copyStatusItem = NSMenuItem(
             title: copyStatusTitle,
@@ -750,7 +868,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem.separator())
         
         let quitItem = makeAlignedMenuItem(
-            title: "Quit Khomyak",
+            title: "Quit Xomsky",
             keyEquivalent: "q",
             modifierMask: [.command],
             action: #selector(handleQuit),
@@ -783,7 +901,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         
         let alert = NSAlert()
         alert.messageText = "Chrome Profiles Limit Reached (4 of 4)"
-        alert.informativeText = "Khomyak supports up to 4 quick Chrome profiles (Caps + 1..4).\n\nAll 4 profile slots are currently in use. Choose which profile slot to replace with '\(newProfileName)':"
+        alert.informativeText = "Xomsky supports up to 4 quick profiles (Caps + 1..4).\n\nAll 4 profile slots are currently in use. Choose which profile slot to replace with '\(newProfileName)':"
         alert.alertStyle = .informational
         
         let popUp = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 300, height: 26))
@@ -905,6 +1023,78 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
+    @objc private func handleSelectBrowserClick(_ sender: NSMenuItem) {
+        guard let bundleID = sender.representedObject as? String else { return }
+        ChromeProfileEngine.shared.selectBrowser(bundleID: bundleID)
+        updateMenu()
+    }
+    
+    @objc private func handleUpgradeToPro() {
+        if let url = URL(string: "https://almosteleven.com/xomsky") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+    
+    @objc private func handleManageLicense() {
+        let alert = NSAlert()
+        alert.messageText = "Xomsky Pro Active"
+        let keyText = LicenseEngine.shared.activeLicenseKey ?? "Activated via License"
+        alert.informativeText = "Status: Pro (\(LicenseEngine.proPrice))\nLicense Key: \(keyText)\n\nYou have unlocked unlimited Quick App slots!"
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: "Deactivate License")
+        
+        NSApp.activate(ignoringOtherApps: true)
+        alert.window.level = .floating
+        if alert.runModal() == .alertSecondButtonReturn {
+            LicenseEngine.shared.deactivate()
+            updateDynamicShortcuts()
+            updateMenu()
+        }
+    }
+    
+    private func promptEnterLicenseKey(thenPinBundleID: String? = nil) {
+        let alert = NSAlert()
+        alert.messageText = "Enter Xomsky Pro License Key"
+        alert.informativeText = "Please enter your license key to unlock unlimited slots:"
+        alert.alertStyle = .informational
+        
+        let input = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
+        input.placeholderString = "XOMSKY-PRO-XXXX-XXXX"
+        alert.accessoryView = input
+        
+        alert.addButton(withTitle: "Activate")
+        alert.addButton(withTitle: "Cancel")
+        
+        NSApp.activate(ignoringOtherApps: true)
+        alert.window.level = .floating
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            let key = input.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if LicenseEngine.shared.activate(key: key) {
+                let successAlert = NSAlert()
+                successAlert.messageText = "Xomsky Pro Activated!"
+                successAlert.informativeText = "Thank you for supporting independent software development. You now have unlimited Quick App slots!"
+                successAlert.alertStyle = .informational
+                successAlert.addButton(withTitle: "OK")
+                successAlert.runModal()
+                
+                if let pinID = thenPinBundleID {
+                    AppGroupEngine.selectApp(bundleID: pinID)
+                }
+                updateDynamicShortcuts()
+                updateMenu()
+            } else {
+                let errorAlert = NSAlert()
+                errorAlert.messageText = "Invalid License Key"
+                errorAlert.informativeText = "The license key provided could not be validated. Please check the key and try again."
+                errorAlert.alertStyle = .warning
+                errorAlert.addButton(withTitle: "OK")
+                errorAlert.runModal()
+            }
+        }
+    }
+    
     private func promptAppReplacement(newBundleID: String) {
         let allDiscovered = AppGroupEngine.allDiscoveredItems()
         let newAppName = allDiscovered.first(where: { $0.bundleID == newBundleID })?.name
@@ -912,8 +1102,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             ?? newBundleID
         
         let alert = NSAlert()
-        alert.messageText = "Quick Apps Limit Reached (4 of 4)"
-        alert.informativeText = "Khomyak supports 5 quick apps in total (Chrome + 4 pinned apps).\n\nAll 4 pinned slots are currently in use. Choose which application to replace with '\(newAppName)':"
+        alert.messageText = "Free Tier Slot Limit Reached (5 of 5 Slots)"
+        alert.informativeText = "Xomsky Free includes 5 quick slots (1 Browser Hub + 4 Pinned Apps).\n\nSlots 6 and beyond require Xomsky Pro (\(LicenseEngine.proPrice)).\n\nYou can replace an existing pinned slot or upgrade to Xomsky Pro for unlimited quick app slots:"
         alert.alertStyle = .informational
         
         let popUp = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 300, height: 26))
@@ -930,6 +1120,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.accessoryView = popUp
         
         alert.addButton(withTitle: "Replace App")
+        alert.addButton(withTitle: "Upgrade to Pro (\(LicenseEngine.proPrice))")
+        alert.addButton(withTitle: "Enter License Key...")
         alert.addButton(withTitle: "Cancel")
         
         NSApp.activate(ignoringOtherApps: true)
@@ -943,6 +1135,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                 updateDynamicShortcuts()
                 updateMenu()
             }
+        } else if response == .alertSecondButtonReturn {
+            handleUpgradeToPro()
+        } else if response == .alertThirdButtonReturn {
+            promptEnterLicenseKey(thenPinBundleID: newBundleID)
         }
     }
     
@@ -954,7 +1150,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.allowedContentTypes = [.application]
         panel.directoryURL = URL(fileURLWithPath: "/Applications")
         panel.prompt = "Pin App"
-        panel.message = "Choose an application to pin to Khomyak Quick Apps:"
+        panel.message = "Choose an application to pin to Xomsky Quick Apps:"
         
         NSApp.activate(ignoringOtherApps: true)
         panel.level = .floating
