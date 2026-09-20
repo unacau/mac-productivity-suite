@@ -995,6 +995,49 @@ struct ChromeQuickAccessUnitTests {
     
     @Test @MainActor
     func testTwoGroupMenuStructure() {
+        let dummyIcon = NSImage(size: NSSize(width: 32, height: 32))
+        let mockAiAgent = [
+            AntigravityItem(name: "Antigravity", bundleID: "com.google.antigravity", path: "/Applications/Antigravity.app", icon: dummyIcon, index: 1)
+        ]
+        let mockIde = [
+            AntigravityItem(name: "Antigravity IDE", bundleID: "com.google.antigravity-ide", path: "/Applications/Antigravity IDE.app", icon: dummyIcon, index: 1)
+        ]
+        let mockTerminal = [
+            AntigravityItem(name: "iTerm2", bundleID: "com.googlecode.iterm2", path: "/Applications/iTerm.app", icon: dummyIcon, index: 1),
+            AntigravityItem(name: "Terminal", bundleID: "com.apple.Terminal", path: "/System/Applications/Utilities/Terminal.app", icon: dummyIcon, index: 2)
+        ]
+        let mockNotes = [
+            AntigravityItem(name: "Notes", bundleID: "com.apple.Notes", path: "/System/Applications/Notes.app", icon: dummyIcon, index: 1)
+        ]
+        
+        AppGroupEngine.aiAgent.customItemsOverride = mockAiAgent
+        AppGroupEngine.ide.customItemsOverride = mockIde
+        AppGroupEngine.terminal.customItemsOverride = mockTerminal
+        AppGroupEngine.notes.customItemsOverride = mockNotes
+        
+        AppGroupEngine.aiAgent.refreshItems()
+        AppGroupEngine.ide.refreshItems()
+        AppGroupEngine.terminal.refreshItems()
+        AppGroupEngine.notes.refreshItems()
+        
+        let previousSelected = UserDefaults.standard.stringArray(forKey: "SelectedAppBundleIDs")
+        defer {
+            AppGroupEngine.aiAgent.customItemsOverride = nil
+            AppGroupEngine.ide.customItemsOverride = nil
+            AppGroupEngine.terminal.customItemsOverride = nil
+            AppGroupEngine.notes.customItemsOverride = nil
+            AppGroupEngine.aiAgent.refreshItems()
+            AppGroupEngine.ide.refreshItems()
+            AppGroupEngine.terminal.refreshItems()
+            AppGroupEngine.notes.refreshItems()
+            
+            if let prev = previousSelected {
+                UserDefaults.standard.set(prev, forKey: "SelectedAppBundleIDs")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "SelectedAppBundleIDs")
+            }
+        }
+
         UserDefaults.standard.set(AppGroupEngine.defaultPinnedBundleIDs, forKey: "SelectedAppBundleIDs")
         let appDelegate = AppDelegate()
         let menu = appDelegate.buildStatusMenu()
@@ -1025,7 +1068,7 @@ struct ChromeQuickAccessUnitTests {
         // Active Quick Apps items present with valid keyEquivalent
         let termMatch = menu.items.first(where: { $0.title.contains("iTerm") || $0.title.contains("Terminal") })
         #expect(termMatch != nil)
-        #expect(!termMatch!.keyEquivalent.isEmpty)
+        #expect(termMatch?.keyEquivalent.isEmpty == false)
         
         let agentOrIdeMatch = menu.items.first(where: { $0.title.contains("Antigravity") || $0.title.contains("IDE") })
         #expect(agentOrIdeMatch != nil)
@@ -1034,7 +1077,7 @@ struct ChromeQuickAccessUnitTests {
         
         let notesMatch = menu.items.first(where: { $0.title.contains("Notes") || $0.title.contains("Obsidian") })
         #expect(notesMatch != nil)
-        #expect(!notesMatch!.keyEquivalent.isEmpty)
+        #expect(notesMatch?.keyEquivalent.isEmpty == false)
         
         // Change App item with submenu present
         let changeAppItem = menu.items.first(where: { $0.title == "Change App" })
@@ -1108,8 +1151,49 @@ struct ChromeQuickAccessUnitTests {
     
     @Test @MainActor
     func testCanPinMoreAppsAndExplicitReplacement() {
+        let dummyIcon = NSImage(size: NSSize(width: 32, height: 32))
+        let mockAiAgent = [
+            AntigravityItem(name: "Antigravity", bundleID: "com.google.antigravity", path: "/Applications/Antigravity.app", icon: dummyIcon, index: 1)
+        ]
+        let mockIde = [
+            AntigravityItem(name: "Antigravity IDE", bundleID: "com.google.antigravity-ide", path: "/Applications/Antigravity IDE.app", icon: dummyIcon, index: 1)
+        ]
+        let mockTerminal = [
+            AntigravityItem(name: "iTerm2", bundleID: "com.googlecode.iterm2", path: "/Applications/iTerm.app", icon: dummyIcon, index: 1)
+        ]
+        let mockNotes = [
+            AntigravityItem(name: "Notes", bundleID: "com.apple.Notes", path: "/System/Applications/Notes.app", icon: dummyIcon, index: 1)
+        ]
+        let mockComm = [
+            AntigravityItem(name: "Telegram", bundleID: "com.tdesktop.Telegram", path: "/Applications/Telegram.app", icon: dummyIcon, index: 1)
+        ]
+        
+        AppGroupEngine.aiAgent.customItemsOverride = mockAiAgent
+        AppGroupEngine.ide.customItemsOverride = mockIde
+        AppGroupEngine.terminal.customItemsOverride = mockTerminal
+        AppGroupEngine.notes.customItemsOverride = mockNotes
+        AppGroupEngine.communication.customItemsOverride = mockComm
+        
+        AppGroupEngine.aiAgent.refreshItems()
+        AppGroupEngine.ide.refreshItems()
+        AppGroupEngine.terminal.refreshItems()
+        AppGroupEngine.notes.refreshItems()
+        AppGroupEngine.communication.refreshItems()
+        
         let previous = UserDefaults.standard.stringArray(forKey: "SelectedAppBundleIDs")
         defer {
+            AppGroupEngine.aiAgent.customItemsOverride = nil
+            AppGroupEngine.ide.customItemsOverride = nil
+            AppGroupEngine.terminal.customItemsOverride = nil
+            AppGroupEngine.notes.customItemsOverride = nil
+            AppGroupEngine.communication.customItemsOverride = nil
+            
+            AppGroupEngine.aiAgent.refreshItems()
+            AppGroupEngine.ide.refreshItems()
+            AppGroupEngine.terminal.refreshItems()
+            AppGroupEngine.notes.refreshItems()
+            AppGroupEngine.communication.refreshItems()
+            
             if let prev = previous {
                 UserDefaults.standard.set(prev, forKey: "SelectedAppBundleIDs")
             } else {
