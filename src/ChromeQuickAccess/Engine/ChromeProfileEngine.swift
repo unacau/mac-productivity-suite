@@ -244,9 +244,12 @@ public final class ChromeProfileEngine: ObservableObject {
         // Priority D: First discovered candidate or fallback
         var chosen: ChromiumBrowserCandidate? = nil
         
-        if let preferred = preferredBrowserBundleID,
-           let match = discovered.first(where: { $0.bundleID == preferred }) {
-            chosen = match
+        if let preferred = preferredBrowserBundleID {
+            if let match = discovered.first(where: { $0.bundleID == preferred }) {
+                chosen = match
+            } else if let supported = Self.supportedBrowsers.first(where: { $0.bundleID == preferred }) {
+                chosen = supported
+            }
         } else {
             let runningApps = NSWorkspace.shared.runningApplications
             let runningBundles = Set(runningApps.compactMap { $0.bundleIdentifier })
