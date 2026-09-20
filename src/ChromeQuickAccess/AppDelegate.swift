@@ -829,6 +829,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                 action: #selector(handleManageLicense),
                 target: self
             )
+            menu.addItem(proItem)
         } else {
             proItem = makeAlignedMenuItem(
                 title: "Upgrade to Xomsky Pro (\(LicenseEngine.proPrice))...",
@@ -836,8 +837,16 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                 action: #selector(handleUpgradeToPro),
                 target: self
             )
+            menu.addItem(proItem)
+            
+            let enterKeyItem = makeAlignedMenuItem(
+                title: "Enter License Key...",
+                icon: NSImage(systemSymbolName: "key.fill", accessibilityDescription: nil),
+                action: #selector(handleEnterLicenseKeyFromMenu),
+                target: self
+            )
+            menu.addItem(enterKeyItem)
         }
-        menu.addItem(proItem)
         
         let copyStatusTitle = CopyOnSelectEngine.shared.isEnabled ? "Copy-on-Select: Active ✓" : "Copy-on-Select: Disabled"
         let copyStatusItem = NSMenuItem(
@@ -1030,9 +1039,13 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     @objc private func handleUpgradeToPro() {
-        if let url = URL(string: "https://almosteleven.com/xomsky") {
+        if let url = URL(string: LicenseEngine.polarCheckoutUrl) {
             NSWorkspace.shared.open(url)
         }
+    }
+    
+    @objc private func handleEnterLicenseKeyFromMenu() {
+        promptEnterLicenseKey()
     }
     
     @objc private func handleManageLicense() {
@@ -1071,28 +1084,64 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         let response = alert.runModal()
         if response == .alertFirstButtonReturn {
             let key = input.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
-            if LicenseEngine.shared.activate(key: key) {
-                let successAlert = NSAlert()
-                successAlert.messageText = "Xomsky Pro Activated!"
-                successAlert.informativeText = "Thank you for supporting independent software development. You now have unlimited Quick App slots!"
-                successAlert.alertStyle = .informational
-                successAlert.addButton(withTitle: "OK")
-                successAlert.runModal()
-                
-                if let pinID = thenPinBundleID {
-                    AppGroupEngine.selectApp(bundleID: pinID)
+            guard !key.isEmpty else { return }
+            
+            // 1. Offline master key fast-path: activates immediately in 0ms without network
+            if LicenseEngine.isOfflineMasterKey(key) {
+                if LicenseEngine.shared.activate(key: key) {
+                    showActivationSuccess(thenPinBundleID: thenPinBundleID)
+                } else {
+                    showActivationError(message: "The offline master key provided could not be activated.")
                 }
-                updateDynamicShortcuts()
-                updateMenu()
-            } else {
-                let errorAlert = NSAlert()
-                errorAlert.messageText = "Invalid License Key"
-                errorAlert.informativeText = "The license key provided could not be validated. Please check the key and try again."
-                errorAlert.alertStyle = .warning
-                errorAlert.addButton(withTitle: "OK")
-                errorAlert.runModal()
+                return
+            }
+            
+            // 2. Key format validation check before making network calls
+            guard LicenseEngine.shared.validateLicenseKey(key) else {
+                showActivationError(message: "Invalid license key format. Xomsky license keys start with 'XOMSKY-'.")
+                return
+            }
+            
+            // 3. Online Polar activation via async Task on MainActor
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                let result = await LicenseEngine.shared.activateOnlineDetailed(key: key)
+                switch result {
+                case .success:
+                    self.showActivationSuccess(thenPinBundleID: thenPinBundleID)
+                case .invalidKey(let msg):
+                    self.showActivationError(message: msg)
+                case .activationLimitReached:
+                    self.showActivationError(message: "This license key has reached its maximum number of activated devices. Please deactivate another device or contact support.")
+                case .networkError(let msg):
+                    self.showActivationError(message: "Could not connect to the Polar license server. Please check your internet connection and try again.\n\nDetails: \(msg)")
+                }
             }
         }
+    }
+    
+    private func showActivationSuccess(thenPinBundleID: String?) {
+        let successAlert = NSAlert()
+        successAlert.messageText = "Xomsky Pro Activated!"
+        successAlert.informativeText = "Thank you for supporting independent software development. You now have unlimited Quick App slots!"
+        successAlert.alertStyle = .informational
+        successAlert.addButton(withTitle: "OK")
+        successAlert.runModal()
+        
+        if let pinID = thenPinBundleID {
+            AppGroupEngine.selectApp(bundleID: pinID)
+        }
+        updateDynamicShortcuts()
+        updateMenu()
+    }
+    
+    private func showActivationError(message: String) {
+        let errorAlert = NSAlert()
+        errorAlert.messageText = "Activation Failed"
+        errorAlert.informativeText = message
+        errorAlert.alertStyle = .warning
+        errorAlert.addButton(withTitle: "OK")
+        errorAlert.runModal()
     }
     
     private func promptAppReplacement(newBundleID: String) {

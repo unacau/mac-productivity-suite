@@ -639,17 +639,400 @@ kbd {
   transform: scale(0.98);
 }
 
+/* ==========================================================================
+   Xomsky Brand, Primary CTA, Terminal 1-Click Install & Pricing Matrix
+   ========================================================================== */
+
+/* Top Nav Primary CTA */
+.buy-pro-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #38BDF8 0%, #0284C7 100%);
+  color: #FFFFFF;
+  padding: 9px 20px;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgba(56, 189, 248, 0.38);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.buy-pro-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(56, 189, 248, 0.55);
+  background: linear-gradient(135deg, #60A5FA 0%, #0369A1 100%);
+}
+
+/* Hero Overlay Card (Top-Left) */
+.hero-card {
+  position: absolute;
+  top: 86px;
+  left: 32px;
+  width: 440px;
+  max-width: calc(100vw - 64px);
+  background: var(--card-bg);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  padding: 22px 24px;
+  box-shadow: var(--card-shadow);
+  pointer-events: auto;
+  z-index: 20;
+  transition: all 0.3s ease;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.70rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #0284C7;
+  background: rgba(2, 132, 199, 0.12);
+  padding: 3px 9px;
+  border-radius: 999px;
+  margin-bottom: 10px;
+}
+
+[data-theme="dark"] .hero-badge {
+  color: #38BDF8;
+  background: rgba(56, 189, 248, 0.16);
+}
+
+.hero-title {
+  font-size: 2.2rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--brand-color);
+  margin-bottom: 6px;
+}
+
+.hero-tagline {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.35;
+  margin-bottom: 4px;
+}
+
+.hero-subtext {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-bottom: 16px;
+}
+
+/* Terminal Install Bar */
+.terminal-install-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(15, 23, 42, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.terminal-prompt {
+  font-family: var(--font-mono);
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: #10B981;
+}
+
+.terminal-cmd {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: #F8FAFC;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+
+.terminal-cmd::-webkit-scrollbar {
+  display: none;
+}
+
+.copy-cmd-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.copy-cmd-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+  transform: translateY(-1px);
+}
+
+.copy-cmd-btn.copied {
+  background: #10B981;
+  border-color: #10B981;
+  color: #FFFFFF;
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.hero-buy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #38BDF8 0%, #0284C7 100%);
+  color: #FFFFFF;
+  padding: 8px 18px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  box-shadow: 0 6px 18px rgba(56, 189, 248, 0.35);
+  transition: all 0.2s ease;
+}
+
+.hero-buy-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(56, 189, 248, 0.5);
+}
+
+.hero-download-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--glass-bg);
+  color: var(--text-muted);
+  border: 1px solid var(--glass-border);
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.hero-download-link:hover {
+  background: var(--glass-hover-bg);
+  color: var(--glass-hover-text);
+  transform: translateY(-1px);
+}
+
+/* Pricing & Tier Comparison Card */
+.insight-card.pricing-card {
+  position: absolute;
+  top: 86px;
+  right: 32px;
+  width: 530px;
+  max-width: calc(100vw - 64px);
+  background: var(--card-bg);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  padding: 20px 22px;
+  box-shadow: var(--card-shadow);
+  pointer-events: auto;
+  z-index: 20;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pricing-card.minimized {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.92) translateY(-10px);
+}
+
+.pro-badge {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2) 0%, rgba(2, 132, 199, 0.2) 100%);
+  color: #0284C7;
+}
+
+[data-theme="dark"] .pro-badge {
+  color: #38BDF8;
+}
+
+.tiers-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.tier-col {
+  background: var(--compare-row-bg);
+  border: 1px solid var(--compare-row-border);
+  border-radius: 14px;
+  padding: 14px 14px 16px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: all 0.25s ease;
+}
+
+.tier-col.pro-tier {
+  border: 1.5px solid rgba(56, 189, 248, 0.5);
+  box-shadow: 0 4px 18px rgba(56, 189, 248, 0.15);
+}
+
+.tier-badge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.tier-badge.pro-badge-pop {
+  color: #0284C7;
+}
+
+[data-theme="dark"] .tier-badge.pro-badge-pop {
+  color: #38BDF8;
+}
+
+.tier-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--card-title);
+  margin-bottom: 4px;
+}
+
+.tier-price {
+  font-size: 1.45rem;
+  font-weight: 900;
+  color: var(--card-title);
+  font-family: var(--font-mono);
+  margin-bottom: 6px;
+}
+
+.price-sub {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.tier-summary {
+  font-size: 0.72rem;
+  color: var(--card-desc);
+  line-height: 1.35;
+  margin-bottom: 12px;
+  min-height: 30px;
+}
+
+.tier-feature-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+  flex: 1;
+}
+
+.tier-feature-list li {
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--text-primary);
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.check-icon {
+  color: #10B981;
+  font-weight: 800;
+  font-size: 0.75rem;
+}
+
+.check-icon.pro-check {
+  color: #38BDF8;
+}
+
+.tier-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.free-tier-btn {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+}
+
+.free-tier-btn:hover {
+  background: var(--glass-hover-bg);
+  transform: translateY(-1px);
+}
+
+.pro-tier-btn {
+  background: linear-gradient(135deg, #38BDF8 0%, #0284C7 100%);
+  color: #FFFFFF;
+  box-shadow: 0 4px 14px rgba(56, 189, 248, 0.35);
+}
+
+.pro-tier-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(56, 189, 248, 0.5);
+}
+
+.compare-row.profile-row-xomsky {
+  border-left: 3.5px solid #38BDF8;
+}
+
 /* Responsive Rules */
-@media (max-width: 900px) {
-  .insight-card.paradox-card {
-    top: auto;
-    bottom: 120px;
-    right: 16px;
-    left: 16px;
-    width: auto;
+@media (max-width: 1024px) {
+  .hero-card {
+    position: static;
+    width: 100%;
     max-width: none;
+    margin-top: 14px;
   }
-  .mnemonic-label { display: none; }
+  .insight-card.pricing-card {
+    position: static;
+    width: 100%;
+    max-width: none;
+    margin-top: 14px;
+  }
+  .insight-card.paradox-card {
+    position: static;
+    width: 100%;
+    max-width: none;
+    margin-top: 14px;
+  }
+  .ui-overlay {
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    pointer-events: auto;
+  }
+  .bottom-container {
+    margin-top: 20px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -658,4 +1041,6 @@ kbd {
   .glass-link { display: none; }
   .mnemonic-pill { font-size: 0.7rem; padding: 3px 8px; }
   .badge-btn { display: none; }
+  .tiers-grid { grid-template-columns: 1fr; }
+  .hero-title { font-size: 1.8rem; }
 }

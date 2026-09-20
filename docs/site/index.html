@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Khomyak — 5-Category macOS Productivity Suite</title>
-  <meta name="description" content="Switch Chrome profiles, Terminal, IDE, AI Agent, and Notes in 0ms via Caps-Lock Home-Row Shortcuts.">
+  <title>Xomsky — Universal Grammar for Your Mac Shortcuts</title>
+  <meta name="description" content="Xomsky — Universal Grammar for Your Mac Shortcuts. Cognitive Speed. Zero Friction. Switch browser profiles, Terminal, IDE, AI Agent, and Notes in 0ms via Caps-Lock Home-Row Shortcuts.">
 
   <!-- OpenGraph -->
-  <meta property="og:title" content="Khomyak — 5-Category macOS Productivity Suite">
-  <meta property="og:description" content="Switch Chrome profiles, Terminal, IDE, AI Agent, and Notes in 0ms via Caps-Lock Home-Row Shortcuts.">
+  <meta property="og:title" content="Xomsky — Universal Grammar for Your Mac Shortcuts">
+  <meta property="og:description" content="Universal Grammar for Your Mac Shortcuts. Cognitive Speed. Zero Friction.">
   <meta property="og:image" content="assets/images/khomyak_opengraph_banner.png">
 
   <link rel="icon" type="image/png" href="assets/images/AppIcon.png">
@@ -26,14 +26,17 @@
   <!-- Ultra-Clean, Zero-Noise UI Overlay -->
   <div class="ui-overlay">
     
-    <!-- Top Bar: Minimalist Branding & Single Download Action -->
+    <!-- Top Bar: Minimalist Branding, Pricing, Download & Primary Buy CTA -->
     <header class="top-nav">
       <div class="nav-brand">
-        <img src="assets/images/AppIcon.png" alt="Khomyak Icon" class="brand-icon">
-        <span class="brand-name">Khomyak</span>
+        <img src="assets/images/AppIcon.png" alt="Xomsky Icon" class="brand-icon">
+        <span class="brand-name">Xomsky</span>
       </div>
 
       <div class="nav-controls">
+        <button id="pricing-toggle" class="glass-btn badge-btn" title="Toggle Pricing & Tiers">
+          <span>💎 Pricing</span>
+        </button>
         <button id="paradox-toggle" class="glass-btn badge-btn" title="Toggle Spotlight Paradox insight">
           <span>⚡ Spotlight Paradox</span>
         </button>
@@ -43,14 +46,90 @@
         <button id="sound-toggle" class="glass-btn sound-btn" title="Toggle tactile sound">
           <span id="sound-icon">🔊</span>
         </button>
-        <a href="https://github.com/almosteleven/khomyak" target="_blank" rel="noopener" class="glass-link">
+        <a href="https://github.com/unacau/mac-productivity-suite" target="_blank" rel="noopener" class="glass-link">
           GitHub ↗
         </a>
-        <a href="assets/downloads/Khomyak.dmg" class="download-btn" download>
-          <span>⬇️</span> Download DMG <span class="dmg-size">2.5 MB</span>
+        <a href="assets/downloads/Xomsky.dmg" class="download-btn" download>
+          <span>⬇️</span> Download DMG <span class="dmg-size">1.8 MB</span>
+        </a>
+        <a href="https://buy.polar.sh/polar_cl_v5lBa882Ea4dkTo9gvABMVxVbMgRyjkkhUcY43ktCAo" target="_blank" rel="noopener" class="buy-pro-btn">
+          <span>✨</span> Buy Xomsky Pro ($19)
         </a>
       </div>
     </header>
+
+    <!-- Hero Card: Brand, Tagline & 1-Click Terminal Install -->
+    <aside class="hero-card" id="hero-card">
+      <div class="hero-badge">macOS 14+ Sonoma • Sequoia • Tahoe</div>
+      <h1 class="hero-title">Xomsky</h1>
+      <p class="hero-tagline">Universal Grammar for Your Mac Shortcuts</p>
+      <p class="hero-subtext">Cognitive Speed. Zero Friction.</p>
+
+      <!-- 1-Click Terminal Install Command -->
+      <div class="terminal-install-bar">
+        <span class="terminal-prompt">$</span>
+        <code class="terminal-cmd" id="install-cmd">curl -fsSL https://raw.githubusercontent.com/unacau/mac-productivity-suite/main/install.sh | bash</code>
+        <button class="copy-cmd-btn" id="copy-install-btn" title="Copy 1-click terminal install command">
+          <span class="copy-icon">📋</span>
+          <span class="copy-text">Copy</span>
+        </button>
+      </div>
+
+      <div class="hero-actions">
+        <a href="https://buy.polar.sh/polar_cl_v5lBa882Ea4dkTo9gvABMVxVbMgRyjkkhUcY43ktCAo" target="_blank" rel="noopener" class="hero-buy-btn">
+          <span>⚡</span> Buy Xomsky Pro ($19)
+        </a>
+        <a href="assets/downloads/Xomsky.dmg" class="hero-download-link" download>
+          <span>⬇️</span> Free Download
+        </a>
+      </div>
+    </aside>
+
+    <!-- Pricing / Tier Comparison Card -->
+    <aside class="insight-card pricing-card" id="pricing-card">
+      <div class="card-header">
+        <div class="card-badge pro-badge">💎 Pricing & Tiers</div>
+        <button class="card-close" id="pricing-close" title="Minimize pricing">✕</button>
+      </div>
+      <h3 class="card-title">Simple, Transparent Pricing</h3>
+      <p class="card-desc">Pay once, own forever. 100% native Swift, driverless, zero telemetry.</p>
+      
+      <div class="tiers-grid">
+        <!-- Free Tier -->
+        <div class="tier-col free-tier">
+          <div class="tier-badge">ESSENTIAL</div>
+          <h4 class="tier-title">Free Tier</h4>
+          <div class="tier-price">$0</div>
+          <p class="tier-summary">Instant muscle-memory acceleration for daily workflows.</p>
+          <ul class="tier-feature-list">
+            <li><span class="check-icon">✓</span> <span><strong>5 Quick Slots</strong> (1 Browser Hub with profiles + 4 Pinned Apps)</span></li>
+            <li><span class="check-icon">✓</span> <span><strong>Driverless CapsLock Hyper Key</strong></span></li>
+            <li><span class="check-icon">✓</span> <span><strong>Instant App Switching</strong> (0ms)</span></li>
+            <li><span class="check-icon">✓</span> <span><strong>Safe Drag & Drop</strong> (Copy-on-Select)</span></li>
+          </ul>
+          <a href="assets/downloads/Xomsky.dmg" class="tier-action-btn free-tier-btn" download>
+            Download Free DMG
+          </a>
+        </div>
+
+        <!-- Xomsky Pro Tier -->
+        <div class="tier-col pro-tier">
+          <div class="tier-badge pro-badge-pop">POPULAR LIFETIME</div>
+          <h4 class="tier-title">Xomsky Pro</h4>
+          <div class="tier-price">$19 <span class="price-sub">Lifetime</span></div>
+          <p class="tier-summary">Unrestricted cognitive workflow for power users & builders.</p>
+          <ul class="tier-feature-list">
+            <li><span class="check-icon pro-check">✨</span> <span><strong>Unlimited Quick App Slots</strong></span></li>
+            <li><span class="check-icon pro-check">✨</span> <span><strong>Multi-browser support</strong></span></li>
+            <li><span class="check-icon pro-check">✨</span> <span><strong>Custom slots</strong> & full catalog</span></li>
+            <li><span class="check-icon pro-check">✨</span> <span><strong>Priority updates</strong> & support</span></li>
+          </ul>
+          <a href="https://buy.polar.sh/polar_cl_v5lBa882Ea4dkTo9gvABMVxVbMgRyjkkhUcY43ktCAo" target="_blank" rel="noopener" class="tier-action-btn pro-tier-btn">
+            <span>⚡</span> Buy Xomsky Pro ($19)
+          </a>
+        </div>
+      </div>
+    </aside>
 
     <!-- Floating Insight Card: The Spotlight Paradox & The 4th Profile Pain -->
     <aside class="insight-card paradox-card minimized" id="paradox-card">
@@ -58,7 +137,7 @@
         <div class="card-badge">⚡ Spotlight Paradox</div>
         <button class="card-close" id="paradox-close" title="Minimize card">✕</button>
       </div>
-      <h3 class="card-title">Why turning Khomyak off hurts</h3>
+      <h3 class="card-title">Why turning Xomsky off hurts</h3>
       <p class="card-desc">Spotlight is instant for standalone apps. But macOS is completely blind to browser profiles.</p>
       
       <div class="compare-matrix">
@@ -72,15 +151,15 @@
 
         <div class="compare-row profile-row-manual">
           <div class="row-info">
-            <span class="row-target">Profile 4 (Without Khomyak)</span>
+            <span class="row-target">Profile 4 (Without Xomsky)</span>
             <span class="row-method">Mouse ➔ Menu ➔ Profiles ➔ Scan</span>
           </div>
           <span class="row-time danger">5.4s 🛑</span>
         </div>
 
-        <div class="compare-row profile-row-khomyak">
+        <div class="compare-row profile-row-xomsky">
           <div class="row-info">
-            <span class="row-target">Profile 4 (With Khomyak)</span>
+            <span class="row-target">Profile 4 (With Xomsky)</span>
             <span class="row-method">Instant <kbd class="glow-kbd">Caps</kbd>+<kbd class="glow-kbd">4</kbd></span>
           </div>
           <span class="row-time lightning">0.01s ⚡</span>
@@ -96,7 +175,6 @@
 
     <!-- Bottom Center: Mnemonic Thought-to-Key Bar & Tactile Hint -->
     <div class="bottom-container">
-      <!-- Insight 1: Mnemonic Connection (Brain thinks in names, not categories) -->
       <div class="mnemonic-bar">
         <span class="mnemonic-label">🧠 Think tool ➔ Press first letter:</span>
         <div class="mnemonic-buttons">
@@ -127,6 +205,6 @@
 
   </div>
 
-  <script src="app.js?v=hamster_tilt"></script>
+  <script src="app.js?v=xomsky_launch"></script>
 </body>
 </html>

@@ -1170,15 +1170,16 @@ struct ChromeQuickAccessUnitTests {
         #expect(engine.validateLicenseKey("   ") == false)
         #expect(engine.validateLicenseKey("\n\t") == false)
         
-        // Invalid key checks: shorter than 8 characters
+        // Invalid key checks: shorter than 8 characters or missing XOMSKY/KHOMYAK prefix
         #expect(engine.validateLicenseKey("ABC") == false)
         #expect(engine.validateLicenseKey("1234567") == false)
         #expect(engine.validateLicenseKey("   short   ") == false)
-        
-        // Valid key checks: 8 or more characters
-        #expect(engine.validateLicenseKey("12345678") == true)
+        #expect(engine.validateLicenseKey("12345678") == false)
+        #expect(engine.validateLicenseKey("RANDOM-KEY-123") == false)
         #expect(engine.validateLicenseKey("XOMSKY-PRO-LICENSE-001") == true)
         #expect(engine.validateLicenseKey("  XOMSKY-VALID-KEY  ") == true)
+        #expect(engine.validateLicenseKey("XOMSKY-OWNER-KEY-001") == true)
+        #expect(engine.validateLicenseKey("KHOMYAK-VIP-KEY") == true)
     }
     
     @Test @MainActor
@@ -1202,8 +1203,8 @@ struct ChromeQuickAccessUnitTests {
         #expect(engine.isPro == false)
         #expect(engine.activeLicenseKey == nil)
         
-        // Attempt activation with valid key
-        let validKey = "XOMSKY-PRO-KEY-TEST"
+        // Attempt activation with valid offline master key
+        let validKey = "XOMSKY-OWNER-PRO-TEST"
         let validResult = engine.activate(key: "  \(validKey)  ")
         #expect(validResult == true)
         #expect(engine.isPro == true)
@@ -1291,7 +1292,7 @@ struct ChromeQuickAccessUnitTests {
         engine.testOverrideProStatus = false
         #expect(engine.isPro == false)
         
-        let success = engine.activate(key: "XOMSKY-TEST-OVERRIDE-KEY")
+        let success = engine.activate(key: "XOMSKY-OWNER-OVERRIDE-KEY")
         #expect(success == true)
         #expect(engine.isPro == true)
         #expect(engine.testOverrideProStatus == nil)
@@ -1326,6 +1327,104 @@ struct ChromeQuickAccessUnitTests {
         #expect(engine.browserBundleID == "com.google.Chrome")
         #expect(engine.activeBrowserName == "Google Chrome")
     }
+    
+    @Test @MainActor
+    func testLicenseEngineOfflineMasterKeys() {
+        let engine = LicenseEngine.shared
+        defer {
+            engine.deactivate()
+        }
+        
+        // 1. Prefix detection
+        #expect(LicenseEngine.isOfflineMasterKey("XOMSKY-OWNER-KEY-001") == true)
+        #expect(LicenseEngine.isOfflineMasterKey("xomsky-owner-lowercase") == true)
+        #expect(LicenseEngine.isOfflineMasterKey("XOMSKY-VIP-CHAMPION-2026") == true)
+        #expect(LicenseEngine.isOfflineMasterKey("XOMSKY-GIVEAWAY-FREE-ACCESS") == true)
+        #expect(LicenseEngine.isOfflineMasterKey("KHOMYAK-OWNER-RETRO") == true)
+        #expect(LicenseEngine.isOfflineMasterKey("KHOMYAK-VIP-RETRO") == true)
+        #expect(LicenseEngine.isOfflineMasterKey("XOMSKY-CUSTOMER-REGULAR") == false)
+        #expect(LicenseEngine.isOfflineMasterKey("RANDOM-KEY-123") == false)
+        
+        // 2. Offline master key activation succeeds and persists
+        engine.deactivate()
+        #expect(engine.isPro == false)
+        
+        let ownerKey = "XOMSKY-OWNER-DIRECT-ACCESS"
+        let res = engine.activate(key: ownerKey)
+        #expect(res == true)
+        #expect(engine.isPro == true)
+        #expect(engine.activeLicenseKey == ownerKey)
+        #expect(UserDefaults.standard.string(forKey: "XomskyProLicenseKey") == ownerKey)
+        
+        // 3. VIP master key activation
+        let vipKey = "XOMSKY-VIP-CONTEST-WINNER"
+        let vipRes = engine.activate(key: vipKey)
+        #expect(vipRes == true)
+        #expect(engine.isPro == true)
+        #expect(engine.activeLicenseKey == vipKey)
+        
+        // 4. Giveaway master key activation
+        let giveawayKey = "XOMSKY-GIVEAWAY-OFFLINE"
+        let giveawayRes = engine.activate(key: giveawayKey)
+        #expect(giveawayRes == true)
+        #expect(engine.isPro == true)
+        #expect(engine.activeLicenseKey == giveawayKey)
+    }
+    
+    @Test @MainActor
+    func testLicenseEnginePolarValidationMockAndAsync() async {
+        let engine = LicenseEngine.shared
+        let originalMock = engine.testMockOnlineValidationResult
+        defer {
+            engine.testMockOnlineValidationResult = originalMock
+            engine.deactivate()
+        }
+        
+        // Verify polar constants
+        #expect(LicenseEngine.polarCheckoutUrl == "https://buy.polar.sh/polar_cl_v5lBa882Ea4dkTo9gvABMVxVbMgRyjkkhUcY43ktCAo")
+        #expect(LicenseEngine.polarActivateEndpoint == "https://api.polar.sh/v1/customer-portal/license-keys/activate")
+        #expect(LicenseEngine.polarDeactivateEndpoint == "https://api.polar.sh/v1/customer-portal/license-keys/deactivate")
+        #expect(LicenseEngine.polarOrganizationId == "fabcbc99-df59-4b60-9485-20a8dddca3c3")
+        
+        // 1. Unmocked customer key in tests fails cleanly without bypass cheat
+        engine.deactivate()
+        engine.testMockOnlineValidationResult = nil
+        let unmockedResult = engine.activate(key: "XOMSKY-UNMOCKED-CUSTOMER-KEY")
+        #expect(unmockedResult == false)
+        #expect(engine.isPro == false)
+        
+        // 2. Mock failure: online validation fails (e.g. invalid customer key on Polar)
+        engine.deactivate()
+        engine.testMockOnlineValidationResult = false
+        let failedResult = engine.activate(key: "XOMSKY-INVALID-CUSTOMER-KEY")
+        #expect(failedResult == false)
+        #expect(engine.isPro == false)
+        
+        // 3. Mock success: online validation passes (valid customer key on Polar)
+        engine.testMockOnlineValidationResult = true
+        let validCustomerKey = "XOMSKY-CUSTOMER-VALID-KEY"
+        let successResult = engine.activate(key: validCustomerKey)
+        #expect(successResult == true)
+        #expect(engine.isPro == true)
+        #expect(engine.activeLicenseKey == validCustomerKey)
+        
+        // 4. Async activation test (Bool and Detailed)
+        engine.deactivate()
+        engine.testMockOnlineValidationResult = false
+        let asyncFail = await engine.activateOnline(key: "XOMSKY-ASYNC-FAIL")
+        #expect(asyncFail == false)
+        #expect(engine.isPro == false)
+        
+        let detailedFail = await engine.activateOnlineDetailed(key: "XOMSKY-ASYNC-FAIL")
+        #expect(detailedFail != .success)
+        
+        engine.testMockOnlineValidationResult = true
+        let asyncSuccess = await engine.activateOnline(key: "XOMSKY-ASYNC-SUCCESS")
+        #expect(asyncSuccess == true)
+        #expect(engine.isPro == true)
+        #expect(engine.activeLicenseKey == "XOMSKY-ASYNC-SUCCESS")
+        
+        let detailedSuccess = await engine.activateOnlineDetailed(key: "XOMSKY-ASYNC-SUCCESS")
+        #expect(detailedSuccess == .success)
+    }
 }
-
-

@@ -186,7 +186,7 @@ const CATEGORY_DATA = {
       "☑ Zero-latency Caps-Lock Hyper Key",
       "☑ 5-App Toolkit Fast Switcher",
       "☑ Universal Copy-on-Select",
-      "☐ Ship Khomyak v1.0.0 Release"
+      "☐ Ship Xomsky v1.0.0 Release"
     ]
   }
 };
@@ -221,7 +221,7 @@ let pillarMat, pillarMeshes = [];
 let chassisMesh, chassisMat, plateMesh, plateMat, glowStripMesh, glowStripMat;
 
 // Theme Engine: Concept A (Midnight Obsidian Studio) vs Bright Liminal
-let currentTheme = localStorage.getItem("khomyak_theme") || "dark";
+let currentTheme = localStorage.getItem("xomsky_theme") || localStorage.getItem("khomyak_theme") || "dark";
 
 const THEMES = {
   light: {
@@ -1047,7 +1047,7 @@ function buildMechanicalKeyboardDeck() {
   });
 
   // Spacebar
-  addKey(curX + 2.75 * step, startZ + step * 4, 5.5, "Khomyak Space");
+  addKey(curX + 2.75 * step, startZ + step * 4, 5.5, "Xomsky Space");
   curX += 5.5 * step;
 
   ["Cmd", "Opt", "Fn", "Ctrl"].forEach(k => {
@@ -1204,7 +1204,7 @@ function createPortalCanvas(category = "chrome", selectedIdx = 0) {
 
       ctx.fillStyle = "#94A3B8";
       ctx.font = "12px -apple-system, sans-serif";
-      ctx.fillText(`Khomyak Caps + 4 teleports here in 1 frame (540x faster)`, 300, 426);
+      ctx.fillText(`Xomsky Caps + 4 teleports here in 1 frame (540x faster)`, 300, 426);
     } else {
       ctx.fillStyle = "#7DD3FC";
       ctx.font = "bold 16px -apple-system, monospace";
@@ -1369,7 +1369,7 @@ function createPortalCanvas(category = "chrome", selectedIdx = 0) {
       { check: "☑", text: "Zero-latency Caps-Lock Hyper Key (0x35)", color: "#34D399" },
       { check: "☑", text: "5-App Toolkit Switcher (C, T, I, A, N)", color: "#34D399" },
       { check: "🧠", text: "Mnemonic: Think \"Notes\" ➔ Press N", color: "#FCD34D" },
-      { check: "☐", text: "Ship Khomyak v1.0.0 Universal DMG", color: "#38BDF8" }
+      { check: "☐", text: "Ship Xomsky v1.0.0 Universal DMG", color: "#38BDF8" }
     ];
 
     tasks.forEach((t, i) => {
@@ -1550,6 +1550,7 @@ function applyTheme(themeName, animate = true) {
   const themeIcon = document.getElementById("theme-icon");
   if (themeIcon) themeIcon.textContent = themeName === "dark" ? "☀️" : "🌙";
   try {
+    localStorage.setItem("xomsky_theme", themeName);
     localStorage.setItem("khomyak_theme", themeName);
   } catch(e) {}
 
@@ -1822,14 +1823,82 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Spotlight Paradox Card Toggle & Close
+  // 1-Click Terminal Install Copy
+  const copyInstallBtn = document.getElementById("copy-install-btn");
+  const installCmd = document.getElementById("install-cmd");
+  if (copyInstallBtn && installCmd) {
+    const copyAction = () => {
+      const text = installCmd.textContent.trim();
+      const onCopied = () => {
+        const textSpan = copyInstallBtn.querySelector(".copy-text");
+        if (textSpan) textSpan.textContent = "Copied! ✓";
+        copyInstallBtn.classList.add("copied");
+        sound.playChime();
+        setTimeout(() => {
+          if (textSpan) textSpan.textContent = "Copy";
+          copyInstallBtn.classList.remove("copied");
+        }, 2200);
+      };
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(onCopied).catch(() => {
+          const ta = document.createElement("textarea");
+          ta.value = text;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          document.body.removeChild(ta);
+          onCopied();
+        });
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        onCopied();
+      }
+    };
+
+    copyInstallBtn.addEventListener("click", copyAction);
+    installCmd.addEventListener("click", copyAction);
+  }
+
+  // Pricing & Tiers Card Toggle & Close (Mutually exclusive with Paradox card)
+  const pricingCard = document.getElementById("pricing-card");
+  const pricingToggle = document.getElementById("pricing-toggle");
+  const pricingClose = document.getElementById("pricing-close");
   const paradoxCard = document.getElementById("paradox-card");
   const paradoxToggle = document.getElementById("paradox-toggle");
   const paradoxClose = document.getElementById("paradox-close");
-  
+
+  if (pricingToggle && pricingCard) {
+    pricingToggle.addEventListener("click", () => {
+      const willOpen = pricingCard.classList.contains("minimized");
+      pricingCard.classList.toggle("minimized");
+      if (willOpen && paradoxCard) {
+        paradoxCard.classList.add("minimized");
+      }
+      sound.playClick();
+    });
+  }
+
+  if (pricingClose && pricingCard) {
+    pricingClose.addEventListener("click", () => {
+      pricingCard.classList.add("minimized");
+      sound.playClick();
+    });
+  }
+
+  // Spotlight Paradox Card Toggle & Close (Mutually exclusive with Pricing card)
   if (paradoxToggle && paradoxCard) {
     paradoxToggle.addEventListener("click", () => {
+      const willOpen = paradoxCard.classList.contains("minimized");
       paradoxCard.classList.toggle("minimized");
+      if (willOpen && pricingCard) {
+        pricingCard.classList.add("minimized");
+      }
       sound.playClick();
     });
   }
