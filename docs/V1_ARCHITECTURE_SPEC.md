@@ -50,7 +50,7 @@ It operates as a driverless standalone application providing:
 ### 3.1 CapsLock Engine (`src/ChromeQuickAccess/Engine/CapsLockEngine.swift`)
 - **Driverless Remapping**: Uses macOS `hidutil property --set` to map Caps-Lock (`0x700000039`) to F18 (`0x70000006D`). Restores default mapping upon application termination.
 - **Head-Insert Event Tap**: Intercepts `keyDown`, `keyUp`, and `flagsChanged` via `.cghidEventTap`.
-- **Dual-Role State Machine**: Tracks physical F18 events and isolates external Hyper modifier (`Cmd+Opt+Ctrl+Shift`) state, ensuring modifier keys (e.g. Shift during Shift-Tab navigation) never cause premature Caps-Lock release.
+- **Modifier State Machine**: Tracks physical F18 events and isolates external Hyper modifier (`Cmd+Opt+Ctrl+Shift`) state, ensuring modifier keys (e.g. Shift during Shift-Tab navigation) never cause premature Caps-Lock release. Physical Caps Lock acts purely as a modifier without synthetic Escape side effects or LED toggling.
 - **Sleep/Wake Resilience**: Registers an observer for `NSWorkspace.didWakeNotification` to re-apply HID mappings and re-enable event taps upon system wake.
 
 ### 3.2 Chrome Profile Engine (`src/ChromeQuickAccess/Engine/ChromeProfileEngine.swift`)
@@ -112,7 +112,7 @@ mac-productivity-suite/
 │       ├── Resources/                        # AppIcon & DMG background
 │       ├── Engine/
 │       │   ├── KeyCodes.swift                # Carbon virtual keycode mappings
-│       │   ├── CapsLockEngine.swift          # hidutil remapping & event tap dual-role router
+│       │   ├── CapsLockEngine.swift          # hidutil remapping & event tap modifier router
 │       │   ├── AppGroupEngine.swift          # 5-app toolkit & dynamic letter cycling
 │       │   ├── ChromeProfileEngine.swift     # Chromium Local State parser & AX switcher
 │       │   ├── AntigravityEngine.swift       # Antigravity app discovery & switcher

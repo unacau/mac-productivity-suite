@@ -43,13 +43,12 @@ public enum HIDMappingService {
     }
 }
 
-// MARK: - CapsLock Engine (Dual-Role & Shortcuts)
+// MARK: - CapsLock Engine (Modifier & Shortcuts)
 @MainActor
 public final class CapsLockEngine: @unchecked Sendable {
     public static let shared = CapsLockEngine()
     
     public static let f18KeyCode: Int64 = Int64(KeyCodes.kVK_F18) // 79 (0x4F)
-    public static let escKeyCode: CGKeyCode = CGKeyCode(KeyCodes.kVK_Escape) // 53 (0x35)
     public static let capsLockKeyCode: Int64 = Int64(KeyCodes.kVK_CapsLock) // 57 (0x39)
     public static let syntheticMarker: Int64 = 0x43514150 // "CQAP"
     
@@ -60,7 +59,6 @@ public final class CapsLockEngine: @unchecked Sendable {
     public var isCapsHeld: Bool = false
     public var isExternalHyperHeld: Bool = false
     public var capsUsedAsModifier: Bool = false
-    public var escapeOnTapEnabled: Bool = true
     
     /// Callbacks for actions
     public var onChromeTrigger: (@MainActor () -> Void)?
@@ -203,8 +201,6 @@ public final class CapsLockEngine: @unchecked Sendable {
             
             if wasUsed {
                 onModifierReleased?()
-            } else if escapeOnTapEnabled {
-                postSyntheticEscape()
             }
             return nil // Swallow F18 up
         }
@@ -221,8 +217,6 @@ public final class CapsLockEngine: @unchecked Sendable {
                 capsUsedAsModifier = false
                 if wasUsed {
                     onModifierReleased?()
-                } else if escapeOnTapEnabled {
-                    postSyntheticEscape()
                 }
             }
             return nil
@@ -243,8 +237,6 @@ public final class CapsLockEngine: @unchecked Sendable {
                 capsUsedAsModifier = false
                 if wasUsed {
                     onModifierReleased?()
-                } else if escapeOnTapEnabled {
-                    postSyntheticEscape()
                 }
             }
         }
@@ -375,20 +367,5 @@ public final class CapsLockEngine: @unchecked Sendable {
         }
         
         return Unmanaged.passUnretained(event)
-    }
-    
-    public func postSyntheticEscape() {
-        let src = CGEventSource(stateID: .hidSystemState)
-        guard let down = CGEvent(keyboardEventSource: src, virtualKey: Self.escKeyCode, keyDown: true),
-              let up = CGEvent(keyboardEventSource: src, virtualKey: Self.escKeyCode, keyDown: false) else {
-            return
-        }
-        
-        down.setIntegerValueField(.eventSourceUserData, value: Self.syntheticMarker)
-        up.setIntegerValueField(.eventSourceUserData, value: Self.syntheticMarker)
-        
-        down.post(tap: .cghidEventTap)
-        up.post(tap: .cghidEventTap)
-        logger.debug("Posted synthetic Escape key event.")
     }
 }

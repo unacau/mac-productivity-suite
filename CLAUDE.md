@@ -19,8 +19,8 @@
 1. **Caps-Lock Engine (`src/ChromeQuickAccess/Engine/CapsLockEngine.swift`)**:
    - Hardware remapping via `hidutil property --set` (Caps Lock `0x700000039` -> F18 `0x70000006D`).
    - Head-insert `CGEventTap` (.cghidEventTap):
-     - Tapped alone emits synthetic `Escape` (`0x35`).
-     - Held down acts as modifier and routes `C`, `A`, `T`, `I`, `N`, digits `1`..`4`, Arrow keys, and `Tab`.
+     - Held down acts as dedicated modifier and routes `C`, `A`, `T`, `I`, `N`, dynamic letters, digits `1`..`4`, Arrow keys, and `Tab` (without green LED blinking).
+     - Released without action simply swallows event (no synthetic Escape).
 2. **App Group Engine (`src/ChromeQuickAccess/Engine/AppGroupEngine.swift`)**:
    - Universal Pinned Quick Apps (4 slots max):
      - `Caps + T` ➔ **Terminal** (Ghostty, iTerm2, Alacritty, Terminal)

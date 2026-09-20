@@ -456,6 +456,31 @@ struct ChromeQuickAccessUnitTests {
     }
     
     @Test @MainActor
+    func testCapsLockTapWithoutModifierDoesNotTriggerEscapeOrModifierReleased() {
+        let engine = CapsLockEngine()
+        let proxy = unsafeBitCast(1, to: CGEventTapProxy.self)
+        
+        var modifierReleased = false
+        engine.onModifierReleased = { modifierReleased = true }
+        
+        // 1. User taps Caps Lock (F18 KeyDown)
+        let f18Down = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(KeyCodes.kVK_F18), keyDown: true)!
+        let resDown = engine.handleEvent(proxy: proxy, type: .keyDown, event: f18Down)
+        #expect(resDown == nil) // F18 down swallowed
+        #expect(engine.isCapsHeld == true)
+        #expect(engine.capsUsedAsModifier == false)
+        
+        // 2. User immediately releases Caps Lock (F18 KeyUp) without pressing any other key
+        let f18Up = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(KeyCodes.kVK_F18), keyDown: false)!
+        let resUp = engine.handleEvent(proxy: proxy, type: .keyUp, event: f18Up)
+        #expect(resUp == nil) // F18 up swallowed
+        #expect(engine.isCapsHeld == false)
+        #expect(engine.capsUsedAsModifier == false)
+        // Verify modifierReleased callback is NOT triggered since no action occurred
+        #expect(modifierReleased == false)
+    }
+    
+    @Test @MainActor
     func testCapsLockAntigravityTrigger() {
         let engine = CapsLockEngine()
         let proxy = unsafeBitCast(1, to: CGEventTapProxy.self)

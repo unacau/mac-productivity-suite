@@ -4,7 +4,7 @@
 - **Target Platform**: macOS 14.0+ (Sonoma, Sequoia, Tahoe).
 - **Primary Engine (Swift 6+)**: 100% Pure Native Standalone App (`src/ChromeQuickAccess`) using SwiftUI, AppKit bridging, CoreGraphics `CGEvent` taps, and driverless IOHID remapping.
   - `Engine/KeyCodes.swift`: Virtual keycode definitions and Carbon/AppKit key lookup.
-  - `Engine/CapsLockEngine.swift`: Driverless hardware remapping via `hidutil` (Caps-Lock -> F18) and dual-role head-insert `CGEventTap` (Escape on tap, Hyper modifier on hold).
+  - `Engine/CapsLockEngine.swift`: Driverless hardware remapping via `hidutil` (Caps-Lock -> F18) and head-insert `CGEventTap` for dedicated application switching modifiers (without green LED blinking).
   - `Engine/AppGroupEngine.swift`: Universal Pinned Quick Apps (4 slots max: Terminal, IDE, AI Agent, Notes), home-row shortcuts (`T`, `I`, `A`, `N`, `C`), letter cycling submenus, dynamic alphabet catalog, and 1-click slot replacement.
   - `Engine/ChromeProfileEngine.swift`: Dynamic Chromium `Local State` discovery, monogram avatar rendering, native macOS Accessibility (`AXUIElement`) menu bar profile switching, and window raising.
   - `Engine/AntigravityEngine.swift`: Discovery and fast cycling for Antigravity & Antigravity IDE.

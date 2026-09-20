@@ -71,10 +71,10 @@ With Khomyak:    Press Caps-Lock + 4  (or Caps-Lock + C)                     [�
   <img src="assets/features/feature_caps_hyper.png" alt="Caps-Lock Dual-Role Hyper Key" width="100%">
 </p>
 
-The physical `Caps-Lock` key is the prime real estate of the home row, historically wasted on screaming accidental capitalization. Khomyak transforms it into an instant dual-role hardware weapon:
+The physical `Caps-Lock` key is the prime real estate of the home row, historically wasted on screaming accidental capitalization. Khomyak transforms it into an instant hardware modifier:
 
-- **Tapped Alone (< 200ms)**: Synthesizes an instantaneous hardware `Escape` (`0x35`). Absolute bliss for Vim, Neovim, Helix, terminal commands, and modal dismissal.
-- **Held Down**: Instantly acts as a `Hyper` modifier (`Shift + Control + Option + Command`) and routes navigation commands without toggling the physical Caps-Lock LED.
+- **Clean Hyper Modifier**: Acts as a dedicated modifier for instant app navigation (`Caps + C`, `Caps + A`, `Caps + T`, `Caps + N`, `Caps + I`) without toggling the physical Caps-Lock LED.
+- **No LED Blinking**: Hardware-level remapping to F18 ensures macOS never toggles Alpha Lock or flashes the green LED during rapid app switching.
 - **100% Driverless Architecture**: No kernel extensions, no virtual HID drivers (no Karabiner overhead). Uses native macOS `IOHID` hardware remapping (`hidutil`) + CoreGraphics `CGEventTap`.
 
 ---
@@ -209,7 +209,7 @@ mac-productivity-suite/
 │   ├── main.swift                   # AppKit entry point
 │   ├── AppDelegate.swift            # Status bar item & lifecycle coordinator
 │   ├── Engine/
-│   │   ├── CapsLockEngine.swift     # hidutil F18 remapping & dual-role CGEventTap
+│   │   ├── CapsLockEngine.swift     # hidutil F18 remapping & CGEventTap modifier engine
 │   │   ├── ChromeProfileEngine.swift# Chromium Local State parser & AXUIElement switcher
 │   │   ├── AppGroupEngine.swift     # 5-app toolkit home-row router & letter cycler
 │   │   ├── AntigravityEngine.swift  # Antigravity IDE partner discovery & switcher
