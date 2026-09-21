@@ -1892,6 +1892,24 @@ struct ChromeQuickAccessUnitTests {
         let separatorView = AppDelegate.HamsterSeparatorView(icon: AppDelegate.makeKhomyakStatusIcon())
         #expect(separatorView.intrinsicContentSize.height == 20)
     }
+    
+    @Test @MainActor
+    func testAboutAndCheckForUpdatesMenuItems() {
+        #expect(!AppDelegate.appVersion.isEmpty)
+        #expect(!AppDelegate.appBuild.isEmpty)
+        
+        let appDelegate = AppDelegate()
+        let menu = appDelegate.buildStatusMenu()
+        
+        let aboutItem = menu.items.first(where: { $0.title.contains("About Xomsky") })
+        #expect(aboutItem != nil, "About Xomsky menu item must exist")
+        #expect(aboutItem?.attributedTitle?.string.contains("v\(AppDelegate.appVersion)") == true)
+        #expect(aboutItem?.action == #selector(AppDelegate.handleAbout))
+        
+        let updateItem = menu.items.first(where: { $0.title.contains("Check for Updates") })
+        #expect(updateItem != nil, "Check for Updates menu item must exist")
+        #expect(updateItem?.action == #selector(AppDelegate.handleCheckForUpdates))
+    }
 }
 
 

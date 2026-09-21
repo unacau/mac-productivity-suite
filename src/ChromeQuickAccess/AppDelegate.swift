@@ -19,6 +19,14 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         AppDelegate.shared = self
     }
     
+    public static var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.1.0"
+    }
+    
+    public static var appBuild: String {
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "3"
+    }
+    
     public func applicationDidFinishLaunching(_ notification: Notification) {
         logger.info("Starting Xomsky...")
         
@@ -1164,6 +1172,38 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             menu.addItem(enterKeyItem)
         }
         
+        menu.addItem(NSMenuItem.separator())
+        
+        let aboutItem = makeAlignedMenuItem(
+            title: "About Xomsky...",
+            icon: NSImage(systemSymbolName: "info.circle", accessibilityDescription: "About Xomsky"),
+            accessibilityHelp: "View version and application information",
+            action: #selector(handleAbout),
+            target: self
+        )
+        let aboutAttr = NSMutableAttributedString(string: "About Xomsky")
+        let versionBadge = NSAttributedString(
+            string: "  v\(AppDelegate.appVersion)",
+            attributes: [
+                .foregroundColor: NSColor.secondaryLabelColor,
+                .font: NSFont.systemFont(ofSize: 11, weight: .regular)
+            ]
+        )
+        aboutAttr.append(versionBadge)
+        aboutItem.attributedTitle = aboutAttr
+        menu.addItem(aboutItem)
+        
+        let updateItem = makeAlignedMenuItem(
+            title: "Check for Updates...",
+            icon: NSImage(systemSymbolName: "arrow.triangle.2.circlepath", accessibilityDescription: "Check for Updates"),
+            accessibilityHelp: "Check for new versions of Xomsky",
+            action: #selector(handleCheckForUpdates),
+            target: self
+        )
+        menu.addItem(updateItem)
+        
+        menu.addItem(NSMenuItem.separator())
+        
         let quitItem = makeAlignedMenuItem(
             title: "Quit Xomsky",
             keyEquivalent: "q",
@@ -1560,6 +1600,111 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApplication.shared.terminate(nil)
     }
     
+    // MARK: - About & Updates Handlers
+    @objc public func handleAbout() {
+        let alert = NSAlert()
+        alert.messageText = "Xomsky"
+        alert.informativeText = """
+        Version \(AppDelegate.appVersion) (Build \(AppDelegate.appBuild))
+
+        Universal Grammar for Your Mac Shortcuts.
+        Sub-16ms Context Switching • Zero-Driver • Pure Swift 6.
+
+        Open source under MIT License.
+        """
+        alert.alertStyle = .informational
+        alert.icon = AppDelegate.makeKhomyakStatusIcon()
+        
+        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: "GitHub ↗")
+        alert.addButton(withTitle: "Website ↗")
+        
+        let response = alert.runModal()
+        if response == .alertSecondButtonReturn {
+            if let url = URL(string: "https://github.com/unacau/mac-productivity-suite") {
+                NSWorkspace.shared.open(url)
+            }
+        } else if response == .alertThirdButtonReturn {
+            if let url = URL(string: "https://unacau.github.io/mac-productivity-suite") {
+                NSWorkspace.shared.open(url)
+            }
+        }
+    }
+    
+    @objc public func handleCheckForUpdates() {
+        Task { @MainActor [weak self] in
+            guard let self = self else { return }
+            await self.checkForUpdates()
+        }
+    }
+    
+    public func checkForUpdates() async {
+        guard let url = URL(string: "https://api.github.com/repos/unacau/mac-productivity-suite/releases/latest") else { return }
+        var request = URLRequest(url: url)
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        request.setValue("Xomsky-App", forHTTPHeaderField: "User-Agent")
+        request.timeoutInterval = 10
+        
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+                showUpToDateAlert(currentVersion: AppDelegate.appVersion)
+                return
+            }
+            struct GitHubRelease: Decodable {
+                let tag_name: String
+                let html_url: String
+            }
+            let release = try JSONDecoder().decode(GitHubRelease.self, from: data)
+            let latestVersion = release.tag_name.trimmingCharacters(in: CharacterSet(charactersIn: "vV "))
+            let current = AppDelegate.appVersion
+            
+            if latestVersion.compare(current, options: .numeric) == .orderedDescending {
+                showUpdateAvailableAlert(latestVersion: latestVersion, releaseUrl: release.html_url)
+            } else {
+                showUpToDateAlert(currentVersion: current)
+            }
+        } catch {
+            showUpToDateAlert(currentVersion: AppDelegate.appVersion)
+        }
+    }
+    
+    private func showUpdateAvailableAlert(latestVersion: String, releaseUrl: String) {
+        let alert = NSAlert()
+        alert.messageText = "New Update Available: v\(latestVersion)"
+        alert.informativeText = """
+        You are currently running Xomsky v\(AppDelegate.appVersion).
+
+        To upgrade via Homebrew, run:
+        brew upgrade xomsky
+        """
+        alert.alertStyle = .informational
+        alert.icon = AppDelegate.makeKhomyakStatusIcon()
+        alert.addButton(withTitle: "Copy 'brew upgrade'")
+        alert.addButton(withTitle: "View Release ↗")
+        alert.addButton(withTitle: "Later")
+        
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString("brew upgrade xomsky", forType: .string)
+        } else if response == .alertSecondButtonReturn {
+            if let url = URL(string: releaseUrl) {
+                NSWorkspace.shared.open(url)
+            }
+        }
+    }
+    
+    private func showUpToDateAlert(currentVersion: String) {
+        let alert = NSAlert()
+        alert.messageText = "Xomsky is Up to Date"
+        alert.informativeText = "Version \(currentVersion) is currently the newest version available."
+        alert.alertStyle = .informational
+        alert.icon = AppDelegate.makeKhomyakStatusIcon()
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
+    }
+
     private func promptForAccessibilityPermissions() {
         let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
         _ = AXIsProcessTrustedWithOptions(options)
