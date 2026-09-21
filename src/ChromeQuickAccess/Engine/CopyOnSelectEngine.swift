@@ -190,6 +190,7 @@ public final class CopyOnSelectEngine: @unchecked Sendable {
     
     public func postCopyKeystroke() {
         onCopyKeystrokePosted?()
+        CopyToastWindow.shared.show(at: NSEvent.mouseLocation)
         let src = CGEventSource(stateID: .hidSystemState)
         let cKeyCode: CGKeyCode = CGKeyCode(KeyCodes.kVK_ANSI_C)
         guard let down = CGEvent(keyboardEventSource: src, virtualKey: cKeyCode, keyDown: true),

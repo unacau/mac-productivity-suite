@@ -35,29 +35,35 @@ public final class AppSearchPickerViewModel: ObservableObject {
     
     public func selectNext() {
         guard !results.isEmpty else { return }
-        selectedIndex = min(results.count - 1, selectedIndex + 1)
+        withAnimation(XomskyMotion.magneticGlide) {
+            selectedIndex = min(results.count - 1, selectedIndex + 1)
+        }
     }
     
     public func selectPrevious() {
         guard !results.isEmpty else { return }
-        selectedIndex = max(0, selectedIndex - 1)
+        withAnimation(XomskyMotion.magneticGlide) {
+            selectedIndex = max(0, selectedIndex - 1)
+        }
     }
     
     public func toggleApp(app: InstalledAppInfo, onSlotLimitReached: ((String) -> Void)? = nil) {
-        let isAlreadyPinned = AppGroupEngine.isAppSelected(bundleID: app.bundleID)
-        if isAlreadyPinned {
-            AppGroupEngine.deselectApp(bundleID: app.bundleID)
-            self.pinnedBundleIDs = AppGroupEngine.selectedBundleIDs
-            AppDelegate.shared?.updateDynamicShortcuts()
-            AppDelegate.shared?.updateMenu()
-        } else {
-            let success = AppGroupEngine.toggleInstalledAppPin(app: app)
-            if success {
+        withAnimation(XomskyMotion.tactileBop) {
+            let isAlreadyPinned = AppGroupEngine.isAppSelected(bundleID: app.bundleID)
+            if isAlreadyPinned {
+                AppGroupEngine.deselectApp(bundleID: app.bundleID)
                 self.pinnedBundleIDs = AppGroupEngine.selectedBundleIDs
                 AppDelegate.shared?.updateDynamicShortcuts()
                 AppDelegate.shared?.updateMenu()
             } else {
-                onSlotLimitReached?(app.bundleID)
+                let success = AppGroupEngine.toggleInstalledAppPin(app: app)
+                if success {
+                    self.pinnedBundleIDs = AppGroupEngine.selectedBundleIDs
+                    AppDelegate.shared?.updateDynamicShortcuts()
+                    AppDelegate.shared?.updateMenu()
+                } else {
+                    onSlotLimitReached?(app.bundleID)
+                }
             }
         }
     }
@@ -75,7 +81,24 @@ public struct AppSearchPickerRowView: View {
     public let isSelected: Bool
     public let isPinned: Bool
     public let canPinMore: Bool
+    public var namespace: Namespace.ID?
     public let onToggle: () -> Void
+    
+    public init(
+        app: InstalledAppInfo,
+        isSelected: Bool,
+        isPinned: Bool,
+        canPinMore: Bool,
+        namespace: Namespace.ID? = nil,
+        onToggle: @escaping () -> Void
+    ) {
+        self.app = app
+        self.isSelected = isSelected
+        self.isPinned = isPinned
+        self.canPinMore = canPinMore
+        self.namespace = namespace
+        self.onToggle = onToggle
+    }
     
     public var body: some View {
         Button(action: onToggle) {
@@ -114,69 +137,89 @@ public struct AppSearchPickerRowView: View {
                             .fill(Color.white.opacity(0.10))
                     )
                 
-                // Pin Status Badge
-                if isPinned {
-                    HStack(spacing: 4) {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 9, weight: .bold))
-                        Text("Pinned")
-                            .font(.system(size: 10, weight: .semibold))
-                    }
-                    .foregroundColor(Color(red: 0.35, green: 0.85, blue: 0.50))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(
-                        Capsule()
-                            .fill(Color(red: 0.35, green: 0.85, blue: 0.50).opacity(0.18))
-                    )
-                    .overlay(
-                        Capsule()
-                            .stroke(Color(red: 0.35, green: 0.85, blue: 0.50).opacity(0.30), lineWidth: 0.75)
-                    )
-                } else if canPinMore {
-                    HStack(spacing: 3) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 9, weight: .bold))
-                        Text("Pin")
-                            .font(.system(size: 10, weight: .semibold))
-                    }
-                    .foregroundColor(Color.white.opacity(0.85))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(
-                        Capsule()
-                            .fill(Color.white.opacity(0.14))
-                    )
-                    .overlay(
-                        Capsule()
-                            .stroke(Color.white.opacity(0.22), lineWidth: 0.75)
-                    )
-                } else {
-                    Text("Replace")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(Color.orange.opacity(0.90))
+                // Pin Status Badge with tactile bounce
+                Group {
+                    if isPinned {
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 9, weight: .bold))
+                            Text("Pinned")
+                                .font(.system(size: 10, weight: .semibold))
+                        }
+                        .foregroundColor(Color(red: 0.35, green: 0.85, blue: 0.50))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
                         .background(
                             Capsule()
-                                .fill(Color.orange.opacity(0.18))
+                                .fill(Color(red: 0.35, green: 0.85, blue: 0.50).opacity(0.18))
                         )
                         .overlay(
                             Capsule()
-                                .stroke(Color.orange.opacity(0.30), lineWidth: 0.75)
+                                .stroke(Color(red: 0.35, green: 0.85, blue: 0.50).opacity(0.30), lineWidth: 0.75)
                         )
+                        .transition(.scale(scale: 0.85).combined(with: .opacity))
+                    } else if canPinMore {
+                        HStack(spacing: 3) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 9, weight: .bold))
+                            Text("Pin")
+                                .font(.system(size: 10, weight: .semibold))
+                        }
+                        .foregroundColor(Color.white.opacity(0.85))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(
+                            Capsule()
+                                .fill(Color.white.opacity(0.14))
+                        )
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.white.opacity(0.22), lineWidth: 0.75)
+                        )
+                        .transition(.scale(scale: 0.85).combined(with: .opacity))
+                    } else {
+                        Text("Replace")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(Color.orange.opacity(0.90))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(
+                                Capsule()
+                                    .fill(Color.orange.opacity(0.18))
+                            )
+                            .overlay(
+                                Capsule()
+                                    .stroke(Color.orange.opacity(0.30), lineWidth: 0.75)
+                            )
+                            .transition(.scale(scale: 0.85).combined(with: .opacity))
+                    }
                 }
+                .animation(XomskyMotion.tactileBop, value: isPinned)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 7)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(isSelected ? Color.white.opacity(0.16) : Color.clear)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(isSelected ? Color.white.opacity(0.24) : Color.clear, lineWidth: 0.75)
-            )
+            .background {
+                if isSelected {
+                    if let ns = namespace {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color.white.opacity(0.16))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .stroke(Color.white.opacity(0.24), lineWidth: 0.75)
+                            )
+                            .matchedGeometryEffect(id: "pickerRowCapsule", in: ns)
+                    } else {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color.white.opacity(0.16))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .stroke(Color.white.opacity(0.24), lineWidth: 0.75)
+                            )
+                    }
+                }
+            }
+            .scaleEffect(isSelected ? 1.01 : 1.0)
+            .animation(XomskyMotion.interactiveSnap, value: isSelected)
         }
         .buttonStyle(.plain)
     }
@@ -185,6 +228,7 @@ public struct AppSearchPickerRowView: View {
 // MARK: - App Search Picker View
 public struct AppSearchPickerView: View {
     @ObservedObject var viewModel: AppSearchPickerViewModel
+    @Namespace private var pickerNamespace
     public let onClose: () -> Void
     public let onChooseOther: () -> Void
     public let onSlotLimitReached: (String) -> Void
@@ -288,6 +332,7 @@ public struct AppSearchPickerView: View {
                                     isSelected: idx == viewModel.selectedIndex,
                                     isPinned: viewModel.pinnedBundleIDs.contains(app.bundleID),
                                     canPinMore: AppGroupEngine.canPinMoreApps,
+                                    namespace: pickerNamespace,
                                     onToggle: {
                                         viewModel.toggleApp(app: app, onSlotLimitReached: onSlotLimitReached)
                                     }
@@ -302,7 +347,7 @@ public struct AppSearchPickerView: View {
                 .frame(maxHeight: 280)
                 .onChange(of: viewModel.selectedIndex) { _, newIdx in
                     guard newIdx >= 0, newIdx < viewModel.results.count else { return }
-                    withAnimation(.easeInOut(duration: 0.1)) {
+                    withAnimation(XomskyMotion.magneticGlide) {
                         proxy.scrollTo(viewModel.results[newIdx].bundleID, anchor: .center)
                     }
                 }
@@ -319,6 +364,8 @@ public struct AppSearchPickerView: View {
                 Text("\(pinnedCount) of \(maxCount) slots used")
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.white.opacity(0.55))
+                    .contentTransition(.numericText())
+                    .animation(XomskyMotion.tactileBop, value: pinnedCount)
                 
                 Spacer()
                 

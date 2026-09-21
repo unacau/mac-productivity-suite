@@ -1820,5 +1820,56 @@ struct ChromeQuickAccessUnitTests {
             #expect(!menu.items[changeAppIdx - 1].isSeparatorItem, "Manage Quick Apps must not be preceded by a separator creating a 1-item island")
         }
     }
+    
+    @Test @MainActor
+    func testCopyToastWindowProperties() {
+        let toast = CopyToastWindow.shared
+        #expect(toast.isFloatingPanel == true)
+        #expect(toast.isOpaque == false)
+        #expect(toast.ignoresMouseEvents == true)
+        
+        toast.show(at: CGPoint(x: 200, y: 200))
+        #expect(CopyToastState.shared.isVisible == true)
+        toast.hideImmediate()
+        #expect(CopyToastState.shared.isVisible == false)
+    }
+    
+    @Test
+    func testXomskyMotionConstants() {
+        _ = XomskyMotion.interactiveSnap
+        _ = XomskyMotion.magneticGlide
+        _ = XomskyMotion.tactileBop
+        _ = XomskyMotion.cardMorph
+        _ = XomskyMotion.microPress
+    }
+    
+    @Test @MainActor
+    func testMascotProceduralIconGenerationAndBlinking() {
+        let normalIcon = AppDelegate.makeKhomyakStatusIcon()
+        #expect(normalIcon.size.width == 18)
+        #expect(normalIcon.size.height == 18)
+        
+        let blinkingIcon = AppDelegate.makeKhomyakStatusIcon(blinkProgress: 1.0)
+        #expect(blinkingIcon.size.width == 18)
+        
+        let gazeLeftIcon = AppDelegate.makeKhomyakStatusIcon(eyeGazeX: -0.8)
+        #expect(gazeLeftIcon.size.width == 18)
+        
+        let gazeRightIcon = AppDelegate.makeKhomyakStatusIcon(eyeGazeX: 0.8)
+        #expect(gazeRightIcon.size.width == 18)
+    }
+    
+    @Test @MainActor
+    func testMascotPeekAndSeparatorBounceProperties() {
+        #expect(ChromeSwitcherState.shared.isMascotPeeking == false)
+        ChromeSwitcherState.shared.isMascotPeeking = true
+        #expect(ChromeSwitcherState.shared.isMascotPeeking == true)
+        MinimalHUDWindow.shared.hideImmediate()
+        #expect(ChromeSwitcherState.shared.isMascotPeeking == false)
+        
+        let separatorView = AppDelegate.HamsterSeparatorView(icon: AppDelegate.makeKhomyakStatusIcon())
+        #expect(separatorView.intrinsicContentSize.height == 20)
+    }
 }
+
 

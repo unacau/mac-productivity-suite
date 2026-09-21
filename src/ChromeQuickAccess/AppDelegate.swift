@@ -11,6 +11,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     private let logger = Logger(subsystem: "com.almosteleven.xomsky", category: "app")
     private var accessibilityPollTimer: Timer?
     private var appSwitchObserver: Any?
+    private var mascotBlinkTimer: Timer?
+    private var mascotGazeResetTask: Task<Void, Never>?
     
     public override init() {
         super.init()
@@ -38,6 +40,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     
     public func applicationWillTerminate(_ notification: Notification) {
         logger.info("Terminating Xomsky: cleaning up event taps and restoring HID mapping.")
+        stopMascotBlinkTimer()
         stopAccessibilityPolling()
         CapsLockEngine.shared.stop()
         CopyOnSelectEngine.shared.stop()
@@ -201,10 +204,12 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     public func updateDynamicShortcuts() {
         let groups = AppGroupEngine.pinnedAppsGroupedByLetter()
         var triggers: [UInt32: @MainActor () -> Void] = [:]
-        
         // 1. Chrome browser is 'C'
         triggers[KeyCodes.kVK_ANSI_C] = { [weak self] in
-            self?.handleChromeTrigger()
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                self.handleChromeTrigger()
+            }
         }
         
         // 2. Register every pinned letter's items
@@ -215,7 +220,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             if let code = KeyCodes.keyCode(for: char) {
                 let items = group.items
                 triggers[code] = { [weak self] in
-                    self?.handleAppLetterTrigger(char: char, items: items)
+                    Task { @MainActor [weak self] in
+                        guard let self = self else { return }
+                        self.handleAppLetterTrigger(char: char, items: items)
+                    }
                 }
             }
         }
@@ -233,132 +241,155 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         let capsEngine = CapsLockEngine.shared
         
         updateDynamicShortcuts()
-        
         capsEngine.onChromeTrigger = { [weak self] in
-            self?.handleChromeTrigger()
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                self.handleChromeTrigger()
+            }
         }
         
         capsEngine.onAntigravityTrigger = { [weak self] in
-            guard let self = self else { return }
-            self.handleSingleAppTrigger(
-                engine: aiAgentEngine,
-                mode: .antigravity,
-                switcherMode: .antigravity,
-                keyName: String(aiAgentEngine.activeShortcutChar)
-            )
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                self.handleSingleAppTrigger(
+                    engine: aiAgentEngine,
+                    mode: .antigravity,
+                    switcherMode: .antigravity,
+                    keyName: String(aiAgentEngine.activeShortcutChar)
+                )
+            }
         }
         
         capsEngine.onTerminalTrigger = { [weak self] in
-            guard let self = self else { return }
-            self.handleSingleAppTrigger(
-                engine: terminalEngine,
-                mode: .terminal,
-                switcherMode: .terminal,
-                keyName: String(terminalEngine.activeShortcutChar)
-            )
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                self.handleSingleAppTrigger(
+                    engine: terminalEngine,
+                    mode: .terminal,
+                    switcherMode: .terminal,
+                    keyName: String(terminalEngine.activeShortcutChar)
+                )
+            }
         }
         
         capsEngine.onNotesTrigger = { [weak self] in
-            guard let self = self else { return }
-            self.handleSingleAppTrigger(
-                engine: notesEngine,
-                mode: .notes,
-                switcherMode: .notes,
-                keyName: String(notesEngine.activeShortcutChar)
-            )
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                self.handleSingleAppTrigger(
+                    engine: notesEngine,
+                    mode: .notes,
+                    switcherMode: .notes,
+                    keyName: String(notesEngine.activeShortcutChar)
+                )
+            }
         }
         
         capsEngine.onIdeTrigger = { [weak self] in
-            guard let self = self else { return }
-            self.handleSingleAppTrigger(
-                engine: ideEngine,
-                mode: .ide,
-                switcherMode: .ide,
-                keyName: String(ideEngine.activeShortcutChar)
-            )
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                self.handleSingleAppTrigger(
+                    engine: ideEngine,
+                    mode: .ide,
+                    switcherMode: .ide,
+                    keyName: String(ideEngine.activeShortcutChar)
+                )
+            }
         }
         
         capsEngine.onProfileTrigger = { [weak self] digit in
-            guard let self = self else { return }
-            self.logger.info("Caps-Lock + \(digit) triggered.")
-            
-            let profiles = profileEngine.selectedProfiles
-            guard !profiles.isEmpty else { return }
-            let targetIdx = max(0, min(digit - 1, profiles.count - 1))
-            if !self.isCyclingHUDActive {
-                self.isCyclingHUDActive = true
-                self.activeMode = .chrome
-                MinimalHUDWindow.shared.show(profiles: profiles, selectedIndex: targetIdx)
-            } else {
-                MinimalHUDWindow.shared.updateSelection(to: targetIdx)
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                self.logger.info("Caps-Lock + \(digit) triggered.")
+                self.triggerMascotGaze(offset: digit <= 2 ? -0.8 : 0.8)
+                
+                let profiles = profileEngine.selectedProfiles
+                guard !profiles.isEmpty else { return }
+                let targetIdx = max(0, min(digit - 1, profiles.count - 1))
+                if !self.isCyclingHUDActive {
+                    self.isCyclingHUDActive = true
+                    self.activeMode = .chrome
+                    MinimalHUDWindow.shared.show(profiles: profiles, selectedIndex: targetIdx)
+                } else {
+                    MinimalHUDWindow.shared.updateSelection(to: targetIdx)
+                }
             }
         }
         
         capsEngine.onNavigateLeft = { [weak self] in
-            guard let self = self, self.isCyclingHUDActive else { return }
-            MinimalHUDWindow.shared.selectPrevious()
+            Task { @MainActor [weak self] in
+                guard let self = self, self.isCyclingHUDActive else { return }
+                self.triggerMascotGaze(offset: -0.8)
+                MinimalHUDWindow.shared.selectPrevious()
+            }
         }
         
         capsEngine.onNavigateRight = { [weak self] in
-            guard let self = self, self.isCyclingHUDActive else { return }
-            MinimalHUDWindow.shared.selectNext()
+            Task { @MainActor [weak self] in
+                guard let self = self, self.isCyclingHUDActive else { return }
+                self.triggerMascotGaze(offset: 0.8)
+                MinimalHUDWindow.shared.selectNext()
+            }
         }
         
         capsEngine.onCancelTrigger = { [weak self] in
-            guard let self = self else { return }
-            self.logger.info("Escape pressed: cancelling switcher HUD.")
-            self.isCyclingHUDActive = false
-            self.activeMode = .none
-            MinimalHUDWindow.shared.hideImmediate()
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                self.logger.info("Escape pressed: cancelling switcher HUD.")
+                self.isCyclingHUDActive = false
+                self.activeMode = .none
+                MinimalHUDWindow.shared.hideImmediate()
+            }
         }
         
         capsEngine.onModifierReleased = { [weak self] in
-            guard let self = self else { return }
-            guard self.isCyclingHUDActive else { return }
-            
-            let mode = self.activeMode
-            self.isCyclingHUDActive = false
-            self.activeMode = .none
-            
-            // RULE 9: ALWAYS hide HUD before triggering application focus!
-            MinimalHUDWindow.shared.hideImmediate()
-            
-            switch mode {
-            case .chrome:
-                let targetProfile = ChromeSwitcherState.shared.selectedProfile
-                if let target = targetProfile {
-                    self.logger.info("Caps-Lock released: switching to profile '\(target.effectiveName)' (\(target.dir)).")
-                    profileEngine.focusProfile(dir: target.dir)
-                } else {
-                    profileEngine.focusChrome()
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                guard self.isCyclingHUDActive else { return }
+                
+                let mode = self.activeMode
+                self.isCyclingHUDActive = false
+                self.activeMode = .none
+                
+                // RULE 9: ALWAYS hide HUD before triggering application focus!
+                MinimalHUDWindow.shared.hideImmediate()
+                
+                switch mode {
+                case .chrome:
+                    let targetProfile = ChromeSwitcherState.shared.selectedProfile
+                    if let target = targetProfile {
+                        self.logger.info("Caps-Lock released: switching to profile '\(target.effectiveName)' (\(target.dir)).")
+                        profileEngine.focusProfile(dir: target.dir)
+                    } else {
+                        profileEngine.focusChrome()
+                    }
+                case .appLetter(let char):
+                    if let target = ChromeSwitcherState.shared.selectedAppItem {
+                        self.logger.info("Caps-Lock released: switching to '\(target.name)' (\(target.bundleID)) for key \(char).")
+                        self.focusApp(bundleID: target.bundleID)
+                    }
+                case .antigravity:
+                    if let target = aiAgentEngine.selectedItem {
+                        self.logger.info("Caps-Lock released: switching to AI Agent '\(target.name)' (\(target.bundleID)).")
+                        aiAgentEngine.focusItem(bundleID: target.bundleID)
+                    }
+                case .terminal:
+                    if let target = terminalEngine.selectedItem {
+                        self.logger.info("Caps-Lock released: switching to Terminal app '\(target.name)' (\(target.bundleID)).")
+                        terminalEngine.focusItem(bundleID: target.bundleID)
+                    }
+                case .notes:
+                    if let target = notesEngine.selectedItem {
+                        self.logger.info("Caps-Lock released: switching to Notes app '\(target.name)' (\(target.bundleID)).")
+                        notesEngine.focusItem(bundleID: target.bundleID)
+                    }
+                case .ide:
+                    if let target = ideEngine.selectedItem {
+                        self.logger.info("Caps-Lock released: switching to IDE app '\(target.name)' (\(target.bundleID)).")
+                        ideEngine.focusItem(bundleID: target.bundleID)
+                    }
+                case .none:
+                    break
                 }
-            case .appLetter(let char):
-                if let target = ChromeSwitcherState.shared.selectedAppItem {
-                    self.logger.info("Caps-Lock released: switching to '\(target.name)' (\(target.bundleID)) for key \(char).")
-                    self.focusApp(bundleID: target.bundleID)
-                }
-            case .antigravity:
-                if let target = aiAgentEngine.selectedItem {
-                    self.logger.info("Caps-Lock released: switching to AI Agent '\(target.name)' (\(target.bundleID)).")
-                    aiAgentEngine.focusItem(bundleID: target.bundleID)
-                }
-            case .terminal:
-                if let target = terminalEngine.selectedItem {
-                    self.logger.info("Caps-Lock released: switching to Terminal app '\(target.name)' (\(target.bundleID)).")
-                    terminalEngine.focusItem(bundleID: target.bundleID)
-                }
-            case .notes:
-                if let target = notesEngine.selectedItem {
-                    self.logger.info("Caps-Lock released: switching to Notes app '\(target.name)' (\(target.bundleID)).")
-                    notesEngine.focusItem(bundleID: target.bundleID)
-                }
-            case .ide:
-                if let target = ideEngine.selectedItem {
-                    self.logger.info("Caps-Lock released: switching to IDE app '\(target.name)' (\(target.bundleID)).")
-                    ideEngine.focusItem(bundleID: target.bundleID)
-                }
-            case .none:
-                break
             }
         }
     }
@@ -367,17 +398,70 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         guard let button = statusItem?.button else { return }
         
-        let icon = makeKhomyakStatusIcon()
+        let icon = AppDelegate.makeKhomyakStatusIcon()
         button.image = icon
         button.imagePosition = .imageOnly
         button.toolTip = "Xomsky — Tap the Mascot"
         
+        startMascotBlinkTimer()
         updateMenu()
     }
     
+    // MARK: - Mascot Animation Engine
+    public func startMascotBlinkTimer() {
+        scheduleNextBlink()
+    }
+    
+    public func stopMascotBlinkTimer() {
+        mascotBlinkTimer?.invalidate()
+        mascotBlinkTimer = nil
+        mascotGazeResetTask?.cancel()
+        mascotGazeResetTask = nil
+    }
+    
+    private func scheduleNextBlink() {
+        mascotBlinkTimer?.invalidate()
+        let interval = Double.random(in: 7.0...12.0)
+        mascotBlinkTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                self.performMascotBlink()
+            }
+        }
+    }
+    
+    public func performMascotBlink() {
+        guard let button = self.statusItem?.button else { return }
+        button.image = AppDelegate.makeKhomyakStatusIcon(blinkProgress: 1.0)
+        
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 120_000_000)
+            guard let self = self else { return }
+            self.statusItem?.button?.image = AppDelegate.makeKhomyakStatusIcon(blinkProgress: 0.0)
+            self.scheduleNextBlink()
+        }
+    }
+    
+    public func triggerMascotGaze(offset: CGFloat) {
+        mascotGazeResetTask?.cancel()
+        guard let button = self.statusItem?.button else { return }
+        button.image = AppDelegate.makeKhomyakStatusIcon(eyeGazeX: offset)
+        
+        mascotGazeResetTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            guard !Task.isCancelled, let self = self else { return }
+            self.statusItem?.button?.image = AppDelegate.makeKhomyakStatusIcon()
+        }
+    }
+    
     /// Generates a resolution-independent, full-color vector status bar icon of the Khomyak mascot
-    /// featuring its signature concentric target eyes, red triangle nose, cheek lobes, and paws.
-    private func makeKhomyakStatusIcon() -> NSImage {
+    /// featuring its signature concentric target eyes, red triangle nose, cheek lobes, paws,
+    /// dynamic directional gaze tracking, and procedural blinking.
+    public static func makeKhomyakStatusIcon(
+        eyeGazeX: CGFloat = 0.0,
+        eyeGazeY: CGFloat = 0.0,
+        blinkProgress: CGFloat = 0.0
+    ) -> NSImage {
         let size = NSSize(width: 18, height: 18)
         let image = NSImage(size: size, flipped: false) { rect in
             guard let cg = NSGraphicsContext.current?.cgContext else { return false }
@@ -454,6 +538,27 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                 let cy = Y(svgY)
                 let gy = Y(svgGY)
 
+                if blinkProgress >= 0.75 {
+                    // Joyful curved eyelid slit during procedural blink
+                    let slit = CGMutablePath()
+                    slit.move(to: CGPoint(x: cx - 3.8, y: cy - 0.5))
+                    slit.addCurve(
+                        to: CGPoint(x: cx + 3.8, y: cy - 0.5),
+                        control1: CGPoint(x: cx - 1.8, y: cy + 1.8),
+                        control2: CGPoint(x: cx + 1.8, y: cy + 1.8)
+                    )
+                    cg.addPath(slit)
+                    cg.setStrokeColor(cDark)
+                    cg.setLineWidth(1.4)
+                    cg.strokePath()
+                    return
+                }
+
+                let px = cx + eyeGazeX
+                let py = cy + eyeGazeY
+                let glx = gx + eyeGazeX
+                let gly = gy + eyeGazeY
+
                 // Outer ring
                 cg.setFillColor(cWhite)
                 cg.setStrokeColor(cDark)
@@ -468,14 +573,14 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                 cg.addEllipse(in: CGRect(x: cx - 3.0, y: cy - 3.0, width: 6.0, height: 6.0))
                 cg.drawPath(using: .fillStroke)
 
-                // Pupil
+                // Pupil with gaze shift
                 cg.setFillColor(cDark)
-                cg.addEllipse(in: CGRect(x: cx - 1.9, y: cy - 1.9, width: 3.8, height: 3.8))
+                cg.addEllipse(in: CGRect(x: px - 1.9, y: py - 1.9, width: 3.8, height: 3.8))
                 cg.fillPath()
 
-                // Glare highlight
+                // Glare highlight with gaze shift
                 cg.setFillColor(cWhite)
-                cg.addEllipse(in: CGRect(x: gx - 0.7, y: gy - 0.7, width: 1.4, height: 1.4))
+                cg.addEllipse(in: CGRect(x: glx - 0.7, y: gly - 0.7, width: 1.4, height: 1.4))
                 cg.fillPath()
             }
             drawEye(cx: 11.2, svgY: 13.8, gx: 12.0, svgGY: 13.0)
@@ -536,6 +641,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor
     public final class HamsterSeparatorView: NSView {
         private let icon: NSImage
+        private var bounceOffset: CGFloat = 0.0
         
         public init(icon: NSImage) {
             self.icon = icon
@@ -560,6 +666,24 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             return false
         }
         
+        public override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            guard window != nil else { return }
+            self.bounceOffset = -3.5
+            self.needsDisplay = true
+            
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(nanoseconds: 25_000_000)
+                guard let self = self else { return }
+                self.bounceOffset = 1.0
+                self.needsDisplay = true
+                
+                try? await Task.sleep(nanoseconds: 50_000_000)
+                self.bounceOffset = 0.0
+                self.needsDisplay = true
+            }
+        }
+        
         public override func draw(_ dirtyRect: NSRect) {
             super.draw(dirtyRect)
             
@@ -567,7 +691,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             let midY = bounds.midY
             let midX = bounds.midX
             let iconSize: CGFloat = 16
-            let iconRect = NSRect(x: midX - iconSize / 2.0, y: midY - iconSize / 2.0, width: iconSize, height: iconSize)
+            let iconRect = NSRect(x: midX - iconSize / 2.0, y: midY - iconSize / 2.0 + bounceOffset, width: iconSize, height: iconSize)
             
             let margin: CGFloat = 14
             let spacing: CGFloat = 8
@@ -596,7 +720,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         let item = NSMenuItem()
         item.title = ""
         item.isEnabled = false
-        item.view = HamsterSeparatorView(icon: makeKhomyakStatusIcon())
+        item.view = HamsterSeparatorView(icon: AppDelegate.makeKhomyakStatusIcon())
         return item
     }
     

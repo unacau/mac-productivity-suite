@@ -38,6 +38,7 @@ public final class ChromeSwitcherState: ObservableObject {
     @Published public var antigravityItems: [AntigravityItem] = []
     @Published public var selectedIndex: Int = 0
     @Published public var isVisible: Bool = false
+    @Published public var isMascotPeeking: Bool = false
     
     public var selectedProfile: ChromeProfile? {
         guard !profiles.isEmpty, selectedIndex >= 0, selectedIndex < profiles.count else {
@@ -68,20 +69,26 @@ public final class ChromeSwitcherState: ObservableObject {
     public func selectNext() {
         let count = mode == .chrome ? profiles.count : antigravityItems.count
         guard count > 0 else { return }
-        selectedIndex = (selectedIndex + 1) % count
+        withAnimation(XomskyMotion.magneticGlide) {
+            selectedIndex = (selectedIndex + 1) % count
+        }
     }
     
     public func selectPrevious() {
         let count = mode == .chrome ? profiles.count : antigravityItems.count
         guard count > 0 else { return }
-        selectedIndex = (selectedIndex - 1 + count) % count
+        withAnimation(XomskyMotion.magneticGlide) {
+            selectedIndex = (selectedIndex - 1 + count) % count
+        }
     }
     
     public func selectIndex(_ index: Int) {
         let count = mode == .chrome ? profiles.count : antigravityItems.count
         guard count > 0 else { return }
         let clamped = max(0, min(index, count - 1))
-        selectedIndex = clamped
+        withAnimation(XomskyMotion.magneticGlide) {
+            selectedIndex = clamped
+        }
     }
 }
 
@@ -90,11 +97,13 @@ public struct ProfileAvatarView: View {
     public let profile: ChromeProfile
     public let isSelected: Bool
     public let slotIndex: Int
+    public var namespace: Namespace.ID?
     
-    public init(profile: ChromeProfile, isSelected: Bool, slotIndex: Int = 0) {
+    public init(profile: ChromeProfile, isSelected: Bool, slotIndex: Int = 0, namespace: Namespace.ID? = nil) {
         self.profile = profile
         self.isSelected = isSelected
         self.slotIndex = slotIndex > 0 ? slotIndex : profile.index
+        self.namespace = namespace
     }
     
     public var body: some View {
@@ -151,14 +160,28 @@ public struct ProfileAvatarView: View {
         }
         .frame(width: 44)
         .padding(.vertical, 4)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(isSelected ? Color.white.opacity(0.18) : Color.clear)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(isSelected ? Color.white.opacity(0.24) : Color.clear, lineWidth: 0.75)
-        )
+        .background {
+            if isSelected {
+                if let ns = namespace {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color.white.opacity(0.18))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(Color.white.opacity(0.24), lineWidth: 0.75)
+                        )
+                        .matchedGeometryEffect(id: "activeSlotCapsule", in: ns)
+                } else {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color.white.opacity(0.18))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(Color.white.opacity(0.24), lineWidth: 0.75)
+                        )
+                }
+            }
+        }
+        .scaleEffect(isSelected ? 1.05 : 0.96)
+        .animation(XomskyMotion.magneticGlide, value: isSelected)
     }
 }
 
@@ -167,11 +190,13 @@ public struct AntigravityAvatarView: View {
     public let item: AntigravityItem
     public let isSelected: Bool
     public let slotIndex: Int
+    public var namespace: Namespace.ID?
     
-    public init(item: AntigravityItem, isSelected: Bool, slotIndex: Int = 0) {
+    public init(item: AntigravityItem, isSelected: Bool, slotIndex: Int = 0, namespace: Namespace.ID? = nil) {
         self.item = item
         self.isSelected = isSelected
         self.slotIndex = slotIndex > 0 ? slotIndex : item.index
+        self.namespace = namespace
     }
     
     public var body: some View {
@@ -211,20 +236,35 @@ public struct AntigravityAvatarView: View {
         }
         .frame(width: 44)
         .padding(.vertical, 4)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(isSelected ? Color.white.opacity(0.18) : Color.clear)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(isSelected ? Color.white.opacity(0.24) : Color.clear, lineWidth: 0.75)
-        )
+        .background {
+            if isSelected {
+                if let ns = namespace {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color.white.opacity(0.18))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(Color.white.opacity(0.24), lineWidth: 0.75)
+                        )
+                        .matchedGeometryEffect(id: "activeSlotCapsule", in: ns)
+                } else {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color.white.opacity(0.18))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(Color.white.opacity(0.24), lineWidth: 0.75)
+                        )
+                }
+            }
+        }
+        .scaleEffect(isSelected ? 1.05 : 0.96)
+        .animation(XomskyMotion.magneticGlide, value: isSelected)
     }
 }
 
 // MARK: - Modern Switcher HUD View
 public struct MinimalHUDView: View {
     @ObservedObject var state = ChromeSwitcherState.shared
+    @Namespace private var selectionNamespace
     
     public init() {}
     
@@ -273,6 +313,8 @@ public struct MinimalHUDView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .shadow(color: Color.black.opacity(0.25), radius: 5, x: 0, y: 2)
                 .padding(.top, 2)
+                .id(topIcon)
+                .transition(.scale(scale: 0.92).combined(with: .opacity))
             
             // 2. Primary Title Label & Contextual Subtitle (Understated & Non-Intrusive)
             VStack(spacing: 3) {
@@ -292,6 +334,7 @@ public struct MinimalHUDView: View {
                             Capsule()
                                 .fill(Color.white.opacity(0.12))
                         )
+                        .transition(.scale(scale: 0.9).combined(with: .opacity))
                 }
             }
             
@@ -303,7 +346,8 @@ public struct MinimalHUDView: View {
                             ProfileAvatarView(
                                 profile: profile,
                                 isSelected: idx == state.selectedIndex,
-                                slotIndex: idx + 1
+                                slotIndex: idx + 1,
+                                namespace: selectionNamespace
                             )
                         }
                     } else {
@@ -311,7 +355,8 @@ public struct MinimalHUDView: View {
                             AntigravityAvatarView(
                                 item: item,
                                 isSelected: idx == state.selectedIndex,
-                                slotIndex: idx + 1
+                                slotIndex: idx + 1,
+                                namespace: selectionNamespace
                             )
                         }
                     }
@@ -322,6 +367,7 @@ public struct MinimalHUDView: View {
         .padding(.vertical, 16)
         .padding(.horizontal, 16)
         .frame(width: cardWidth)
+        .animation(XomskyMotion.cardMorph, value: cardWidth)
         .background(
             ZStack {
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -345,9 +391,22 @@ public struct MinimalHUDView: View {
                     lineWidth: 0.75
                 )
         )
+        .overlay(alignment: .top) {
+            if state.isMascotPeeking {
+                Image(nsImage: AppDelegate.makeKhomyakStatusIcon())
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 24, height: 24)
+                    .offset(y: -13)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
         // Two-stage organic Apple drop shadow (ambient + directional)
         .shadow(color: Color.black.opacity(0.28), radius: 16, x: 0, y: 8)
         .shadow(color: Color.black.opacity(0.16), radius: 4, x: 0, y: 2)
+        .scaleEffect(state.isVisible ? 1.0 : 0.93)
+        .opacity(state.isVisible ? 1.0 : 0.0)
+        .animation(XomskyMotion.interactiveSnap, value: state.isVisible)
         .padding(48)
         .preferredColorScheme(.dark)
     }
@@ -358,9 +417,17 @@ public struct MinimalHUDView: View {
 public final class MinimalHUDWindow: NSPanel {
     public static let shared = MinimalHUDWindow()
     
+    private let hostingView: NSHostingView<MinimalHUDView>
+    private var peekTask: Task<Void, Never>?
+    
     public init() {
+        let hosting = NSHostingView(rootView: MinimalHUDView())
+        hosting.wantsLayer = true
+        hosting.layer?.backgroundColor = .clear
+        self.hostingView = hosting
+        
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 260, height: 260),
+            contentRect: NSRect(x: 0, y: 0, width: 440, height: 260),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -373,25 +440,32 @@ public final class MinimalHUDWindow: NSPanel {
         self.hasShadow = false
         self.ignoresMouseEvents = true
         self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
-        let hosting = NSHostingView(rootView: MinimalHUDView())
-        hosting.wantsLayer = true
-        hosting.layer?.backgroundColor = .clear
         self.contentView = hosting
     }
     
+    private func resetAndSchedulePeek() {
+        peekTask?.cancel()
+        ChromeSwitcherState.shared.isMascotPeeking = false
+        peekTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            guard !Task.isCancelled, let _ = self, ChromeSwitcherState.shared.isVisible else { return }
+            withAnimation(XomskyMotion.tactileBop) {
+                ChromeSwitcherState.shared.isMascotPeeking = true
+            }
+        }
+    }
+    
     public func show(profiles: [ChromeProfile], selectedIndex: Int) {
-        ChromeSwitcherState.shared.mode = .chrome
-        ChromeSwitcherState.shared.profiles = profiles
-        let validIndex = profiles.isEmpty ? 0 : max(0, min(selectedIndex, profiles.count - 1))
-        ChromeSwitcherState.shared.selectedIndex = validIndex
-        ChromeSwitcherState.shared.isVisible = true
+        withAnimation(XomskyMotion.interactiveSnap) {
+            ChromeSwitcherState.shared.mode = .chrome
+            ChromeSwitcherState.shared.profiles = profiles
+            let validIndex = profiles.isEmpty ? 0 : max(0, min(selectedIndex, profiles.count - 1))
+            ChromeSwitcherState.shared.selectedIndex = validIndex
+            ChromeSwitcherState.shared.isVisible = true
+        }
         
-        let hostingView = NSHostingView(rootView: MinimalHUDView())
-        hostingView.wantsLayer = true
-        hostingView.layer?.backgroundColor = .clear
-        self.contentView = hostingView
-        reposition(with: hostingView)
-        
+        reposition()
+        resetAndSchedulePeek()
         self.alphaValue = 1.0
         self.orderFrontRegardless()
         triggerSensoryFeedback()
@@ -402,29 +476,26 @@ public final class MinimalHUDWindow: NSPanel {
     }
     
     public func showAppGroup(mode: SwitcherMode, items: [AntigravityItem], selectedIndex: Int) {
-        ChromeSwitcherState.shared.mode = mode
-        ChromeSwitcherState.shared.antigravityItems = items
-        let validIndex = items.isEmpty ? 0 : max(0, min(selectedIndex, items.count - 1))
-        ChromeSwitcherState.shared.selectedIndex = validIndex
-        ChromeSwitcherState.shared.isVisible = true
+        withAnimation(XomskyMotion.interactiveSnap) {
+            ChromeSwitcherState.shared.mode = mode
+            ChromeSwitcherState.shared.antigravityItems = items
+            let validIndex = items.isEmpty ? 0 : max(0, min(selectedIndex, items.count - 1))
+            ChromeSwitcherState.shared.selectedIndex = validIndex
+            ChromeSwitcherState.shared.isVisible = true
+        }
         
-        let hostingView = NSHostingView(rootView: MinimalHUDView())
-        hostingView.wantsLayer = true
-        hostingView.layer?.backgroundColor = .clear
-        self.contentView = hostingView
-        reposition(with: hostingView)
-        
+        reposition()
+        resetAndSchedulePeek()
         self.alphaValue = 1.0
         self.orderFrontRegardless()
         triggerSensoryFeedback()
     }
     
-    private func reposition(with hostingView: NSHostingView<MinimalHUDView>) {
+    private func reposition() {
         if let screen = NSScreen.main {
             let screenRect = screen.visibleFrame
-            let fittingSize = hostingView.fittingSize
-            let width = max(220, fittingSize.width)
-            let height = max(160, fittingSize.height)
+            let width: CGFloat = 440
+            let height: CGFloat = 260
             let x = screenRect.midX - (width / 2)
             let y = screenRect.midY - (height / 2)
             self.setFrame(NSRect(x: x, y: y, width: width, height: height), display: true)
@@ -457,21 +528,42 @@ public final class MinimalHUDWindow: NSPanel {
     }
     
     public func updateSelection(to index: Int) {
+        peekTask?.cancel()
+        if ChromeSwitcherState.shared.isMascotPeeking {
+            withAnimation(XomskyMotion.interactiveSnap) {
+                ChromeSwitcherState.shared.isMascotPeeking = false
+            }
+        }
         ChromeSwitcherState.shared.selectIndex(index)
         triggerSensoryFeedback()
     }
     
     public func selectNext() {
+        peekTask?.cancel()
+        if ChromeSwitcherState.shared.isMascotPeeking {
+            withAnimation(XomskyMotion.interactiveSnap) {
+                ChromeSwitcherState.shared.isMascotPeeking = false
+            }
+        }
         ChromeSwitcherState.shared.selectNext()
         triggerSensoryFeedback()
     }
     
     public func selectPrevious() {
+        peekTask?.cancel()
+        if ChromeSwitcherState.shared.isMascotPeeking {
+            withAnimation(XomskyMotion.interactiveSnap) {
+                ChromeSwitcherState.shared.isMascotPeeking = false
+            }
+        }
         ChromeSwitcherState.shared.selectPrevious()
         triggerSensoryFeedback()
     }
     
     public func hideImmediate() {
+        peekTask?.cancel()
+        peekTask = nil
+        ChromeSwitcherState.shared.isMascotPeeking = false
         ChromeSwitcherState.shared.isVisible = false
         self.orderOut(nil)
         self.alphaValue = 1.0
