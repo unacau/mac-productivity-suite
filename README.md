@@ -13,7 +13,7 @@
   <a href="#"><img src="https://img.shields.io/badge/macOS-14.0%2B_(Sonoma_%7C_Sequoia_%7C_Tahoe)-black.svg?style=flat-square&logo=apple" alt="macOS 14+"></a>
   <a href="#"><img src="https://img.shields.io/badge/DMG-1.6_MB-purple.svg?style=flat-square" alt="DMG Size"></a>
   <a href="#"><img src="https://img.shields.io/badge/Latency-Sub--16ms_(1_Frame)-FF9500.svg?style=flat-square&logo=speedtest" alt="Sub-16ms"></a>
-  <a href="#"><img src="https://img.shields.io/badge/Tests-50%2F50_Passing-brightgreen.svg?style=flat-square" alt="Tests"></a>
+  <a href="#"><img src="https://img.shields.io/badge/Tests-62%2F62_Passing-brightgreen.svg?style=flat-square" alt="Tests"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="MIT License"></a>
 </p>
 

@@ -833,9 +833,9 @@ function createKeycapTexture(label, isInteractive, accentColor, hasLed, isCaps) 
 
 function buildMechanicalKeyboardDeck() {
   keyboardGroup = new THREE.Group();
-  keyboardGroup.position.set(0, -0.06, 1.70);
-  keyboardGroup.rotation.y = Math.PI; // Oriented facing the hamster typist
-  keyboardGroup.rotation.x = -0.12;   // ~7° natural ergonomic tilt facing toward the hamster (back propped up, spacebar low)
+  keyboardGroup.position.set(0, -0.05, 1.60);
+  keyboardGroup.rotation.y = 0; // Strictly oriented facing the human user (Spacebar in front, Esc top-left)
+  keyboardGroup.rotation.x = 0.12; // ~7° natural ergonomic tilt facing toward the user (back propped up, spacebar low)
 
   const t = THEMES[currentTheme] || THEMES.dark;
 

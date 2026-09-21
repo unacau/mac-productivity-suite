@@ -5,10 +5,17 @@ import os
 
 @MainActor
 public final class AppDelegate: NSObject, NSApplicationDelegate {
+    public static var shared: AppDelegate?
+    
     private var statusItem: NSStatusItem?
     private let logger = Logger(subsystem: "com.almosteleven.xomsky", category: "app")
     private var accessibilityPollTimer: Timer?
     private var appSwitchObserver: Any?
+    
+    public override init() {
+        super.init()
+        AppDelegate.shared = self
+    }
     
     public func applicationDidFinishLaunching(_ notification: Notification) {
         logger.info("Starting Xomsky...")
@@ -525,12 +532,82 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem?.menu = menu
     }
     
+    // MARK: - Hamster Mascot Separator View
+    @MainActor
+    public final class HamsterSeparatorView: NSView {
+        private let icon: NSImage
+        
+        public init(icon: NSImage) {
+            self.icon = icon
+            super.init(frame: NSRect(x: 0, y: 0, width: 240, height: 20))
+            self.autoresizingMask = [.width]
+            self.setAccessibilityElement(false)
+        }
+        
+        public required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        public override var intrinsicContentSize: NSSize {
+            return NSSize(width: NSView.noIntrinsicMetric, height: 20)
+        }
+        
+        public override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+            return false
+        }
+        
+        public override var acceptsFirstResponder: Bool {
+            return false
+        }
+        
+        public override func draw(_ dirtyRect: NSRect) {
+            super.draw(dirtyRect)
+            
+            let bounds = self.bounds
+            let midY = bounds.midY
+            let midX = bounds.midX
+            let iconSize: CGFloat = 16
+            let iconRect = NSRect(x: midX - iconSize / 2.0, y: midY - iconSize / 2.0, width: iconSize, height: iconSize)
+            
+            let margin: CGFloat = 14
+            let spacing: CGFloat = 8
+            
+            // Accessible system-adaptive separator lines flanking the mascot icon (WCAG 1.4.11 compliant)
+            let leftLineRect = NSRect(x: margin, y: midY - 0.5, width: max(0, iconRect.minX - spacing - margin), height: 1.0)
+            if leftLineRect.width > 0 {
+                NSColor.separatorColor.set()
+                NSBezierPath.fill(leftLineRect)
+            }
+            
+            let rightLineStart = iconRect.maxX + spacing
+            let rightLineWidth = max(0, bounds.maxX - margin - rightLineStart)
+            let rightLineRect = NSRect(x: rightLineStart, y: midY - 0.5, width: rightLineWidth, height: 1.0)
+            if rightLineRect.width > 0 {
+                NSColor.separatorColor.set()
+                NSBezierPath.fill(rightLineRect)
+            }
+            
+            // Center: Draw Khomyak Mascot
+            icon.draw(in: iconRect)
+        }
+    }
+    
+    private func makeHamsterSeparatorItem() -> NSMenuItem {
+        let item = NSMenuItem()
+        item.title = ""
+        item.isEnabled = false
+        item.view = HamsterSeparatorView(icon: makeKhomyakStatusIcon())
+        return item
+    }
+    
     private func makeAlignedMenuItem(
         title: String,
         keyEquivalent: String = "",
         modifierMask: NSEvent.ModifierFlags = [],
         isHeader: Bool = false,
         icon: NSImage? = nil,
+        accessibilityLabel: String? = nil,
+        accessibilityHelp: String? = nil,
         action: Selector? = nil,
         target: AnyObject? = nil,
         representedObject: Any? = nil
@@ -552,6 +629,13 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             icon.draw(in: NSRect(x: 0, y: 0, width: 18, height: 18))
             small.unlockFocus()
             item.image = small
+        }
+        
+        if let aLabel = accessibilityLabel {
+            item.setAccessibilityLabel(aLabel)
+        }
+        if let aHelp = accessibilityHelp {
+            item.setAccessibilityHelp(aHelp)
         }
         
         return item
@@ -579,16 +663,21 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             chromeIcon = NSImage(systemSymbolName: "globe", accessibilityDescription: nil) ?? NSImage()
         }
         
+        let browserSectionHeader = NSMenuItem.sectionHeader(title: "Browsers & Profiles")
+        browserSectionHeader.isEnabled = false
+        menu.addItem(browserSectionHeader)
+        
         let browserTitle = profileEngine.browserBundleID == "com.google.Chrome" ? "Chrome (Caps-Lock + C)" : "\(browserName) (Caps-Lock + C)"
-        let chromeHeader = makeAlignedMenuItem(
+        let chromeItem = makeAlignedMenuItem(
             title: browserTitle,
-            isHeader: true,
+            isHeader: false,
             icon: chromeIcon,
-            action: nil,
-            target: nil
+            accessibilityLabel: "\(browserName)",
+            accessibilityHelp: "Hold Caps-Lock and press C to switch to \(browserName)",
+            action: #selector(handleActivateBrowserClick(_:)),
+            target: self
         )
-        chromeHeader.isEnabled = false
-        menu.addItem(chromeHeader)
+        menu.addItem(chromeItem)
         
         if !selectedList.isEmpty {
             for p in selectedList {
@@ -596,6 +685,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                     title: p.effectiveName,
                     keyEquivalent: "\(p.index)",
                     icon: p.avatarImage,
+                    accessibilityLabel: "\(p.effectiveName)",
+                    accessibilityHelp: "Hold Caps-Lock and press \(p.index) to switch to \(p.effectiveName)",
                     action: #selector(handleProfileClick(_:)),
                     target: self,
                     representedObject: p.dir
@@ -607,6 +698,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                 title: firstProfile.effectiveName,
                 keyEquivalent: "1",
                 icon: firstProfile.avatarImage,
+                accessibilityLabel: "\(firstProfile.effectiveName)",
+                accessibilityHelp: "Hold Caps-Lock and press 1 to switch to \(firstProfile.effectiveName)",
                 action: #selector(handleProfileClick(_:)),
                 target: self,
                 representedObject: firstProfile.dir
@@ -614,82 +707,56 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             menu.addItem(pItem)
         }
         
-        menu.addItem(NSMenuItem.separator())
+        menu.addItem(makeHamsterSeparatorItem())
         
         // 2. Quick Apps section (Caps-Lock)
-        let quickAppsIcon = NSImage(systemSymbolName: "square.grid.2x2.fill", accessibilityDescription: nil)
-            ?? NSImage(systemSymbolName: "wrench.and.screwdriver.fill", accessibilityDescription: nil)
-            ?? NSImage()
-        let quickAppsHeader = makeAlignedMenuItem(
-            title: "Quick Apps (Caps-Lock)",
-            isHeader: true,
-            icon: quickAppsIcon,
-            action: nil,
-            target: nil
-        )
+        let quickAppsHeader = NSMenuItem.sectionHeader(title: "Quick Apps (Caps-Lock)")
         quickAppsHeader.isEnabled = false
         menu.addItem(quickAppsHeader)
         
-        let pinnedGroups = AppGroupEngine.pinnedAppsGroupedByLetter()
-        for group in pinnedGroups {
-            let char = group.letter
+        let pinnedItems = AppGroupEngine.pinnedAppItems()
+        for item in pinnedItems {
+            let char = Character((item.name.first(where: { $0.isLetter }) ?? "A").uppercased())
             let charStr = String(char).lowercased()
-            
-            if group.items.count == 1 {
-                let item = group.items[0]
-                let rowItem = makeAlignedMenuItem(
-                    title: item.name,
-                    keyEquivalent: charStr,
-                    icon: item.icon,
-                    action: #selector(handleCoreAppClick(_:)),
-                    target: self,
-                    representedObject: item.bundleID
-                )
-                menu.addItem(rowItem)
-            } else {
-                let firstName = group.items.first?.name ?? "App"
-                let title = "\(firstName) (\(char) • \(group.items.count) apps)"
-                let firstIcon = group.items.first?.icon
-                let rowItem = makeAlignedMenuItem(
-                    title: title,
-                    keyEquivalent: "",
-                    icon: firstIcon,
-                    action: nil,
-                    target: nil
-                )
-                
-                let cycleSubmenu = NSMenu(title: title)
-                let header = NSMenuItem(title: "Caps-Lock + \(char) to cycle:", action: nil, keyEquivalent: "")
-                header.attributedTitle = NSAttributedString(
-                    string: "Caps-Lock + \(char) to cycle:",
-                    attributes: [.font: NSFont.boldSystemFont(ofSize: 11)]
-                )
-                header.isEnabled = false
-                cycleSubmenu.addItem(header)
-                
-                for item in group.items {
-                    let subItem = makeAlignedMenuItem(
-                        title: item.name,
-                        icon: item.icon,
-                        action: #selector(handleCoreAppClick(_:)),
-                        target: self,
-                        representedObject: item.bundleID
-                    )
-                    cycleSubmenu.addItem(subItem)
-                }
-                
-                rowItem.submenu = cycleSubmenu
-                menu.addItem(rowItem)
-            }
+            let rowItem = makeAlignedMenuItem(
+                title: item.name,
+                keyEquivalent: charStr,
+                icon: item.icon,
+                accessibilityLabel: "\(item.name)",
+                accessibilityHelp: "Hold Caps-Lock and press \(char) to switch to \(item.name)",
+                action: #selector(handleCoreAppClick(_:)),
+                target: self,
+                representedObject: item.bundleID
+            )
+            menu.addItem(rowItem)
         }
         
         menu.addItem(NSMenuItem.separator())
         
         // 3. Change App submenu
-        let changeAppItem = NSMenuItem(title: "Change App", action: nil, keyEquivalent: "")
+        let changeAppItem = makeAlignedMenuItem(
+            title: "Change App",
+            icon: NSImage(systemSymbolName: "arrow.triangle.swap", accessibilityDescription: "Change App"),
+            accessibilityHelp: "Configure pinned apps and browser profiles",
+            action: nil,
+            target: nil
+        )
         let changeAppSubmenu = NSMenu(title: "Change App")
         
         let transparentOffImage = NSImage(size: NSSize(width: 14, height: 14))
+        
+        // 3.0 Search & Add Application... (⌘F)
+        let searchAppItem = makeAlignedMenuItem(
+            title: "Search & Add Application...",
+            keyEquivalent: "f",
+            modifierMask: [.command],
+            icon: NSImage(systemSymbolName: "magnifyingglass", accessibilityDescription: "Search Applications"),
+            accessibilityHelp: "Search installed applications to pin to Quick Apps",
+            action: #selector(handleOpenAppSearch),
+            target: self
+        )
+        changeAppSubmenu.addItem(searchAppItem)
+        changeAppSubmenu.addItem(NSMenuItem.separator())
         
         // 3a. Active Browser Selection (when multiple browsers available)
         if profileEngine.availableBrowsers.count > 1 {
@@ -748,8 +815,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         
         // 3c. Pinned Quick Apps Header
         changeAppSubmenu.addItem(NSMenuItem.separator())
-        let pinnedItems = AppGroupEngine.pinnedAppItems()
-        let pinnedTitle = LicenseEngine.shared.isPro ? "Pinned Quick Apps (\(pinnedItems.count)):" : "Pinned Quick Apps (up to 4):"
+        let submenuPinned = AppGroupEngine.pinnedAppItems()
+        let pinnedTitle = LicenseEngine.shared.isPro ? "Pinned Quick Apps (\(submenuPinned.count)):" : "Pinned Quick Apps (up to 4):"
         let pinnedHeader = NSMenuItem(title: pinnedTitle, action: nil, keyEquivalent: "")
         pinnedHeader.attributedTitle = NSAttributedString(
             string: pinnedTitle,
@@ -758,7 +825,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         pinnedHeader.isEnabled = false
         changeAppSubmenu.addItem(pinnedHeader)
         
-        for item in pinnedItems {
+        for item in submenuPinned {
             let char = Character((item.name.first(where: { $0.isLetter }) ?? "A").uppercased())
             let pItem = makeAlignedMenuItem(
                 title: "\(item.name) (\(char))",
@@ -768,43 +835,11 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                 target: self,
                 representedObject: item.bundleID
             )
-            pItem.state = .on
+            pItem.state = NSControl.StateValue.on
             changeAppSubmenu.addItem(pItem)
         }
         
-        // 3d. Catalog Categories in Change App
-        let catalogCategories = AppGroupEngine.catalogCategories
-        for cat in catalogCategories {
-            changeAppSubmenu.addItem(NSMenuItem.separator())
-            
-            let catHeader = NSMenuItem(title: "\(cat.category):", action: nil, keyEquivalent: "")
-            catHeader.attributedTitle = NSAttributedString(
-                string: "\(cat.category):",
-                attributes: [.font: NSFont.boldSystemFont(ofSize: 11)]
-            )
-            catHeader.isEnabled = false
-            changeAppSubmenu.addItem(catHeader)
-            
-            for item in cat.items {
-                let isPinned = AppGroupEngine.isAppSelected(bundleID: item.bundleID)
-                let char = Character((item.name.first(where: { $0.isLetter }) ?? "A").uppercased())
-                let menuItem = makeAlignedMenuItem(
-                    title: item.name,
-                    keyEquivalent: String(char).lowercased(),
-                    icon: item.icon,
-                    action: #selector(handleTogglePinAppClick(_:)),
-                    target: self,
-                    representedObject: item.bundleID
-                )
-                menuItem.state = isPinned ? .on : .off
-                if !isPinned {
-                    menuItem.offStateImage = transparentOffImage
-                }
-                changeAppSubmenu.addItem(menuItem)
-            }
-        }
-        
-        // 3e. Choose Other App...
+        // 3d. Choose Other App...
         changeAppSubmenu.addItem(NSMenuItem.separator())
         let customAppItem = makeAlignedMenuItem(
             title: "Choose Other App...",
@@ -825,7 +860,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         if LicenseEngine.shared.isPro {
             proItem = makeAlignedMenuItem(
                 title: "Xomsky Pro: Active ✓",
-                icon: NSImage(systemSymbolName: "checkmark.seal.fill", accessibilityDescription: nil),
+                icon: NSImage(systemSymbolName: "checkmark.seal.fill", accessibilityDescription: "Xomsky Pro Active"),
+                accessibilityHelp: "Manage your Xomsky Pro license",
                 action: #selector(handleManageLicense),
                 target: self
             )
@@ -833,7 +869,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             proItem = makeAlignedMenuItem(
                 title: "Upgrade to Xomsky Pro (\(LicenseEngine.proPrice))...",
-                icon: NSImage(systemSymbolName: "star.fill", accessibilityDescription: nil),
+                icon: NSImage(systemSymbolName: "star.fill", accessibilityDescription: "Upgrade to Xomsky Pro"),
+                accessibilityHelp: "Upgrade to Xomsky Pro for unlimited app and profile slots",
                 action: #selector(handleUpgradeToPro),
                 target: self
             )
@@ -841,38 +878,45 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             
             let enterKeyItem = makeAlignedMenuItem(
                 title: "Enter License Key...",
-                icon: NSImage(systemSymbolName: "key.fill", accessibilityDescription: nil),
+                icon: NSImage(systemSymbolName: "key.fill", accessibilityDescription: "Enter License Key"),
+                accessibilityHelp: "Activate your license key",
                 action: #selector(handleEnterLicenseKeyFromMenu),
                 target: self
             )
             menu.addItem(enterKeyItem)
         }
         
-        let copyStatusTitle = CopyOnSelectEngine.shared.isEnabled ? "Copy-on-Select: Active ✓" : "Copy-on-Select: Disabled"
-        let copyStatusItem = NSMenuItem(
-            title: copyStatusTitle,
+        let copyStatusItem = makeAlignedMenuItem(
+            title: "Copy on Select",
+            icon: NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: "Copy on Select"),
+            accessibilityHelp: "Toggle automatic copying of selected text to the clipboard",
             action: #selector(handleToggleCopyOnSelect),
-            keyEquivalent: ""
+            target: self
         )
-        copyStatusItem.target = self
+        copyStatusItem.state = CopyOnSelectEngine.shared.isEnabled ? .on : .off
         menu.addItem(copyStatusItem)
         
         let refreshItem = makeAlignedMenuItem(
             title: "Refresh Profiles & Apps",
             keyEquivalent: "r",
             modifierMask: [.command],
+            icon: NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: "Refresh Profiles & Apps"),
+            accessibilityHelp: "Reload browser profiles and installed applications",
             action: #selector(handleRefreshProfiles),
             target: self
         )
         menu.addItem(refreshItem)
         
-        let permItem = NSMenuItem(
-            title: AXIsProcessTrusted() ? "Accessibility: Granted ✓" : "Accessibility: Not Granted ⚠",
-            action: #selector(handleOpenAccessibilitySettings),
-            keyEquivalent: ""
-        )
-        permItem.target = self
-        menu.addItem(permItem)
+        if !AXIsProcessTrusted() {
+            let permItem = makeAlignedMenuItem(
+                title: "Grant Accessibility Permissions…",
+                icon: NSImage(systemSymbolName: "exclamationmark.triangle.fill", accessibilityDescription: "Accessibility Warning"),
+                accessibilityHelp: "Open macOS System Settings to enable Accessibility permission",
+                action: #selector(handleOpenAccessibilitySettings),
+                target: self
+            )
+            menu.addItem(permItem)
+        }
         
         menu.addItem(NSMenuItem.separator())
         
@@ -880,6 +924,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             title: "Quit Xomsky",
             keyEquivalent: "q",
             modifierMask: [.command],
+            icon: NSImage(systemSymbolName: "power", accessibilityDescription: "Quit Xomsky"),
+            accessibilityHelp: "Quit the application",
             action: #selector(handleQuit),
             target: self
         )
@@ -936,6 +982,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                 updateMenu()
             }
         }
+    }
+    
+    @objc private func handleActivateBrowserClick(_ sender: NSMenuItem) {
+        ChromeProfileEngine.shared.focusChrome()
     }
     
     @objc private func handleProfileClick(_ sender: NSMenuItem) {
@@ -1144,7 +1194,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         errorAlert.runModal()
     }
     
-    private func promptAppReplacement(newBundleID: String) {
+    public func promptAppReplacement(newBundleID: String) {
         let allDiscovered = AppGroupEngine.allDiscoveredItems()
         let newAppName = allDiscovered.first(where: { $0.bundleID == newBundleID })?.name
             ?? (Bundle(identifier: newBundleID)?.infoDictionary?["CFBundleName"] as? String)
@@ -1189,6 +1239,15 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         } else if response == .alertThirdButtonReturn {
             promptEnterLicenseKey(thenPinBundleID: newBundleID)
         }
+    }
+    
+    @objc public func handleOpenAppSearch() {
+        MinimalHUDWindow.shared.hideImmediate()
+        AppSearchPickerWindow.shared.show()
+    }
+    
+    public func handleChooseOtherAppFromExternal() {
+        handleChooseOtherApp()
     }
     
     @objc private func handleChooseOtherApp() {

@@ -89,33 +89,76 @@ public final class ChromeSwitcherState: ObservableObject {
 public struct ProfileAvatarView: View {
     public let profile: ChromeProfile
     public let isSelected: Bool
+    public let slotIndex: Int
+    
+    public init(profile: ChromeProfile, isSelected: Bool, slotIndex: Int = 0) {
+        self.profile = profile
+        self.isSelected = isSelected
+        self.slotIndex = slotIndex > 0 ? slotIndex : profile.index
+    }
     
     public var body: some View {
-        ZStack {
-            if isSelected {
+        VStack(spacing: 5) {
+            ZStack {
+                // Frosted light circular plate so transparent/dark icons (e.g. sunglasses) pop with clarity
                 Circle()
-                    .stroke(Color(red: 130/255, green: 200/255, blue: 250/255), lineWidth: 2.0)
-                    .frame(width: 38, height: 38)
-            }
-            
-            if let avatar = profile.avatarImage {
-                Image(nsImage: avatar)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 30, height: 30)
-                    .clipShape(Circle())
-            } else {
-                Circle()
-                    .fill(Color(red: 175/255, green: 110/255, blue: 230/255))
-                    .frame(width: 30, height: 30)
-                    .overlay(
-                        Text(String(profile.effectiveName.prefix(1)).uppercased())
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.white)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.38),
+                                Color.white.opacity(0.24)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
                     )
+                    .frame(width: 32, height: 32)
+                
+                if let avatar = profile.avatarImage {
+                    Image(nsImage: avatar)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 32, height: 32)
+                        .clipShape(Circle())
+                } else {
+                    Circle()
+                        .fill(LinearGradient(
+                            colors: [Color(red: 0.35, green: 0.55, blue: 0.95), Color(red: 0.55, green: 0.35, blue: 0.85)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ))
+                        .frame(width: 32, height: 32)
+                        .overlay(
+                            Text(String(profile.effectiveName.prefix(1)).uppercased())
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundColor(.white)
+                        )
+                }
+                
+                // Refined circular hairline: subtle framing without clashing with the outer selection tile
+                Circle()
+                    .stroke(
+                        Color.white.opacity(isSelected ? 0.35 : 0.12),
+                        lineWidth: 1
+                    )
+                    .frame(width: 34, height: 34)
             }
+            .frame(width: 36, height: 36)
+            
+            Text("\(slotIndex)")
+                .font(.system(size: 11, weight: isSelected ? .bold : .medium, design: .rounded))
+                .foregroundColor(isSelected ? .white : .white.opacity(0.60))
         }
-        .frame(width: 40, height: 40)
+        .frame(width: 44)
+        .padding(.vertical, 4)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(isSelected ? Color.white.opacity(0.18) : Color.clear)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(isSelected ? Color.white.opacity(0.24) : Color.clear, lineWidth: 0.75)
+        )
     }
 }
 
@@ -123,26 +166,63 @@ public struct ProfileAvatarView: View {
 public struct AntigravityAvatarView: View {
     public let item: AntigravityItem
     public let isSelected: Bool
+    public let slotIndex: Int
+    
+    public init(item: AntigravityItem, isSelected: Bool, slotIndex: Int = 0) {
+        self.item = item
+        self.isSelected = isSelected
+        self.slotIndex = slotIndex > 0 ? slotIndex : item.index
+    }
     
     public var body: some View {
-        ZStack {
-            if isSelected {
+        VStack(spacing: 5) {
+            ZStack {
                 Circle()
-                    .stroke(Color(red: 130/255, green: 200/255, blue: 250/255), lineWidth: 2.0)
-                    .frame(width: 38, height: 38)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.22),
+                                Color.white.opacity(0.12)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: 32, height: 32)
+                
+                Image(nsImage: item.icon)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 32, height: 32)
+                    .clipShape(Circle())
+                
+                Circle()
+                    .stroke(
+                        Color.white.opacity(isSelected ? 0.35 : 0.12),
+                        lineWidth: 1
+                    )
+                    .frame(width: 34, height: 34)
             }
+            .frame(width: 36, height: 36)
             
-            Image(nsImage: item.icon)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 30, height: 30)
-                .clipShape(Circle())
+            Text("\(slotIndex)")
+                .font(.system(size: 11, weight: isSelected ? .bold : .medium, design: .rounded))
+                .foregroundColor(isSelected ? .white : .white.opacity(0.60))
         }
-        .frame(width: 40, height: 40)
+        .frame(width: 44)
+        .padding(.vertical, 4)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(isSelected ? Color.white.opacity(0.18) : Color.clear)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(isSelected ? Color.white.opacity(0.24) : Color.clear, lineWidth: 0.75)
+        )
     }
 }
 
-// MARK: - Redesigned Switcher HUD View
+// MARK: - Modern Switcher HUD View
 public struct MinimalHUDView: View {
     @ObservedObject var state = ChromeSwitcherState.shared
     
@@ -150,10 +230,11 @@ public struct MinimalHUDView: View {
     
     private var cardWidth: CGFloat {
         if !state.hasBrothers {
-            return 150
+            return 155
         }
         let count = state.mode == .chrome ? state.profiles.count : state.antigravityItems.count
-        return max(150, CGFloat(count) * 46 + 20)
+        let itemsWidth = CGFloat(count) * 44 + CGFloat(max(0, count - 1)) * 8
+        return max(180, itemsWidth + 32)
     }
     
     private var topIcon: NSImage {
@@ -169,105 +250,106 @@ public struct MinimalHUDView: View {
     private var appTitle: String {
         if state.mode == .chrome {
             return "Google Chrome"
-        } else if let selected = state.selectedAppItem {
-            return selected.name
-        } else {
-            switch state.mode {
-            case .terminal: return "Terminal"
-            case .notes: return "Notes"
-            case .ide: return "IDE"
-            case .antigravity: return "Antigravity"
-            case .chrome: return "Google Chrome"
+        }
+        return state.selectedAppItem?.name ?? "Application"
+    }
+    
+    private var activeSubtitle: String? {
+        if state.mode == .chrome {
+            if let prof = state.selectedProfile?.effectiveName, prof != "Google Chrome", prof != "Chrome" {
+                return prof.capitalized
             }
         }
+        return nil
     }
     
     public var body: some View {
-        VStack(spacing: 0) {
-            // Inner Blue Card
-            VStack(spacing: 0) {
-                Spacer().frame(height: 16)
-                
-                // 1. App Icon
-                Image(nsImage: topIcon)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 72, height: 72)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                
-                Spacer().frame(height: 10)
-                
-                // 2. App Name Label
+        VStack(spacing: 7) {
+            // 1. App Icon with continuous rounded rect and subtle shadow
+            Image(nsImage: topIcon)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 54, height: 54)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .shadow(color: Color.black.opacity(0.25), radius: 5, x: 0, y: 2)
+                .padding(.top, 2)
+            
+            // 2. Primary Title Label & Contextual Subtitle (Understated & Non-Intrusive)
+            VStack(spacing: 3) {
                 Text(appTitle)
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(.white)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.white.opacity(0.82))
                     .lineLimit(1)
                 
-                // 3. Avatar / Icon Row (only displayed when there are sibling "brothers" to cycle between)
-                if state.hasBrothers {
-                    Spacer().frame(height: 10)
-                    
-                    HStack(spacing: 6) {
-                        if state.mode == .chrome {
-                            ForEach(Array(state.profiles.enumerated()), id: \.element.id) { idx, profile in
-                                ProfileAvatarView(
-                                    profile: profile,
-                                    isSelected: idx == state.selectedIndex
-                                )
-                            }
-                        } else {
-                            ForEach(Array(state.antigravityItems.enumerated()), id: \.element.id) { idx, item in
-                                AntigravityAvatarView(
-                                    item: item,
-                                    isSelected: idx == state.selectedIndex
-                                )
-                            }
-                        }
-                    }
-                    
-                    Spacer().frame(height: 14)
-                } else {
-                    Spacer().frame(height: 16)
+                if let sub = activeSubtitle {
+                    Text(sub)
+                        .font(.system(size: 10.5, weight: .medium))
+                        .foregroundColor(.white.opacity(0.72))
+                        .lineLimit(1)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule()
+                                .fill(Color.white.opacity(0.12))
+                        )
                 }
             }
-            .frame(width: cardWidth)
-            .background(
-                RoundedRectangle(cornerRadius: 15, style: .continuous)
-                    .fill(Color(red: 64/255, green: 108/255, blue: 171/255))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 15, style: .continuous)
-                    .stroke(Color(red: 130/255, green: 189/255, blue: 248/255), lineWidth: 1.5)
-            )
+            
+            // 3. Avatar / Icon Carousel (Only shown when there are sibling profiles or apps)
+            if state.hasBrothers {
+                HStack(spacing: 8) {
+                    if state.mode == .chrome {
+                        ForEach(Array(state.profiles.enumerated()), id: \.element.id) { idx, profile in
+                            ProfileAvatarView(
+                                profile: profile,
+                                isSelected: idx == state.selectedIndex,
+                                slotIndex: idx + 1
+                            )
+                        }
+                    } else {
+                        ForEach(Array(state.antigravityItems.enumerated()), id: \.element.id) { idx, item in
+                            AntigravityAvatarView(
+                                item: item,
+                                isSelected: idx == state.selectedIndex,
+                                slotIndex: idx + 1
+                            )
+                        }
+                    }
+                }
+                .padding(.top, 4)
+            }
         }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 10)
+        .padding(.vertical, 16)
+        .padding(.horizontal, 16)
+        .frame(width: cardWidth)
         .background(
             ZStack {
-                VisualEffectBlur(material: .hudWindow, blendingMode: .behindWindow)
-                Color(red: 45/255, green: 44/255, blue: 49/255).opacity(0.82)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(Color(red: 0.10, green: 0.10, blue: 0.12).opacity(0.85))
+                
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(.ultraThinMaterial)
             }
-            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         )
-    }
-}
-
-// Visual Effect View helper
-struct VisualEffectBlur: NSViewRepresentable {
-    let material: NSVisualEffectView.Material
-    let blendingMode: NSVisualEffectView.BlendingMode
-
-    func makeNSView(context: Context) -> NSVisualEffectView {
-        let view = NSVisualEffectView()
-        view.material = material
-        view.blendingMode = blendingMode
-        view.state = .active
-        return view
-    }
-
-    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
-        nsView.material = material
-        nsView.blendingMode = blendingMode
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.35),
+                            Color.white.opacity(0.08)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 0.75
+                )
+        )
+        // Two-stage organic Apple drop shadow (ambient + directional)
+        .shadow(color: Color.black.opacity(0.28), radius: 16, x: 0, y: 8)
+        .shadow(color: Color.black.opacity(0.16), radius: 4, x: 0, y: 2)
+        .padding(48)
+        .preferredColorScheme(.dark)
     }
 }
 
@@ -278,7 +360,7 @@ public final class MinimalHUDWindow: NSPanel {
     
     public init() {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 220, height: 225),
+            contentRect: NSRect(x: 0, y: 0, width: 260, height: 260),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -288,10 +370,13 @@ public final class MinimalHUDWindow: NSPanel {
         self.isOpaque = false
         self.backgroundColor = .clear
         self.level = .floating
-        self.hasShadow = true
+        self.hasShadow = false
         self.ignoresMouseEvents = true
         self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
-        self.contentView = NSHostingView(rootView: MinimalHUDView())
+        let hosting = NSHostingView(rootView: MinimalHUDView())
+        hosting.wantsLayer = true
+        hosting.layer?.backgroundColor = .clear
+        self.contentView = hosting
     }
     
     public func show(profiles: [ChromeProfile], selectedIndex: Int) {
@@ -302,11 +387,14 @@ public final class MinimalHUDWindow: NSPanel {
         ChromeSwitcherState.shared.isVisible = true
         
         let hostingView = NSHostingView(rootView: MinimalHUDView())
+        hostingView.wantsLayer = true
+        hostingView.layer?.backgroundColor = .clear
         self.contentView = hostingView
         reposition(with: hostingView)
         
         self.alphaValue = 1.0
         self.orderFrontRegardless()
+        triggerSensoryFeedback()
     }
     
     public func showAntigravity(items: [AntigravityItem], selectedIndex: Int) {
@@ -321,37 +409,66 @@ public final class MinimalHUDWindow: NSPanel {
         ChromeSwitcherState.shared.isVisible = true
         
         let hostingView = NSHostingView(rootView: MinimalHUDView())
+        hostingView.wantsLayer = true
+        hostingView.layer?.backgroundColor = .clear
         self.contentView = hostingView
         reposition(with: hostingView)
         
         self.alphaValue = 1.0
         self.orderFrontRegardless()
+        triggerSensoryFeedback()
     }
     
     private func reposition(with hostingView: NSHostingView<MinimalHUDView>) {
         if let screen = NSScreen.main {
             let screenRect = screen.visibleFrame
             let fittingSize = hostingView.fittingSize
-            let width = max(150, fittingSize.width)
-            let minHeight: CGFloat = ChromeSwitcherState.shared.hasBrothers ? 215 : 140
-            let height = max(minHeight, fittingSize.height)
+            let width = max(220, fittingSize.width)
+            let height = max(160, fittingSize.height)
             let x = screenRect.midX - (width / 2)
             let y = screenRect.midY - (height / 2)
             self.setFrame(NSRect(x: x, y: y, width: width, height: height), display: true)
-            self.invalidateShadow()
         }
+    }
+    
+    private func triggerSensoryFeedback() {
+        // 1. Tactile haptic feedback on Force Touch trackpads
+        NSHapticFeedbackManager.defaultPerformer.perform(
+            .alignment,
+            performanceTime: .default
+        )
+        
+        // 2. VoiceOver announcement
+        let announcementText: String
+        if ChromeSwitcherState.shared.mode == .chrome {
+            let prof = ChromeSwitcherState.shared.selectedProfile?.effectiveName ?? "Profile"
+            announcementText = "Google Chrome, \(prof)"
+        } else if let app = ChromeSwitcherState.shared.selectedAppItem {
+            announcementText = app.name
+        } else {
+            announcementText = "Quick Switcher"
+        }
+        
+        NSAccessibility.post(
+            element: NSApp as Any,
+            notification: .announcementRequested,
+            userInfo: [.announcement: announcementText]
+        )
     }
     
     public func updateSelection(to index: Int) {
         ChromeSwitcherState.shared.selectIndex(index)
+        triggerSensoryFeedback()
     }
     
     public func selectNext() {
         ChromeSwitcherState.shared.selectNext()
+        triggerSensoryFeedback()
     }
     
     public func selectPrevious() {
         ChromeSwitcherState.shared.selectPrevious()
+        triggerSensoryFeedback()
     }
     
     public func hideImmediate() {

@@ -22,6 +22,30 @@ public struct AppCandidate: Sendable, Equatable {
     }
 }
 
+// MARK: - Installed Application Info
+public struct InstalledAppInfo: Identifiable, Sendable, Equatable {
+    public var id: String { bundleID }
+    public let name: String
+    public let bundleID: String
+    public let path: String
+    public let icon: NSImage
+    
+    public var firstLetter: Character {
+        Character((name.first(where: { $0.isLetter }) ?? "A").uppercased())
+    }
+    
+    public init(name: String, bundleID: String, path: String, icon: NSImage) {
+        self.name = name
+        self.bundleID = bundleID
+        self.path = path
+        self.icon = icon
+    }
+    
+    public static func == (lhs: InstalledAppInfo, rhs: InstalledAppInfo) -> Bool {
+        lhs.bundleID == rhs.bundleID && lhs.path == rhs.path && lhs.name == rhs.name
+    }
+}
+
 // MARK: - App Group Engine
 @MainActor
 public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
@@ -802,6 +826,109 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
             engine.focusItem(bundleID: bundleID)
         } else {
             AntigravityEngine.shared.focusItem(bundleID: bundleID)
+        }
+    }
+    
+    // MARK: - Installed Applications Scanning & Search
+    
+    public static var cachedInstalledApplications: [InstalledAppInfo] = []
+    
+    @discardableResult
+    public static func scanInstalledApplications(forceRefresh: Bool = false) -> [InstalledAppInfo] {
+        if !cachedInstalledApplications.isEmpty && !forceRefresh {
+            return cachedInstalledApplications
+        }
+        
+        let fileManager = FileManager.default
+        let dirs = [
+            URL(fileURLWithPath: "/Applications"),
+            URL(fileURLWithPath: "/System/Applications"),
+            URL(fileURLWithPath: "/System/Applications/Utilities"),
+            fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Applications")
+        ]
+        
+        var apps: [InstalledAppInfo] = []
+        var seenBundleIDs = Set<String>()
+        
+        for dir in dirs {
+            guard let contents = try? fileManager.contentsOfDirectory(
+                at: dir,
+                includingPropertiesForKeys: [.isApplicationKey],
+                options: [.skipsHiddenFiles]
+            ) else { continue }
+            
+            for url in contents where url.pathExtension == "app" {
+                let name = url.deletingPathExtension().lastPathComponent
+                
+                // Skip uninstallers, helpers, and hidden packages
+                let lowerName = name.lowercased()
+                if lowerName.contains("uninstaller") || lowerName.hasPrefix(".") || lowerName.contains("crash reporter") {
+                    continue
+                }
+                
+                let bundleID = Bundle(url: url)?.bundleIdentifier ?? "app.\(lowerName.replacingOccurrences(of: " ", with: "."))"
+                guard !seenBundleIDs.contains(bundleID) else { continue }
+                seenBundleIDs.insert(bundleID)
+                
+                let icon = NSWorkspace.shared.icon(forFile: url.path)
+                icon.size = NSSize(width: 64, height: 64)
+                
+                apps.append(
+                    InstalledAppInfo(
+                        name: name,
+                        bundleID: bundleID,
+                        path: url.path,
+                        icon: icon
+                    )
+                )
+            }
+        }
+        
+        apps.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        cachedInstalledApplications = apps
+        return apps
+    }
+    
+    public static func searchInstalledApplications(query: String) -> [InstalledAppInfo] {
+        let all = scanInstalledApplications()
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return all }
+        
+        let q = trimmed.lowercased()
+        return all.filter { app in
+            app.name.lowercased().contains(q) || app.bundleID.lowercased().contains(q)
+        }.sorted { a, b in
+            let aName = a.name.lowercased()
+            let bName = b.name.lowercased()
+            let aStarts = aName.hasPrefix(q)
+            let bStarts = bName.hasPrefix(q)
+            if aStarts && !bStarts { return true }
+            if !aStarts && bStarts { return false }
+            return aName.localizedStandardCompare(bName) == .orderedAscending
+        }
+    }
+    
+    /// Pins or unpins an installed application from search results.
+    /// Returns true if pinned/unpinned successfully, or false if slot replacement is needed.
+    @discardableResult
+    public static func toggleInstalledAppPin(app: InstalledAppInfo) -> Bool {
+        if isAppSelected(bundleID: app.bundleID) {
+            deselectApp(bundleID: app.bundleID)
+            return true
+        } else {
+            let url = URL(fileURLWithPath: app.path)
+            registerCustomApp(url: url)
+            
+            if isAppSelected(bundleID: app.bundleID) {
+                return true
+            }
+            
+            if canPinMoreApps {
+                selectApp(bundleID: app.bundleID)
+                return true
+            } else {
+                return false
+            }
         }
     }
 }

@@ -27,6 +27,7 @@ SOURCES=(
     "src/ChromeQuickAccess/Engine/CopyOnSelectEngine.swift"
     "src/ChromeQuickAccess/Engine/LicenseEngine.swift"
     "src/ChromeQuickAccess/Views/MinimalHUDWindow.swift"
+    "src/ChromeQuickAccess/Views/AppSearchPickerWindow.swift"
     "src/ChromeQuickAccess/AppDelegate.swift"
     "src/ChromeQuickAccess/main.swift"
 )
@@ -42,6 +43,7 @@ FRAMEWORKS=(
 )
 
 echo "[1/5] Compiling arm64 slice (Apple Silicon)..."
+mkdir -p "${BUILD_DIR}/temp"
 swiftc \
     -parse-as-library \
     -target arm64-apple-macos14.0 \
@@ -51,6 +53,7 @@ swiftc \
     -O
 
 echo "[2/5] Compiling x86_64 slice (Intel)..."
+mkdir -p "${BUILD_DIR}/temp"
 swiftc \
     -parse-as-library \
     -target x86_64-apple-macos14.0 \

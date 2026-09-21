@@ -1078,15 +1078,26 @@ struct ChromeQuickAccessUnitTests {
         #expect(quitItem?.keyEquivalent == "q")
         #expect(quitItem?.keyEquivalentModifierMask == [.command])
         
-        // Section 1: Chrome header present and strictly non-clickable
-        let chromeHeader = menu.items.first(where: { $0.title.contains("Chrome (Caps-Lock + C)") })
-        #expect(chromeHeader != nil)
-        #expect(chromeHeader?.isEnabled == false)
-        #expect(chromeHeader?.action == nil)
+        // Section 1: Browsers & Profiles section header present and strictly non-clickable
+        let browserSectionHeader = menu.items.first(where: { $0.title == "Browsers & Profiles" })
+        #expect(browserSectionHeader != nil)
+        #expect(browserSectionHeader?.isSectionHeader == true)
+        #expect(browserSectionHeader?.isEnabled == false)
+        #expect(browserSectionHeader?.action == nil)
+        
+        let chromeItem = menu.items.first(where: { $0.title.contains("Chrome (Caps-Lock + C)") })
+        #expect(chromeItem != nil)
+        #expect(chromeItem?.action != nil)
+        
+        // Hamster Mascot Separator present between sections
+        let hamsterSeparator = menu.items.first(where: { $0.view is AppDelegate.HamsterSeparatorView })
+        #expect(hamsterSeparator != nil)
+        #expect(hamsterSeparator?.isEnabled == false)
         
         // Section 2: Quick Apps header present and strictly non-clickable
         let quickAppsHeader = menu.items.first(where: { $0.title.contains("Quick Apps (Caps-Lock)") || $0.title.contains("Toolkit (Caps-Lock)") })
         #expect(quickAppsHeader != nil)
+        #expect(quickAppsHeader?.isSectionHeader == true)
         #expect(quickAppsHeader?.isEnabled == false)
         #expect(quickAppsHeader?.action == nil)
         
@@ -1095,10 +1106,16 @@ struct ChromeQuickAccessUnitTests {
         #expect(termMatch != nil)
         #expect(termMatch?.keyEquivalent.isEmpty == false)
         
-        let agentOrIdeMatch = menu.items.first(where: { $0.title.contains("Antigravity") || $0.title.contains("IDE") })
-        #expect(agentOrIdeMatch != nil)
-        #expect(agentOrIdeMatch?.submenu != nil)
-        #expect((agentOrIdeMatch?.submenu?.items.count ?? 0) >= 2)
+        // Every pinned app is listed directly in the menu without being hidden in submenus
+        let antigravityItem = menu.items.first(where: { $0.title == "Antigravity" })
+        #expect(antigravityItem != nil)
+        #expect(antigravityItem?.keyEquivalent == "a")
+        #expect(antigravityItem?.submenu == nil)
+        
+        let ideItem = menu.items.first(where: { $0.title == "Antigravity IDE" })
+        #expect(ideItem != nil)
+        #expect(ideItem?.keyEquivalent == "a")
+        #expect(ideItem?.submenu == nil)
         
         let notesMatch = menu.items.first(where: { $0.title.contains("Notes") || $0.title.contains("Obsidian") })
         #expect(notesMatch != nil)
@@ -1112,14 +1129,15 @@ struct ChromeQuickAccessUnitTests {
         guard let submenu = changeAppItem?.submenu else { return }
         let subTitles = submenu.items.map { $0.title }
         
-        // Headers present in Change App submenu
+        // Headers and Actions present in Change App submenu
+        #expect(subTitles.contains("Search & Add Application..."))
         #expect(subTitles.contains(where: { $0.contains("Profiles (up to 4):") }))
         #expect(subTitles.contains("Pinned Quick Apps (up to 4):"))
         #expect(subTitles.contains("Choose Other App..."))
         
         // App shortcuts derive strictly from first letter of app name (or slot digit for Chrome)
         for item in menu.items {
-            if item.isSeparatorItem || item.title.hasSuffix(":") || item.title.hasPrefix("Chrome") || item.title.hasPrefix("Quick Apps") || item.title.hasPrefix("Toolkit") { continue }
+            if item.isSeparatorItem || item.title.hasSuffix(":") || item.title.hasPrefix("Chrome") || item.title.hasPrefix("Quick Apps") || item.title.hasPrefix("Toolkit") || item.title == "Browsers & Profiles" || item.view is AppDelegate.HamsterSeparatorView { continue }
             if !item.keyEquivalent.isEmpty && item.keyEquivalentModifierMask == [] {
                 let appName = item.title.trimmingCharacters(in: .whitespaces)
                 let key = item.keyEquivalent
@@ -1536,4 +1554,73 @@ struct ChromeQuickAccessUnitTests {
         let detailedSuccess = await engine.activateOnlineDetailed(key: "XOMSKY-ASYNC-SUCCESS")
         #expect(detailedSuccess == .success)
     }
+    
+    @Test @MainActor
+    func testInstalledApplicationScanningAndCaching() {
+        let apps = AppGroupEngine.scanInstalledApplications(forceRefresh: true)
+        #expect(!apps.isEmpty)
+        #expect(AppGroupEngine.cachedInstalledApplications.count == apps.count)
+        
+        // Every app must have non-empty name and bundle ID
+        for app in apps.prefix(10) {
+            #expect(!app.name.isEmpty)
+            #expect(!app.bundleID.isEmpty)
+            #expect(app.firstLetter.isLetter || app.firstLetter.isNumber)
+        }
+    }
+    
+    @Test @MainActor
+    func testInstalledApplicationSearchFiltering() {
+        _ = AppGroupEngine.scanInstalledApplications()
+        
+        // Empty query returns all
+        let all = AppGroupEngine.searchInstalledApplications(query: "")
+        #expect(all.count == AppGroupEngine.cachedInstalledApplications.count)
+        
+        // Non-empty query matches prefix or contains
+        let searched = AppGroupEngine.searchInstalledApplications(query: "notes")
+        for app in searched {
+            let matches = app.name.lowercased().contains("notes") || app.bundleID.lowercased().contains("notes")
+            #expect(matches == true)
+        }
+    }
+    
+    @Test @MainActor
+    func testAppSearchPickerViewModelPinToggling() {
+        let dummyIcon = NSImage(size: NSSize(width: 32, height: 32))
+        let testApp = InstalledAppInfo(
+            name: "TestPickerApp",
+            bundleID: "com.test.pickerapp",
+            path: "/Applications/TestPickerApp.app",
+            icon: dummyIcon
+        )
+        
+        let previousSelected = UserDefaults.standard.stringArray(forKey: "SelectedAppBundleIDs")
+        defer {
+            if let prev = previousSelected {
+                UserDefaults.standard.set(prev, forKey: "SelectedAppBundleIDs")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "SelectedAppBundleIDs")
+            }
+            AppGroupEngine.deselectApp(bundleID: testApp.bundleID)
+        }
+        
+        // Clean initial state
+        AppGroupEngine.deselectApp(bundleID: testApp.bundleID)
+        #expect(AppGroupEngine.isAppSelected(bundleID: testApp.bundleID) == false)
+        
+        let vm = AppSearchPickerViewModel()
+        #expect(vm.pinnedBundleIDs.contains(testApp.bundleID) == false)
+        
+        // Toggle pin
+        vm.toggleApp(app: testApp)
+        #expect(AppGroupEngine.isAppSelected(bundleID: testApp.bundleID) == true)
+        #expect(vm.pinnedBundleIDs.contains(testApp.bundleID) == true)
+        
+        // Toggle unpin
+        vm.toggleApp(app: testApp)
+        #expect(AppGroupEngine.isAppSelected(bundleID: testApp.bundleID) == false)
+        #expect(vm.pinnedBundleIDs.contains(testApp.bundleID) == false)
+    }
 }
+
