@@ -1173,6 +1173,32 @@ struct ChromeQuickAccessUnitTests {
     
     @Test @MainActor
     func testTwoTierMenuLayoutWithMascotBetween() {
+        let dummyIcon = NSImage(size: NSSize(width: 32, height: 32))
+        let mockAiAgent = [
+            AntigravityItem(name: "Antigravity", bundleID: "com.google.antigravity", path: "/Applications/Antigravity.app", icon: dummyIcon, index: 1)
+        ]
+        let mockIde = [
+            AntigravityItem(name: "Antigravity IDE", bundleID: "com.google.antigravity-ide", path: "/Applications/Antigravity IDE.app", icon: dummyIcon, index: 1)
+        ]
+        AppGroupEngine.aiAgent.customItemsOverride = mockAiAgent
+        AppGroupEngine.ide.customItemsOverride = mockIde
+        AppGroupEngine.aiAgent.refreshItems()
+        AppGroupEngine.ide.refreshItems()
+        
+        let previousSelected = UserDefaults.standard.stringArray(forKey: "SelectedAppBundleIDs")
+        defer {
+            AppGroupEngine.aiAgent.customItemsOverride = nil
+            AppGroupEngine.ide.customItemsOverride = nil
+            AppGroupEngine.aiAgent.refreshItems()
+            AppGroupEngine.ide.refreshItems()
+            if let prev = previousSelected {
+                UserDefaults.standard.set(prev, forKey: "SelectedAppBundleIDs")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "SelectedAppBundleIDs")
+            }
+            AppGroupEngine.selectedBundleIDs = Set(AppGroupEngine.defaultPinnedBundleIDs)
+        }
+        
         let appDelegate = AppDelegate()
         
         // Mock a pinned set containing both Toolset and Quick shortcuts
@@ -1200,10 +1226,6 @@ struct ChromeQuickAccessUnitTests {
             #expect(tIdx < mIdx, "Toolset section must appear before mascot separator")
             #expect(mIdx < qIdx, "Mascot separator must appear before Quick section")
         }
-        
-        // Reset defaults
-        UserDefaults.standard.set(AppGroupEngine.defaultPinnedBundleIDs, forKey: "SelectedAppBundleIDs")
-        AppGroupEngine.selectedBundleIDs = Set(AppGroupEngine.defaultPinnedBundleIDs)
     }
     
     @Test @MainActor

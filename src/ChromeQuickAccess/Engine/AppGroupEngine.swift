@@ -786,6 +786,19 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
                 if !custom.items.contains(where: { $0.bundleID == bundleID }) {
                     custom.items.append(item)
                 }
+            } else if let candidate = allEngines.flatMap({ $0.candidates }).first(where: { $0.bundleID == bundleID }) {
+                // Resilient fallback for catalog candidates (e.g. headless/CI environments or uninstalled defaults)
+                let icon = NSImage(systemSymbolName: "app.dashed", accessibilityDescription: nil) ?? NSImage()
+                icon.size = NSSize(width: 64, height: 64)
+                let item = AntigravityItem(
+                    name: candidate.name,
+                    bundleID: candidate.bundleID,
+                    path: candidate.defaultPaths.first ?? "",
+                    icon: icon,
+                    index: result.count + 1
+                )
+                result.append(item)
+                allMap[bundleID] = item
             }
         }
         return Array(result.prefix(maxPinnedQuickApps))
