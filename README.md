@@ -8,17 +8,17 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/unacau/mac-productivity-suite/releases/latest"><img src="https://img.shields.io/badge/version-1.0.1-007AFF.svg?style=flat-square&logo=apple" alt="Version"></a>
+  <a href="https://github.com/unacau/mac-productivity-suite/releases/latest"><img src="https://img.shields.io/badge/version-1.1.0-007AFF.svg?style=flat-square&logo=apple" alt="Version"></a>
   <a href="https://swift.org"><img src="https://img.shields.io/badge/Swift-6.0_Strict_Concurrency-F05138.svg?style=flat-square&logo=swift&logoColor=white" alt="Swift 6"></a>
   <a href="#"><img src="https://img.shields.io/badge/macOS-14.0%2B_(Sonoma_%7C_Sequoia_%7C_Tahoe)-black.svg?style=flat-square&logo=apple" alt="macOS 14+"></a>
-  <a href="#"><img src="https://img.shields.io/badge/DMG-1.6_MB-purple.svg?style=flat-square" alt="DMG Size"></a>
+  <a href="#"><img src="https://img.shields.io/badge/DMG-2.1_MB-purple.svg?style=flat-square" alt="DMG Size"></a>
   <a href="#"><img src="https://img.shields.io/badge/Latency-Sub--16ms_(1_Frame)-FF9500.svg?style=flat-square&logo=speedtest" alt="Sub-16ms"></a>
-  <a href="#"><img src="https://img.shields.io/badge/Tests-62%2F62_Passing-brightgreen.svg?style=flat-square" alt="Tests"></a>
+  <a href="#"><img src="https://img.shields.io/badge/Tests-70%2F70_Passing-brightgreen.svg?style=flat-square" alt="Tests"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="MIT License"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/unacau/mac-productivity-suite/releases/latest/download/Khomyak.dmg"><b>⬇️ Download Khomyak.dmg (1.6 MB)</b></a> •
+  <a href="https://github.com/unacau/mac-productivity-suite/releases/latest/download/Xomsky.dmg"><b>⬇️ Download Xomsky.dmg (2.1 MB)</b></a> •
   <a href="#-the-spotlight-paradox"><b>⚡ Spotlight Paradox</b></a> •
   <a href="#-key-features"><b>✨ Features</b></a> •
   <a href="#-khomyak-vs-the-world"><b>🏎️ Benchmark Matrix</b></a> •
@@ -169,10 +169,10 @@ The most beloved productivity feature of Linux and X11, brought to macOS with ze
 ### Option 1: Direct Download (Pre-built DMG)
 
 1. Download the latest release:  
-   👉 **[Download Khomyak.dmg (1.6 MB)](https://github.com/unacau/mac-productivity-suite/releases/latest/download/Khomyak.dmg)**
-2. Open `Khomyak.dmg` and drag `Khomyak.app` into `/Applications`.
-3. Launch Khomyak from `/Applications` or Spotlight.
-4. Grant **Accessibility** permission when prompted (*System Settings ➔ Privacy & Security ➔ Accessibility ➔ Enable Khomyak*).
+   👉 **[Download Xomsky.dmg (2.1 MB)](https://github.com/unacau/mac-productivity-suite/releases/latest/download/Xomsky.dmg)**
+2. Open `Xomsky.dmg` and drag `Xomsky.app` into `/Applications`.
+3. Launch Xomsky from `/Applications` or Spotlight.
+4. Grant **Accessibility** permission when prompted (*System Settings ➔ Privacy & Security ➔ Accessibility ➔ Enable Xomsky*).
 
 ### Option 2: Build from Source (1 Command)
 
@@ -275,9 +275,9 @@ Khomyak dynamically parses the Chromium <code>Local State</code> format and supp
 </details>
 
 <details>
-<summary><b>How do I uninstall Khomyak?</b></summary>
+<summary><b>How do I uninstall Xomsky?</b></summary>
 <br>
-Simply quit Khomyak and drag <code>/Applications/Khomyak.app</code> to the Trash. Upon quitting, Khomyak automatically executes <code>hidutil property --set '{"UserKeyMapping":[]}'</code> to restore your keyboard to default factory settings.
+Simply quit Xomsky and drag <code>/Applications/Xomsky.app</code> to the Trash. Upon quitting, Xomsky automatically executes <code>hidutil property --set '{"UserKeyMapping":[]}'</code> to restore your keyboard to default factory settings.
 </details>
 
 ---
