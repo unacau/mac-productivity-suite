@@ -103,44 +103,125 @@ const sound = new ASMRSoundEngine();
 // ==========================================================================
 // 2. Profile Data
 // ==========================================================================
+// 2. Profile Data (Matching Native macOS Google Chrome Profiles)
+// ==========================================================================
 const PROFILES = [
   {
     name: "Igor",
-    icon: "💼",
+    headerName: "Igor",
+    email: "igorekishev92@gmail.com",
+    avatarImg: "assets/images/profiles/igor.png",
+    avatarBg: "linear-gradient(135deg, #6366F1 0%, #A855F7 100%)",
+    avatarEmoji: "👤",
     initial: "I",
-    space: "Space 1",
-    tabs: "GitHub • Linear • Specs",
+    className: "avatar-igor",
+    windows: 11,
+    tabs: ["Linear Team Core", "Claude 3.7", "Antigravity"],
     url: "https://linear.app/team-core",
-    color: "#F43F5E"
-  },
-  {
-    name: "Nastya",
-    icon: "🎨",
-    initial: "N",
-    space: "Space 2",
-    tabs: "Figma • Bauhaus Mascot • Lofi",
-    url: "https://figma.com",
-    color: "#10B981"
+    color: "#8B5CF6"
   },
   {
     name: "Al11",
-    icon: "🔥",
+    headerName: "Al11 (Igor)",
+    email: "igor@almosteleven.com",
+    avatarImg: "assets/images/profiles/ai11.png",
+    avatarBg: "linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)",
+    avatarEmoji: "🔥",
     initial: "A",
-    space: "Space 3",
-    tabs: "GCP Console • Phoenix Traces",
-    url: "https://console.cloud.google.com",
-    color: "#F59E0B"
+    className: "avatar-ai11",
+    windows: 6,
+    tabs: ["GitHub Pull Requests", "CI Pipeline", "Terminal"],
+    url: "https://github.com/unacau/mac-productivity-suite",
+    color: "#3B82F6"
   },
   {
-    name: "GCP Trial",
-    icon: "🕶️",
+    name: "GCP Free Trial",
+    headerName: "GCP Free Trial",
+    email: "igorekishev729@gmail.com",
+    avatarImg: "assets/images/profiles/gcp.png",
+    avatarBg: "linear-gradient(135deg, #EC4899 0%, #F43F5E 100%)",
+    avatarEmoji: "🕶️",
     initial: "G",
-    space: "Space 4",
-    tabs: "Vertex AI • Cloud Billing",
-    url: "https://console.cloud.google.com/vertex-ai",
-    color: "#06B6D4"
+    className: "avatar-gcp",
+    windows: 4,
+    tabs: ["Google Cloud Console", "Vertex AI", "Billing"],
+    url: "https://console.cloud.google.com",
+    color: "#EC4899"
+  },
+  {
+    name: "Nastya",
+    headerName: "Nastya",
+    email: "betapoozytron@gmail.com",
+    avatarImg: "assets/images/profiles/nastya.png",
+    avatarBg: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
+    avatarEmoji: "🖤",
+    initial: "N",
+    className: "avatar-nastya",
+    windows: 2,
+    tabs: ["Figma Design Specs", "Notion Shared", "Spotify"],
+    url: "https://figma.com",
+    color: "#10B981"
   }
 ];
+
+// Camera View Presets (Dynamic 3/4 Hero View vs Cute Butt View vs Front View)
+const CAM_PRESETS = {
+  hero: {
+    pos: new THREE.Vector3(1.65, 1.15, 4.80),
+    target: new THREE.Vector3(-0.35, 0.08, 0.15)
+  },
+  rear: {
+    pos: new THREE.Vector3(0.35, 1.15, -4.90),
+    target: new THREE.Vector3(-0.35, 0.08, 0.10)
+  },
+  front: {
+    pos: new THREE.Vector3(1.00, 1.15, 5.20),
+    target: new THREE.Vector3(-0.35, 0.08, 0.10)
+  }
+};
+
+let currentCamView = "hero"; // Default to dynamic 3/4 Hero view (balanced & shows profile + glowing keycap)
+let targetCamPos = CAM_PRESETS.hero.pos.clone();
+let targetCamLook = CAM_PRESETS.hero.target.clone();
+let isCamTransitioning = false;
+
+function setCameraView(viewName, smooth = true) {
+  currentCamView = viewName;
+  const preset = CAM_PRESETS[viewName] || CAM_PRESETS.hero;
+  targetCamPos.copy(preset.pos);
+  targetCamLook.copy(preset.target);
+
+  if (!smooth && camera && controls) {
+    camera.position.copy(preset.pos);
+    controls.target.copy(preset.target);
+    controls.update();
+  } else {
+    isCamTransitioning = true;
+  }
+  updateCamBtnLabel();
+}
+
+function toggleCameraView() {
+  const next = currentCamView === "rear" ? "hero" : "rear";
+  setCameraView(next, true);
+  sound.playClick();
+}
+
+function updateCamBtnLabel() {
+  const icon = document.getElementById("cam-view-icon");
+  const text = document.getElementById("cam-view-text");
+  const btn = document.getElementById("cam-view-btn");
+  if (!btn) return;
+  if (currentCamView === "rear") {
+    if (icon) icon.textContent = "🐹";
+    if (text) text.textContent = "Face View";
+    btn.title = "Switch to front view (V)";
+  } else {
+    if (icon) icon.textContent = "🍑";
+    if (text) text.textContent = "Butt View";
+    btn.title = "Switch to cute rear butt view (V)";
+  }
+}
 
 const CATEGORY_DATA = {
   chrome: {
@@ -202,16 +283,15 @@ let scene, camera, renderer, controls;
 let hamsterRoot, cheeksGroup, eyesGroup, snoutGroup;
 let eyeLeft, eyeRight;
 let leftEarGroup, rightEarGroup;
-let whiskersGroup;
+let whiskersGroup, tailMesh;
 let keyboardGroup;
 let interactiveKeyMeshes = [];
 let keyMeshMap = {};
-let portalWindowMesh, portalCanvas, portalCtx, portalTexture;
-let activePortalScale = 1.0;
 
 let mouseX = 0, mouseY = 0;
 let targetHeadX = 0, targetHeadY = 0;
 let raycaster, mouseVec;
+let mouseMoved = true;
 
 // Dynamic Environment & Lighting References
 let floorMesh, floorMat;
@@ -258,10 +338,10 @@ const THEMES = {
     pillarColor: 0xFDF2F8,
     pillarRoughness: 0.60,
     pillarMetalness: 0.0,
-    chassisColor: 0x161C28,
+    chassisColor: 0x1E222D,
     chassisRoughness: 0.32,
     chassisMetalness: 0.82,
-    plateColor: 0x0F1420,
+    plateColor: 0x141820,
     plateRoughness: 0.45,
     plateMetalness: 0.65,
     glowStripColor: 0x38BDF8
@@ -316,18 +396,20 @@ function initThreeJS() {
   scene.background = new THREE.Color(initTheme.bg);
   scene.fog = new THREE.FogExp2(initTheme.bg, initTheme.fogDensity);
 
-  // Camera: Placed directly facing the giant hamster face and cheeks
+  // Camera: Placed by default in dynamic 3/4 hero view
   camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 1000);
-  camera.position.set(2.45, 1.95, 7.2);
+  camera.position.copy(CAM_PRESETS.hero.pos);
 
   // Renderer
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
   renderer.setSize(width, height);
+  // Restore high quality on Retina displays
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
+  window.__renderer = renderer;
   container.appendChild(renderer.domElement);
 
   // OrbitControls
@@ -337,7 +419,8 @@ function initThreeJS() {
   controls.maxPolarAngle = Math.PI / 2 - 0.02;
   controls.minDistance = 2.4;
   controls.maxDistance = 8.0;
-  controls.target.set(0, 1.10, 0); // Directly look at the cute hamster face!
+  controls.target.copy(CAM_PRESETS.hero.target);
+  controls.addEventListener("start", () => { isCamTransitioning = false; });
 
   // Raycasting
   raycaster = new THREE.Raycaster();
@@ -347,7 +430,6 @@ function initThreeJS() {
   buildBrightLiminalEnvironment();
   buildGiantRealisticHamster();
   buildMechanicalKeyboardDeck();
-  buildFlankingChromeWindows();
 
   // Events
   window.addEventListener("resize", onWindowResize);
@@ -362,6 +444,9 @@ function initThreeJS() {
 // --------------------------------------------------------------------------
 function buildBrightLiminalEnvironment() {
   const t = THEMES[currentTheme] || THEMES.dark;
+  // Force Space Gray / Dark colors for the keyboard
+  const chassisColorOverride = 0x2A2A2E;
+  const plateColorOverride = 0x1C1C1F;
 
   // Luminous Marble / Smoked Obsidian Floor
   const floorGeo = new THREE.PlaneGeometry(250, 250);
@@ -412,23 +497,10 @@ function buildBrightLiminalEnvironment() {
   fillLight.position.set(0, 1.2, 3.5);
   scene.add(fillLight);
 
-  // Architectural Pillars in Haze
-  const pillarGeo = new THREE.BoxGeometry(2.0, 20, 2.0);
-  pillarMat = new THREE.MeshStandardMaterial({
-    color: t.pillarColor,
-    roughness: t.pillarRoughness,
-    metalness: t.pillarMetalness
-  });
-  pillarMeshes = [];
-  [
-    [-12, 8, -14], [12, 8, -14],
-    [-18, 8, -6], [18, 8, -6]
-  ].forEach(pos => {
-    const pillar = new THREE.Mesh(pillarGeo, pillarMat);
-    pillar.position.set(...pos);
-    scene.add(pillar);
-    pillarMeshes.push(pillar);
-  });
+  // Rear Soft Fill (Illuminating the cute butt view)
+  const rearFill = new THREE.PointLight(t.fillColor, t.fillIntensity * 0.95, 14);
+  rearFill.position.set(1.2, 2.5, -5.2);
+  scene.add(rearFill);
 }
 
 // --------------------------------------------------------------------------
@@ -436,8 +508,8 @@ function buildBrightLiminalEnvironment() {
 // --------------------------------------------------------------------------
 function buildGiantRealisticHamster() {
   hamsterRoot = new THREE.Group();
-  hamsterRoot.position.set(0, 0.05, 0);
-  hamsterRoot.scale.set(1.4, 1.4, 1.4);
+  hamsterRoot.position.set(-0.35, -0.45, 0);
+  hamsterRoot.scale.set(0.68, 0.68, 0.68);
 
   // Bauhaus Palette Materials
   const bauhausYellowMat = new THREE.MeshStandardMaterial({
@@ -583,8 +655,8 @@ function buildGiantRealisticHamster() {
 
   const eyeBaseGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.04, 48);
   eyeBaseGeo.rotateX(Math.PI / 2);
-  const eyeRingOuterGeo = new THREE.TorusGeometry(0.35, 0.016, 16, 64);
-  const eyeRingInnerGeo = new THREE.TorusGeometry(0.27, 0.015, 16, 64);
+  const eyeRingOuterGeo = new THREE.TorusGeometry(0.35, 0.018, 16, 64);
+  const eyeRingInnerGeo = new THREE.TorusGeometry(0.27, 0.016, 16, 64);
   const eyeSphereGeo = new THREE.SphereGeometry(0.20, 32, 32);
   const glintBigGeo = new THREE.SphereGeometry(0.065, 16, 16);
   const glintSmallGeo = new THREE.SphereGeometry(0.032, 16, 16);
@@ -702,10 +774,9 @@ function buildGiantRealisticHamster() {
   const padGeo = new THREE.SphereGeometry(0.042, 16, 16);
 
   // Left Paw
-  // Front Paws: resting gracefully above keyboard deck
   const leftPawGroup = new THREE.Group();
-  leftPawGroup.position.set(-0.46, 0.18, 0.96);
-  leftPawGroup.rotation.x = 0.22;
+  leftPawGroup.position.set(-0.36, 0.28, 0.86);
+  leftPawGroup.rotation.x = 0.20;
   const leftPawMesh = new THREE.Mesh(pawGeo, whitePawMat);
   leftPawGroup.add(leftPawMesh);
   [
@@ -721,8 +792,8 @@ function buildGiantRealisticHamster() {
 
   // Right Paw
   const rightPawGroup = new THREE.Group();
-  rightPawGroup.position.set(0.46, 0.18, 0.96);
-  rightPawGroup.rotation.x = 0.22;
+  rightPawGroup.position.set(0.36, 0.28, 0.86);
+  rightPawGroup.rotation.x = 0.20;
   const rightPawMesh = new THREE.Mesh(pawGeo, whitePawMat);
   rightPawGroup.add(rightPawMesh);
   [
@@ -736,16 +807,18 @@ function buildGiantRealisticHamster() {
   });
   hamsterRoot.add(rightPawGroup);
 
-  // 6. Soft Hind Feet Resting on Marble Floor
+  // 6. Soft Hind Feet Resting on Floor
   const footGeo = new THREE.SphereGeometry(0.24, 20, 20);
   footGeo.scale(1.2, 0.5, 1.5);
   const leftFoot = new THREE.Mesh(footGeo, bauhausYellowMat);
-  leftFoot.position.set(-0.78, -0.12, 0.35);
+  leftFoot.position.set(-0.74, -0.08, 0.28);
   hamsterRoot.add(leftFoot);
 
   const rightFoot = new THREE.Mesh(footGeo, bauhausYellowMat);
-  rightFoot.position.set(0.78, -0.12, 0.35);
+  rightFoot.position.set(0.74, -0.08, 0.28);
   hamsterRoot.add(rightFoot);
+
+  tailMesh = null;
 
   scene.add(hamsterRoot);
 }
@@ -753,14 +826,19 @@ function buildGiantRealisticHamster() {
 // --------------------------------------------------------------------------
 // 3D Mechanical Keyboard Command Deck (60% Layout with Highlighted Keys)
 // --------------------------------------------------------------------------
+const keycapTextureCache = {};
+
 function createKeycapTexture(label, isInteractive, accentColor, hasLed, isCaps) {
+  const cacheKey = `${label}_${isInteractive}_${accentColor || ""}_${hasLed || ""}_${isCaps || ""}`;
+  if (keycapTextureCache[cacheKey]) return keycapTextureCache[cacheKey];
+
   const canvas = document.createElement("canvas");
-  canvas.width = 256;
-  canvas.height = 256;
+  canvas.width = 128;
+  canvas.height = 128;
   const ctx = canvas.getContext("2d");
 
   // Keycap base gradient
-  const bgGrad = ctx.createLinearGradient(0, 0, 0, 256);
+  const bgGrad = ctx.createLinearGradient(0, 0, 0, 128);
   if (isCaps) {
     bgGrad.addColorStop(0, "#1E1B4B");
     bgGrad.addColorStop(1, "#0F172A");
@@ -773,90 +851,83 @@ function createKeycapTexture(label, isInteractive, accentColor, hasLed, isCaps) 
   }
   ctx.fillStyle = bgGrad;
   ctx.beginPath();
-  ctx.roundRect(8, 8, 240, 240, 28);
+  ctx.roundRect(4, 4, 120, 120, 14);
   ctx.fill();
 
   // Chamfered Inner Bevel Border
   ctx.strokeStyle = isInteractive ? (accentColor || "#38BDF8") : "rgba(255, 255, 255, 0.12)";
-  ctx.lineWidth = isInteractive ? 8 : 4;
+  ctx.lineWidth = isInteractive ? 4 : 2;
   ctx.stroke();
 
   // Top Inset Highlight
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.18)";
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.roundRect(16, 16, 224, 224, 20);
+  ctx.roundRect(8, 8, 112, 112, 10);
   ctx.stroke();
 
   // Glowing LED for Caps Lock
   if (hasLed) {
-    const ledGrad = ctx.createRadialGradient(48, 48, 2, 48, 48, 24);
-    ledGrad.addColorStop(0, "#86EFAC");
-    ledGrad.addColorStop(0.4, "rgba(34, 197, 94, 0.9)");
-    ledGrad.addColorStop(1, "rgba(34, 197, 94, 0)");
-    ctx.fillStyle = ledGrad;
-    ctx.beginPath();
-    ctx.arc(48, 48, 24, 0, Math.PI * 2);
-    ctx.fill();
-
     ctx.fillStyle = "#22C55E";
     ctx.beginPath();
-    ctx.arc(48, 48, 8, 0, Math.PI * 2);
+    ctx.arc(24, 24, 5, 0, Math.PI * 2);
     ctx.fill();
   }
 
   // Golden Upward Arrow for Caps Lock
   if (isCaps) {
     ctx.save();
-    ctx.translate(128, 100);
+    ctx.translate(64, 50);
     ctx.beginPath();
-    ctx.moveTo(0, -42);
-    ctx.lineTo(36, -8);
-    ctx.lineTo(16, -8);
-    ctx.lineTo(16, 32);
-    ctx.lineTo(-16, 32);
-    ctx.lineTo(-16, -8);
-    ctx.lineTo(-36, -8);
+    ctx.moveTo(0, -21);
+    ctx.lineTo(18, -4);
+    ctx.lineTo(8, -4);
+    ctx.lineTo(8, 16);
+    ctx.lineTo(-8, 16);
+    ctx.lineTo(-8, -4);
+    ctx.lineTo(-18, -4);
     ctx.closePath();
     ctx.fillStyle = "#F59E0B";
     ctx.fill();
     ctx.strokeStyle = "#0F172A";
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 2.5;
     ctx.stroke();
     ctx.restore();
 
     ctx.fillStyle = "#FFFFFF";
-    ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.font = "bold 14px -apple-system, BlinkMacSystemFont, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("caps", 128, 185);
+    ctx.fillText("caps", 64, 92);
   } else {
     // Standard or Highlighted Legend
     ctx.fillStyle = isInteractive ? (accentColor || "#FFFFFF") : "#94A3B8";
-    ctx.font = isInteractive ? "bold 72px -apple-system, BlinkMacSystemFont, monospace" : "bold 56px -apple-system, BlinkMacSystemFont, monospace";
+    ctx.font = isInteractive ? "bold 38px -apple-system, BlinkMacSystemFont, monospace" : "bold 30px -apple-system, BlinkMacSystemFont, monospace";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.shadowColor = isInteractive ? (accentColor || "#38BDF8") : "rgba(0,0,0,0.5)";
-    ctx.shadowBlur = isInteractive ? 14 : 4;
-    ctx.fillText(label, 128, 128);
+    ctx.fillText(label, 64, 64);
   }
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.anisotropy = 4;
+  keycapTextureCache[cacheKey] = texture;
   return texture;
 }
 
 function buildMechanicalKeyboardDeck() {
   keyboardGroup = new THREE.Group();
-  keyboardGroup.position.set(0, -0.05, 1.60);
-  keyboardGroup.rotation.y = 0; // Strictly oriented facing the human user (Spacebar in front, Esc top-left)
-  keyboardGroup.rotation.x = 0.12; // ~7° natural ergonomic tilt facing toward the user (back propped up, spacebar low)
+  keyboardGroup.scale.set(0.48, 0.48, 0.48); // Scaled proportionally with hamster
+  keyboardGroup.position.set(-0.35, -0.42, 0.95); // Aligned cleanly with hamster
+  keyboardGroup.rotation.y = 0; // Spacebar facing user
+  keyboardGroup.rotation.x = 0.12; // Ergonomic 7° Apple tilt
 
   const t = THEMES[currentTheme] || THEMES.dark;
+  const chassisColorOverride = 0x1E222D; // Space Gray / Dark Obsidian
+  const plateColorOverride = 0x141820;
 
   // 1. Keyboard Chassis (Dark Anodized Aluminum / Slate)
   const chassisGeo = new THREE.BoxGeometry(2.78, 0.11, 1.10);
   chassisMat = new THREE.MeshStandardMaterial({
-    color: t.chassisColor,
+    color: chassisColorOverride,
     roughness: t.chassisRoughness,
     metalness: t.chassisMetalness
   });
@@ -869,7 +940,7 @@ function buildMechanicalKeyboardDeck() {
   // Top Plate Inset
   const plateGeo = new THREE.BoxGeometry(2.70, 0.03, 1.02);
   plateMat = new THREE.MeshStandardMaterial({
-    color: t.plateColor,
+    color: plateColorOverride,
     roughness: t.plateRoughness,
     metalness: t.plateMetalness
   });
@@ -1073,348 +1144,312 @@ function buildMechanicalKeyboardDeck() {
 }
 
 // --------------------------------------------------------------------------
-// Multi-Category 3D Portal Canvas Renderer
+// Live Simulated Native macOS HUD (Matching MinimalHUDWindow.swift)
 // --------------------------------------------------------------------------
-function drawSquircleBadge(ctx, x, y, size, icon, bgColor) {
-  ctx.save();
-  ctx.fillStyle = bgColor || "#FFFFFF";
-  ctx.shadowColor = "rgba(0, 0, 0, 0.4)";
-  ctx.shadowBlur = 14;
-  ctx.shadowOffsetY = 4;
-  ctx.beginPath();
-  ctx.roundRect(x, y, size, size, size * 0.24);
-  ctx.fill();
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
-  ctx.lineWidth = 2;
-  ctx.stroke();
+let hudPeekTimer = null;
 
-  ctx.fillStyle = "#0F172A";
-  ctx.font = `${Math.floor(size * 0.52)}px -apple-system, sans-serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(icon, x + size / 2, y + size / 2);
-  ctx.restore();
-}
+function scheduleHUDPeek() {
+  clearTimeout(hudPeekTimer);
+  const hud = document.getElementById("native-mac-hud");
+  if (hud) hud.classList.remove("peeking");
 
-function createPortalCanvas(category = "chrome", selectedIdx = 0) {
-  if (!portalCanvas) {
-    portalCanvas = document.createElement("canvas");
-    portalCanvas.width = 600;
-    portalCanvas.height = 520;
-    portalCtx = portalCanvas.getContext("2d");
-  }
-  const ctx = portalCtx;
-  ctx.clearRect(0, 0, 600, 520);
-
-  // 1. Outer Frosted Glass Bezel (High-contrast deep obsidian)
-  ctx.save();
-  ctx.fillStyle = "#12141A";
-  ctx.beginPath();
-  ctx.roundRect(10, 10, 580, 500, 36);
-  ctx.fill();
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.24)";
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  ctx.restore();
-
-  // 2. Inner Royal Slate Card
-  const cardX = 26;
-  const cardY = 26;
-  const cardW = 548;
-  const cardH = 468;
-  const cardR = 24;
-
-  const catData = CATEGORY_DATA[category] || CATEGORY_DATA.chrome;
-
-  ctx.save();
-  ctx.fillStyle = "#162032";
-  ctx.beginPath();
-  ctx.roundRect(cardX, cardY, cardW, cardH, cardR);
-  ctx.fill();
-  ctx.strokeStyle = catData.color || "#38BDF8";
-  ctx.lineWidth = 3;
-  ctx.stroke();
-  ctx.restore();
-
-  // 3. Header & Icon
-  if (category === "chrome") {
-    drawSquircleBadge(ctx, 248, 48, 104, "🌐", "#FFFFFF");
-
-    ctx.save();
-    ctx.fillStyle = "#FFFFFF";
-    ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("Google Chrome", 300, 184);
-    ctx.restore();
-
-    // Horizontal Profile Avatars Row
-    const activeProfile = PROFILES[selectedIdx] || PROFILES[0];
-    const avatarSpacing = 98;
-    const totalW = (PROFILES.length - 1) * avatarSpacing;
-    const startX = 300 - totalW / 2;
-    const avatarY = 256;
-    const avatarRadius = 28;
-
-    PROFILES.forEach((p, idx) => {
-      const cx = startX + idx * avatarSpacing;
-      const isSelected = idx === selectedIdx;
-
-      if (isSelected) {
-        ctx.save();
-        ctx.strokeStyle = "#38BDF8";
-        ctx.lineWidth = 4.5;
-        ctx.shadowColor = "#38BDF8";
-        ctx.shadowBlur = 20;
-        ctx.beginPath();
-        ctx.arc(cx, avatarY, avatarRadius + 10, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      ctx.save();
-      ctx.fillStyle = p.color || "#0284C7";
-      ctx.beginPath();
-      ctx.arc(cx, avatarY, avatarRadius, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = "#FFFFFF";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      ctx.fillStyle = "#FFFFFF";
-      ctx.font = "bold 22px -apple-system, sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(p.initial || p.name[0], cx, avatarY + 1);
-      ctx.restore();
-
-      ctx.save();
-      ctx.fillStyle = isSelected ? "#FFFFFF" : "rgba(255, 255, 255, 0.65)";
-      ctx.font = isSelected ? "bold 15px -apple-system, sans-serif" : "13px -apple-system, sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText(p.name, cx, avatarY + 50);
-      ctx.restore();
-    });
-
-    // Active Profile Pill Footnote
-    ctx.save();
-    ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.roundRect(cardX + 24, 356, cardW - 48, 86, 16);
-    ctx.fill();
-    ctx.stroke();
-
-    if (selectedIdx === 3) {
-      // Profile 4: The Spotlight Paradox Callout!
-      ctx.fillStyle = "#38BDF8";
-      ctx.font = "bold 15px -apple-system, monospace";
-      ctx.textAlign = "center";
-      ctx.fillText(`⚡ Profile 4: ${activeProfile.name} • 0ms Instant Warp`, 300, 382);
-
-      ctx.fillStyle = "#F87171";
-      ctx.font = "bold 13px -apple-system, sans-serif";
-      ctx.fillText(`🚫 Spotlight can't reach profiles (~5.4s manual mouse hunt)`, 300, 406);
-
-      ctx.fillStyle = "#94A3B8";
-      ctx.font = "12px -apple-system, sans-serif";
-      ctx.fillText(`Xomsky Caps + 4 teleports here in 1 frame (540x faster)`, 300, 426);
-    } else {
-      ctx.fillStyle = "#7DD3FC";
-      ctx.font = "bold 16px -apple-system, monospace";
-      ctx.textAlign = "center";
-      ctx.fillText(`⚡ Teleport to ${activeProfile.space} • ${activeProfile.name} (Caps + ${selectedIdx + 1})`, 300, 388);
-
-      ctx.fillStyle = "rgba(255, 255, 255, 0.90)";
-      ctx.font = "14px -apple-system, sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText(activeProfile.tabs, 300, 418);
+  hudPeekTimer = setTimeout(() => {
+    if (hud && !hud.classList.contains("minimized")) {
+      hud.classList.add("peeking");
     }
-    ctx.restore();
-
-  } else if (category === "terminal") {
-    drawSquircleBadge(ctx, 248, 48, 104, "💻", "#0F172A");
-
-    ctx.save();
-    ctx.fillStyle = "#FFFFFF";
-    ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("Terminal (iTerm2)", 300, 184);
-    ctx.restore();
-
-    // Terminal Shell Screen Box
-    ctx.save();
-    ctx.fillStyle = "#090D16";
-    ctx.strokeStyle = "rgba(16, 185, 129, 0.4)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.roundRect(cardX + 24, 214, cardW - 48, 226, 16);
-    ctx.fill();
-    ctx.stroke();
-
-    // Traffic light dots
-    ctx.fillStyle = "#EF4444"; ctx.beginPath(); ctx.arc(cardX + 44, 234, 6, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = "#F59E0B"; ctx.beginPath(); ctx.arc(cardX + 62, 234, 6, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = "#10B981"; ctx.beginPath(); ctx.arc(cardX + 80, 234, 6, 0, Math.PI*2); ctx.fill();
-
-    ctx.fillStyle = "#64748B";
-    ctx.font = "11px -apple-system, monospace";
-    ctx.fillText("zsh — 80x24 — sub-16ms switch", cardX + 104, 238);
-
-    // Terminal text lines
-    ctx.font = "13px ui-monospace, monospace";
-    const lines = [
-      { text: "$ swift test", color: "#E2E8F0" },
-      { text: "✔ Test suite 'ChromeQuickAccessTests' passed (0.042s)", color: "#34D399" },
-      { text: "🧠 Mnemonic: Think \"Terminal\" ➔ Press T (Caps + T)", color: "#FCD34D" },
-      { text: "igorekishev@MacBook git:(main) ▋", color: "#38BDF8" }
-    ];
-
-    lines.forEach((l, i) => {
-      ctx.fillStyle = l.color;
-      ctx.fillText(l.text, cardX + 44, 276 + i * 32);
-    });
-    ctx.restore();
-
-  } else if (category === "ide") {
-    drawSquircleBadge(ctx, 248, 48, 104, "🛠️", "#1E1B4B");
-
-    ctx.save();
-    ctx.fillStyle = "#FFFFFF";
-    ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("Antigravity IDE", 300, 184);
-    ctx.restore();
-
-    // Code Editor Box
-    ctx.save();
-    ctx.fillStyle = "#0B0F19";
-    ctx.strokeStyle = "rgba(99, 102, 241, 0.4)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.roundRect(cardX + 24, 214, cardW - 48, 226, 16);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.fillStyle = "#818CF8";
-    ctx.font = "12px ui-monospace, monospace";
-    ctx.fillText("AppGroupEngine.swift — Swift 6 Native", cardX + 44, 238);
-
-    const codeLines = [
-      { num: "42", code: "public static let ide = AppGroupEngine(", color: "#F472B6" },
-      { num: "43", code: "    category: \"IDE\", candidates: [\"IntelliJ IDEA\"]", color: "#E2E8F0" },
-      { num: "44", code: "    // 🧠 Mnemonic: Think \"IDEA\" ➔ Press I", color: "#FCD34D" },
-      { num: "45", code: ") // ⚡ Sub-16ms CGEventTap window focus", color: "#34D399" }
-    ];
-
-    codeLines.forEach((l, i) => {
-      ctx.fillStyle = "#475569";
-      ctx.font = "12px ui-monospace, monospace";
-      ctx.fillText(l.num, cardX + 44, 276 + i * 32);
-
-      ctx.fillStyle = l.color;
-      ctx.fillText(l.code, cardX + 74, 276 + i * 32);
-    });
-    ctx.restore();
-
-  } else if (category === "ai") {
-    drawSquircleBadge(ctx, 248, 48, 104, "🤖", "#083344");
-
-    ctx.save();
-    ctx.fillStyle = "#FFFFFF";
-    ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("Antigravity AI Agent", 300, 184);
-    ctx.restore();
-
-    // AI Chat Card
-    ctx.save();
-    ctx.fillStyle = "#081B2B";
-    ctx.strokeStyle = "rgba(6, 182, 212, 0.45)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.roundRect(cardX + 24, 214, cardW - 48, 226, 16);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.fillStyle = "#22D3EE";
-    ctx.font = "bold 13px -apple-system, sans-serif";
-    ctx.fillText("● AI Agent Stream • Latency: 0ms", cardX + 44, 244);
-
-    ctx.fillStyle = "#E2E8F0";
-    ctx.font = "14px -apple-system, sans-serif";
-    ctx.fillText("“Zero third-party drivers or background daemons.", cardX + 44, 280);
-    ctx.fillText("Your brain thinks 'Agent' ➔ fingers press 'A'.”", cardX + 44, 308);
-
-    ctx.fillStyle = "#FCD34D";
-    ctx.font = "bold 13px ui-monospace, monospace";
-    ctx.fillText("🧠 Mnemonic: Think \"Agent\" ➔ Press A (Caps + A)", cardX + 44, 350);
-
-    ctx.fillStyle = "#38BDF8";
-    ctx.font = "bold 13px ui-monospace, monospace";
-    ctx.fillText("Caps-Lock + A ➔ Instant Summon", cardX + 44, 394);
-    ctx.restore();
-
-  } else if (category === "notes" || category === "caps") {
-    drawSquircleBadge(ctx, 248, 48, 104, "📝", "#451A03");
-
-    ctx.save();
-    ctx.fillStyle = "#FFFFFF";
-    ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("Quick Notes & Scratchpad", 300, 184);
-    ctx.restore();
-
-    // Notes Scratchpad Card
-    ctx.save();
-    ctx.fillStyle = "#1C1917";
-    ctx.strokeStyle = "rgba(245, 158, 11, 0.4)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.roundRect(cardX + 24, 214, cardW - 48, 226, 16);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.fillStyle = "#FCD34D";
-    ctx.font = "bold 13px -apple-system, sans-serif";
-    ctx.fillText("📌 Today's Engineering Log", cardX + 44, 244);
-
-    const tasks = [
-      { check: "☑", text: "Zero-latency Caps-Lock Hyper Key (0x35)", color: "#34D399" },
-      { check: "☑", text: "5-App Toolkit Switcher (C, T, I, A, N)", color: "#34D399" },
-      { check: "🧠", text: "Mnemonic: Think \"Notes\" ➔ Press N", color: "#FCD34D" },
-      { check: "☐", text: "Ship Xomsky v1.0.0 Universal DMG", color: "#38BDF8" }
-    ];
-
-    tasks.forEach((t, i) => {
-      ctx.fillStyle = t.color;
-      ctx.font = "14px ui-monospace, monospace";
-      ctx.fillText(`${t.check}  ${t.text}`, cardX + 44, 282 + i * 32);
-    });
-    ctx.restore();
-  }
-
-  return portalCanvas;
+  }, 150); // Fast appearance
 }
 
-function buildFlankingChromeWindows() {
-  createPortalCanvas("chrome", 0);
-  portalTexture = new THREE.CanvasTexture(portalCanvas);
-  portalTexture.minFilter = THREE.LinearFilter;
+const ANTIGRAVITY_APPS = [
+  { name: "Antigravity", icon: "assets/images/icon_antigravity.png", sub: "Agent Studio" },
+  { name: "Antigravity IDE", icon: "assets/images/icon_antigravity_ide.png", sub: "Workspace IDE" }
+];
 
-  const portalGeo = new THREE.PlaneGeometry(1.42, 1.24);
-  const portalMat = new THREE.MeshBasicMaterial({
-    map: portalTexture,
-    side: THREE.DoubleSide,
-    transparent: true,
-    fog: false,
-    opacity: 1.0
+function updateSimulatedHUD(category = "chrome", profileIdx = 0) {
+  const appIcon = document.getElementById("hud-app-icon");
+  const appTitle = document.getElementById("hud-app-title");
+  const appSub = document.getElementById("hud-app-subtitle");
+  const carousel = document.getElementById("hud-carousel");
+  const previewTitle = document.getElementById("window-preview-title");
+  const previewBody = document.getElementById("window-preview-body");
+
+  if (!appIcon || !appTitle || !appSub || !carousel) return;
+
+  // Reset peek easter egg on any state update
+  scheduleHUDPeek();
+
+  if (category === "chrome") {
+    const profile = PROFILES[profileIdx] || PROFILES[0];
+    appIcon.src = "assets/images/icon_chrome.png";
+    appTitle.textContent = "Google Chrome";
+    appSub.textContent = profile.name;
+    appSub.style.display = "inline-block";
+    carousel.style.display = "flex";
+
+    // Build the 4 profile avatar items
+    carousel.innerHTML = PROFILES.map((p, idx) => `
+      <div class="hud-slot-item ${idx === profileIdx ? 'active' : ''}" data-index="${idx}" title="Profile ${idx + 1}: ${p.name}">
+        <div class="hud-avatar-circle ${p.className}"><span>${p.initial}</span></div>
+        <span class="hud-slot-num">${idx + 1}</span>
+      </div>
+    `).join("");
+
+    carousel.querySelectorAll(".hud-slot-item").forEach((slot) => {
+      slot.addEventListener("click", () => {
+        const idx = parseInt(slot.getAttribute("data-index"), 10);
+        activateCategory("chrome", idx, String(idx + 1), true);
+      });
+    });
+
+    if (previewTitle) previewTitle.textContent = `Google Chrome — ${profile.name} Profile`;
+    if (previewBody) {
+      const tabsHtml = profile.tabs.map((tab, i) => `<span class="${i === 0 ? 'active-tab' : ''}">${tab}</span>`).join("");
+      previewBody.innerHTML = `
+        <div class="browser-omnibar">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span class="omnibar-url">${profile.url}</span>
+        </div>
+        <div class="window-preview-tags">
+          ${tabsHtml}
+        </div>
+      `;
+    }
+  } else if (category === "terminal") {
+    appIcon.src = "assets/images/icon_iterm.png";
+    appTitle.textContent = "iTerm";
+    appSub.textContent = "Quick Slot [T]";
+    appSub.style.display = "inline-block";
+    carousel.style.display = "none";
+
+    if (previewTitle) previewTitle.textContent = "iTerm — zsh (80x24)";
+    if (previewBody) {
+      previewBody.innerHTML = `
+        <div class="terminal-preview-screen">
+          <span class="term-prompt">➜ ~/mac-productivity-suite</span> <span class="term-cmd">swift test</span><br>
+          <span style="color: #34D399;">✔ 70/70 tests passed (0.042s)</span><br>
+          <span class="term-prompt">➜ ~/mac-productivity-suite</span> <span class="term-cursor"></span>
+        </div>
+      `;
+    }
+  } else if (category === "ide") {
+    appIcon.src = "assets/images/icon_antigravity_ide.png";
+    appTitle.textContent = "Antigravity IDE";
+    appSub.textContent = "Quick Slot [I]";
+    appSub.style.display = "inline-block";
+    carousel.style.display = "none";
+
+    if (previewTitle) previewTitle.textContent = "Antigravity IDE — AppDelegate.swift";
+    if (previewBody) {
+      previewBody.innerHTML = `
+        <div class="terminal-preview-screen" style="color: #93C5FD; font-size: 9px; line-height: 1.5;">
+          <span style="color: #F472B6;">import</span> SwiftUI<br>
+          <span style="color: #F472B6;">import</span> AppKit<br>
+          <span style="color: #60A5FA;">MinimalHUDWindow</span>.shared.<span style="color: #34D399;">showImmediate</span>()<br>
+          <span style="color: #64748B;">// Raised window in 0ms with zero latency</span>
+        </div>
+      `;
+    }
+  } else if (category === "ai") {
+    const itemIdx = (profileIdx >= 0 && profileIdx < ANTIGRAVITY_APPS.length) ? profileIdx : 0;
+    const currentApp = ANTIGRAVITY_APPS[itemIdx];
+    appIcon.src = currentApp.icon;
+    appTitle.textContent = currentApp.name;
+    appSub.textContent = currentApp.sub;
+    appSub.style.display = "inline-block";
+    carousel.style.display = "flex";
+
+    carousel.innerHTML = ANTIGRAVITY_APPS.map((item, idx) => `
+      <div class="hud-slot-item ${idx === itemIdx ? 'active' : ''}" data-index="${idx}" title="${item.name}">
+        <div class="hud-avatar-circle" style="background: rgba(255,255,255,0.06); border: 0.75px solid rgba(255,255,255,0.18); overflow: hidden; padding: 3px;">
+          <img src="${item.icon}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 4px;">
+        </div>
+        <span class="hud-slot-num">${idx + 1}</span>
+      </div>
+    `).join("");
+
+    carousel.querySelectorAll(".hud-slot-item").forEach((slot) => {
+      slot.addEventListener("click", () => {
+        const idx = parseInt(slot.getAttribute("data-index"), 10);
+        activateCategory("ai", idx, "a", true);
+      });
+    });
+
+    if (previewTitle) previewTitle.textContent = `${currentApp.name} — ${currentApp.sub}`;
+    if (previewBody) {
+      previewBody.innerHTML = `
+        <div class="terminal-preview-screen" style="color: #C084FC; font-size: 9px; line-height: 1.5;">
+          <span style="color: #38BDF8;">● Antigravity 2.0:</span> Pair programming active<br>
+          <span style="color: #34D399;">✔ Hotkeys:</span> Caps+A (Agent) • Caps+1..4 (Profiles)<br>
+          <span style="color: #94A3B8;">Tracing telemetry: 100% Langfuse instrumented</span>
+        </div>
+      `;
+    }
+  } else if (category === "notes") {
+    appIcon.src = "assets/images/icon_notes.png";
+    appTitle.textContent = "Apple Notes";
+    appSub.textContent = "Quick Slot [N]";
+    appSub.style.display = "inline-block";
+    carousel.style.display = "none";
+
+    if (previewTitle) previewTitle.textContent = "Apple Notes — Quick Scratchpad";
+    if (previewBody) {
+      previewBody.innerHTML = `
+        <div class="terminal-preview-screen" style="color: #FCD34D; font-size: 9px; line-height: 1.5;">
+          • 0ms Caps-Lock Hyper-Key context switching<br>
+          • Native Swift 6 standalone binary (2.1 MB)<br>
+          • Zero background daemons, 0% CPU
+        </div>
+      `;
+    }
+  } else if (category === "caps") {
+    appIcon.src = "assets/images/AppIcon.png";
+    appTitle.textContent = "Xomsky";
+    appSub.textContent = "⇪ Hyper Modifier";
+    appSub.style.display = "inline-block";
+    carousel.style.display = "none";
+
+    if (previewTitle) previewTitle.textContent = "Xomsky — Hyper-Key Status";
+    if (previewBody) {
+      previewBody.innerHTML = `
+        <div class="terminal-preview-screen" style="color: #38BDF8; font-size: 9px; line-height: 1.5;">
+          <span style="color: #34D399;">⚡ Caps-Lock Remapped:</span> Driverless F18 Hyper-Key<br>
+          <span style="color: #E2E8F0;">Shortcuts:</span> C (Chrome) • T (Terminal) • I (IDE) • A (AI) • N (Notes)
+        </div>
+      `;
+    }
+  }
+}
+
+// --------------------------------------------------------------------------
+// --------------------------------------------------------------------------
+// Concept 1: 5-Key Cockpit Switchboard Widget Logic
+// --------------------------------------------------------------------------
+let activeCockpitSlot = "c";
+
+const COCKPIT_SLOT_MAP = {
+  c: "chrome",
+  t: "terminal",
+  i: "ide",
+  a: "ai",
+  n: "notes"
+};
+
+function selectCockpitSlot(slotKey = "c", triggerActivation = true) {
+  activeCockpitSlot = slotKey;
+  const category = COCKPIT_SLOT_MAP[slotKey] || "chrome";
+
+  // Update button active styles
+  document.querySelectorAll(".cockpit-key-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.getAttribute("data-slot") === slotKey);
   });
 
-  portalWindowMesh = new THREE.Mesh(portalGeo, portalMat);
-  portalWindowMesh.position.set(-2.05, 0.85, 1.6);
-  portalWindowMesh.rotation.y = 0.32;
-  scene.add(portalWindowMesh);
+  // Switch visible slot panel
+  document.querySelectorAll(".slot-panel").forEach(panel => {
+    panel.classList.toggle("active", panel.id === `slot-panel-${slotKey}`);
+  });
+
+  // Update latency tag with realistic instant 0.01ms jitter
+  const latencyTag = document.getElementById("cockpit-latency-tag");
+  if (latencyTag) {
+    const lat = (Math.random() * 0.02 + 0.01).toFixed(2);
+    latencyTag.textContent = `${lat}ms · Swift 6`;
+  }
+
+  if (triggerActivation) {
+    activateCategory(category, category === "chrome" ? activeIndex : 0, slotKey, true);
+  }
+}
+
+function updateCockpitWidget(category, keyId) {
+  let targetSlot = "c";
+  for (const [k, cat] of Object.entries(COCKPIT_SLOT_MAP)) {
+    if (cat === category || k === keyId) {
+      targetSlot = k;
+      break;
+    }
+  }
+
+  activeCockpitSlot = targetSlot;
+
+  document.querySelectorAll(".cockpit-key-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.getAttribute("data-slot") === targetSlot);
+  });
+
+  document.querySelectorAll(".slot-panel").forEach(panel => {
+    panel.classList.toggle("active", panel.id === `slot-panel-${targetSlot}`);
+  });
+}
+
+function initCockpitWidget() {
+  // Wire 5-key cockpit selector buttons
+  document.querySelectorAll(".cockpit-key-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const slot = btn.getAttribute("data-slot");
+      selectCockpitSlot(slot, true);
+    });
+  });
+
+  // Wire quick profile switcher pills inside slot C
+  document.querySelectorAll(".profile-pill").forEach(pill => {
+    pill.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const idx = parseInt(pill.getAttribute("data-index"), 10);
+      selectCockpitSlot("c", false);
+      activateCategory("chrome", idx, String(idx + 1), true);
+    });
+  });
+
+  const popupCard = document.getElementById("chrome-popup-card");
+  if (popupCard) {
+    popupCard.addEventListener("click", () => {
+      selectCockpitSlot("c", false);
+      const nextIdx = (activeIndex + 1) % PROFILES.length;
+      activateCategory("chrome", nextIdx, String(nextIdx + 1), true);
+    });
+  }
+
+  updateChromeProfileWidget(activeIndex);
+}
+
+function initChromeProfileWidget() {
+  initCockpitWidget();
+}
+
+function updateChromeProfileWidget(profileIdx = 0) {
+  const profile = PROFILES[profileIdx] || PROFILES[0];
+  const activeAvatar = document.getElementById("chrome-active-avatar");
+  const activeName = document.getElementById("chrome-active-name");
+  const activeEmail = document.getElementById("chrome-active-email");
+  const activeStatus = document.getElementById("chrome-active-status-text");
+  const windowCount = document.getElementById("chrome-window-count");
+
+  if (activeAvatar) {
+    if (profile.avatarImg) {
+      activeAvatar.style.background = "transparent";
+      activeAvatar.innerHTML = `<img src="${profile.avatarImg}" class="chrome-active-avatar-img" alt="${profile.name}">`;
+    } else {
+      activeAvatar.style.background = profile.avatarBg;
+      activeAvatar.innerHTML = `<span>${profile.avatarEmoji}</span>`;
+    }
+  }
+  if (activeName) activeName.textContent = profile.headerName || profile.name;
+  if (activeEmail) activeEmail.textContent = profile.email;
+  if (activeStatus) activeStatus.textContent = `Sync Is On • ⚡ 0ms Raised`;
+  if (windowCount) windowCount.textContent = `${profile.windows} ${profile.windows === 1 ? "window" : "windows"}`;
+  const tabsCount = document.getElementById("chrome-tabs-count");
+  if (tabsCount) tabsCount.textContent = `${profile.tabs.length} tabs`;
+
+  // Update active state in rows
+  const rows = document.querySelectorAll(".chrome-profile-row");
+  rows.forEach((r, idx) => {
+    r.classList.toggle("active", idx === profileIdx);
+  });
+
+  // Update active state in quick pills
+  document.querySelectorAll(".profile-pill").forEach((pill, idx) => {
+    pill.classList.toggle("active", idx === profileIdx);
+  });
 }
 
 // --------------------------------------------------------------------------
@@ -1438,6 +1473,12 @@ function activateCategory(category = "chrome", subIndex = null, keyId = null, fr
       activeIndex = parseInt(subIndex, 10);
     } else {
       activeIndex = (activeIndex + 1) % PROFILES.length;
+    }
+  } else if (category === "ai") {
+    if (subIndex !== null && subIndex !== undefined) {
+      activeIndex = parseInt(subIndex, 10);
+    } else {
+      activeIndex = (activeIndex + 1) % ANTIGRAVITY_APPS.length;
     }
   }
 
@@ -1464,19 +1505,19 @@ function activateCategory(category = "chrome", subIndex = null, keyId = null, fr
     }, 130);
   }
 
-  // Redraw 3D portal window
-  createPortalCanvas(currentCategory, activeIndex);
-  if (portalTexture) {
-    portalTexture.needsUpdate = true;
-  }
+  // Update Live Simulated Native macOS HUD
+  updateSimulatedHUD(currentCategory, activeIndex);
 
-  // Portal scale bounce
-  if (portalWindowMesh) {
-    portalWindowMesh.scale.set(1.14, 1.14, 1);
-    setTimeout(() => {
-      if (portalWindowMesh) portalWindowMesh.scale.set(1.0, 1.0, 1);
-    }, 160);
-  }
+  // Update Native Chrome Profile Popup Widget
+  updateChromeProfileWidget(activeIndex);
+
+  // Update Cockpit Widget active slot state
+  updateCockpitWidget(currentCategory, targetKeyId);
+
+  // Update bottom mnemonic bar active state
+  document.querySelectorAll(".mnemonic-pill").forEach((pill) => {
+    pill.classList.toggle("active", pill.getAttribute("data-category") === currentCategory);
+  });
 }
 
 // --------------------------------------------------------------------------
@@ -1495,30 +1536,7 @@ function onMouseMove(e) {
 
   mouseVec.x = mouseX;
   mouseVec.y = mouseY;
-  raycaster.setFromCamera(mouseVec, camera);
-
-  // Check hover over interactive keys
-  const keyHits = raycaster.intersectObjects(interactiveKeyMeshes, true);
-
-  if (keyHits.length > 0) {
-    container.style.cursor = "pointer";
-    const hitKey = keyHits[0].object;
-    if (hoveredKeyMesh !== hitKey) {
-      if (hoveredKeyMesh && hoveredKeyMesh.material && hoveredKeyMesh.material[2]) {
-        hoveredKeyMesh.material[2].emissiveIntensity = 0.35;
-      }
-      hoveredKeyMesh = hitKey;
-      if (hoveredKeyMesh.material && hoveredKeyMesh.material[2]) {
-        hoveredKeyMesh.material[2].emissiveIntensity = 1.2;
-      }
-    }
-  } else {
-    container.style.cursor = "default";
-    if (hoveredKeyMesh && hoveredKeyMesh.material && hoveredKeyMesh.material[2]) {
-      hoveredKeyMesh.material[2].emissiveIntensity = 0.35;
-      hoveredKeyMesh = null;
-    }
-  }
+  mouseMoved = true;
 }
 
 function onPointerDown(e) {
@@ -1704,6 +1722,34 @@ function animate() {
 
   controls.update();
 
+  // Hover Raycasting (only when mouse has moved)
+  if (camera && mouseVec && mouseMoved) {
+    mouseMoved = false;
+    const container = document.getElementById("canvas-container");
+    raycaster.setFromCamera(mouseVec, camera);
+    const keyHits = raycaster.intersectObjects(interactiveKeyMeshes, true);
+
+    if (keyHits.length > 0) {
+      if (container && container.style.cursor !== "pointer") container.style.cursor = "pointer";
+      const hitKey = keyHits[0].object;
+      if (hoveredKeyMesh !== hitKey) {
+        if (hoveredKeyMesh && hoveredKeyMesh.material && hoveredKeyMesh.material[2]) {
+          hoveredKeyMesh.material[2].emissiveIntensity = 0.35;
+        }
+        hoveredKeyMesh = hitKey;
+        if (hoveredKeyMesh.material && hoveredKeyMesh.material[2]) {
+          hoveredKeyMesh.material[2].emissiveIntensity = 1.2;
+        }
+      }
+    } else {
+      if (container && container.style.cursor !== "grab") container.style.cursor = "grab";
+      if (hoveredKeyMesh && hoveredKeyMesh.material && hoveredKeyMesh.material[2]) {
+        hoveredKeyMesh.material[2].emissiveIntensity = 0.35;
+        hoveredKeyMesh = null;
+      }
+    }
+  }
+
   // Dynamic Theme Transition Interpolation (Cubic Ease)
   if (themeTransition.active) {
     themeTransition.progress += delta / themeTransition.duration;
@@ -1767,33 +1813,60 @@ function animate() {
     }
   }
 
-  // Giant Hamster Breathing Motion
-  const breath = Math.sin(time * 2.8) * 0.02;
+  // Giant Hamster Breathing Motion (Calm, deep, smooth liminal breathing)
+  const BASE_SCALE = 0.68;
+  const BASE_Y = -0.45;
+  const breath = Math.sin(time * 1.2) * 0.005;
   if (!isSquishing && hamsterRoot) {
-    hamsterRoot.scale.set(1.4 + breath * 0.15, 1.4 - breath * 0.25, 1.4 + breath * 0.15);
+    hamsterRoot.scale.set(BASE_SCALE + breath * 0.03, BASE_SCALE - breath * 0.04, BASE_SCALE + breath * 0.03);
   }
 
-  // Giant Cheeks Squish Spring Physics
-  if (isSquishing && cheeksGroup) {
-    squishTime += delta * 14;
-    const factor = Math.sin(squishTime) * Math.exp(-squishTime * 0.45);
-    cheeksGroup.scale.set(1.0 + factor * 0.4, 1.0 - factor * 0.25, 1.0 + factor * 0.3);
-    if (squishTime > Math.PI * 2) {
-      isSquishing = false;
-      cheeksGroup.scale.set(1, 1, 1);
+  // Smooth Camera Perspective Glide (Switch between Butt View & Front View)
+  if (isCamTransitioning && camera && controls) {
+    camera.position.lerp(targetCamPos, delta * 5.5);
+    controls.target.lerp(targetCamLook, delta * 5.5);
+    controls.update();
+    if (camera.position.distanceTo(targetCamPos) < 0.04) {
+      camera.position.copy(targetCamPos);
+      controls.target.copy(targetCamLook);
+      controls.update();
+      isCamTransitioning = false;
     }
   }
 
-  // Nose micro-twitch
-  if (snoutGroup) {
-    const twitch = Math.sin(time * 22.0) * 0.012 * (Math.sin(time * 0.8) > 0.6 ? 1 : 0);
-    snoutGroup.position.y = 0.96 + twitch;
-    if (whiskersGroup) whiskersGroup.rotation.z = twitch * 1.5;
+  // Soft & Gentle Tactile Squish / Micro-Hop on Keypress
+  if (isSquishing && cheeksGroup) {
+    squishTime += delta * 8.0;
+    const factor = Math.sin(squishTime) * Math.exp(-squishTime * 0.50);
+    cheeksGroup.scale.set(1.0 + factor * 0.16, 1.0 - factor * 0.10, 1.0 + factor * 0.12);
+    if (tailMesh) {
+      tailMesh.rotation.z = Math.sin(squishTime * 3.0) * factor * 0.35; // cute tail wag
+    }
+    if (hamsterRoot) {
+      hamsterRoot.rotation.z = Math.sin(squishTime * 1.5) * factor * 0.035; // gentle, cute wobble
+      hamsterRoot.position.y = BASE_Y + Math.abs(Math.sin(squishTime * 1.2)) * factor * 0.05; // subtle micro-hop
+    }
+    if (squishTime > Math.PI * 2.0) {
+      isSquishing = false;
+      cheeksGroup.scale.set(1, 1, 1);
+      if (tailMesh) tailMesh.rotation.z = 0;
+      if (hamsterRoot) {
+        hamsterRoot.rotation.z = 0;
+        hamsterRoot.position.y = BASE_Y;
+      }
+    }
   }
 
-  // Ear twitch
+  // Rare, gentle nose micro-twitch
+  if (snoutGroup) {
+    const twitch = Math.sin(time * 6.0) * 0.003 * (Math.sin(time * 0.3) > 0.85 ? 1 : 0);
+    snoutGroup.position.y = 0.96 + twitch;
+    if (whiskersGroup) whiskersGroup.rotation.z = twitch * 0.5;
+  }
+
+  // Rare, gentle ear micro-twitch
   if (leftEarGroup && rightEarGroup) {
-    const earTwitch = Math.sin(time * 18.0) * 0.035 * (Math.sin(time * 0.5) > 0.8 ? 1 : 0);
+    const earTwitch = Math.sin(time * 5.0) * 0.012 * (Math.sin(time * 0.25) > 0.90 ? 1 : 0);
     leftEarGroup.rotation.z = 0.25 + earTwitch;
     rightEarGroup.rotation.z = -0.25 - earTwitch;
   }
@@ -1817,8 +1890,6 @@ function animate() {
 // --------------------------------------------------------------------------
 document.addEventListener("DOMContentLoaded", () => {
   initThreeJS();
-
-  // Apply Initial Theme (defaults to user's system theme without saving override)
   applyTheme(currentTheme, false, false);
 
   // Auto-adapt to OS system theme changes if user hasn't set an explicit manual override
@@ -1896,56 +1967,91 @@ document.addEventListener("DOMContentLoaded", () => {
     installCmd.addEventListener("click", copyAction);
   }
 
-  // Pricing & Tiers Card Toggle & Close (Mutually exclusive with Paradox card)
+  // Card Elements & Segmented Toggles (Live HUD, Pricing, Paradox)
+  const hudCard = document.getElementById("native-mac-hud");
+  const hudToggle = document.getElementById("hud-toggle");
+
   const pricingCard = document.getElementById("pricing-card");
   const pricingToggle = document.getElementById("pricing-toggle");
   const pricingClose = document.getElementById("pricing-close");
+  const heroPricingTrigger = document.getElementById("hero-pricing-trigger");
+
   const paradoxCard = document.getElementById("paradox-card");
   const paradoxToggle = document.getElementById("paradox-toggle");
   const paradoxClose = document.getElementById("paradox-close");
 
-  if (pricingToggle && pricingCard) {
+  function showCard(target) {
+    // target can be 'hud', 'pricing', 'paradox', or 'none'
+    if (hudCard) {
+      hudCard.classList.toggle("minimized", target !== "hud");
+      if (hudToggle) hudToggle.classList.toggle("active", target === "hud");
+    }
+    if (pricingCard) {
+      pricingCard.classList.toggle("minimized", target !== "pricing");
+      if (pricingToggle) pricingToggle.classList.toggle("active", target === "pricing");
+    }
+    if (paradoxCard) {
+      paradoxCard.classList.toggle("minimized", target !== "paradox");
+      if (paradoxToggle) paradoxToggle.classList.toggle("active", target === "paradox");
+    }
+    sound.playClick();
+  }
+
+  if (hudToggle) {
+    hudToggle.addEventListener("click", () => {
+      const isCurrentlyOpen = hudCard && !hudCard.classList.contains("minimized");
+      showCard(isCurrentlyOpen ? "none" : "hud");
+    });
+  }
+
+  if (pricingToggle) {
     pricingToggle.addEventListener("click", () => {
-      const willOpen = pricingCard.classList.contains("minimized");
-      pricingCard.classList.toggle("minimized");
-      pricingToggle.classList.toggle("active", willOpen);
-      if (willOpen && paradoxCard) {
-        paradoxCard.classList.add("minimized");
-        if (paradoxToggle) paradoxToggle.classList.remove("active");
-      }
-      sound.playClick();
+      const isCurrentlyOpen = pricingCard && !pricingCard.classList.contains("minimized");
+      showCard(isCurrentlyOpen ? "hud" : "pricing");
     });
   }
-
-  if (pricingClose && pricingCard) {
-    pricingClose.addEventListener("click", () => {
-      pricingCard.classList.add("minimized");
-      if (pricingToggle) pricingToggle.classList.remove("active");
-      sound.playClick();
+  if (heroPricingTrigger) {
+    heroPricingTrigger.addEventListener("click", () => {
+      showCard("pricing");
     });
   }
+  if (pricingClose) {
+    pricingClose.addEventListener("click", () => showCard("hud"));
+  }
 
-  // Spotlight Paradox Card Toggle & Close (Mutually exclusive with Pricing card)
-  if (paradoxToggle && paradoxCard) {
+  if (paradoxToggle) {
     paradoxToggle.addEventListener("click", () => {
-      const willOpen = paradoxCard.classList.contains("minimized");
-      paradoxCard.classList.toggle("minimized");
-      paradoxToggle.classList.toggle("active", willOpen);
-      if (willOpen && pricingCard) {
-        pricingCard.classList.add("minimized");
-        if (pricingToggle) pricingToggle.classList.remove("active");
-      }
-      sound.playClick();
+      const isCurrentlyOpen = paradoxCard && !paradoxCard.classList.contains("minimized");
+      showCard(isCurrentlyOpen ? "hud" : "paradox");
     });
   }
-  
-  if (paradoxClose && paradoxCard) {
-    paradoxClose.addEventListener("click", () => {
-      paradoxCard.classList.add("minimized");
-      if (paradoxToggle) paradoxToggle.classList.remove("active");
-      sound.playClick();
-    });
+  if (paradoxClose) {
+    paradoxClose.addEventListener("click", () => showCard("hud"));
   }
+
+  // Initialize Simulated Native macOS HUD
+  const params = new URLSearchParams(window.location.search);
+  const initialCategory = params.get("category") || "chrome";
+  const initialIndex = parseInt(params.get("index") || "0", 10);
+  updateSimulatedHUD(initialCategory, initialIndex);
+
+  // Live Native HUD: Profile Slot Clicks (Matching MinimalHUDWindow.swift)
+  document.querySelectorAll(".hud-slot-item").forEach((pill) => {
+    pill.addEventListener("click", () => {
+      const idx = parseInt(pill.getAttribute("data-index"), 10);
+      activateCategory("chrome", idx, String(idx + 1), true);
+    });
+  });
+
+  // Initialize Native Google Chrome Profile Popup Widget
+  initChromeProfileWidget();
+
+  // Camera Perspective Toggle (🍑 Butt View vs 🐹 Face View)
+  const camBtn = document.getElementById("cam-view-btn");
+  if (camBtn) {
+    camBtn.addEventListener("click", toggleCameraView);
+  }
+  updateCamBtnLabel();
 
   // Spotlight Paradox: Simulate Profile 4 Jump Button
   const simProfile4Btn = document.getElementById("simulate-profile4-btn");
@@ -1964,26 +2070,30 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Keyboard Navigation: [C], [1..4], [T], [I], [A], [N], [Space], [M]
+  // Keyboard Navigation: [V], [C], [1..4], [T], [I], [A], [N], [Space], [M]
   window.addEventListener("keydown", (e) => {
     if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
 
     const key = e.key.toLowerCase();
     if (key === "m") {
       switchTheme();
+    } else if (key === "v") {
+      toggleCameraView();
     } else if (key === "c" || key === " ") {
       e.preventDefault();
+      selectCockpitSlot("c", false);
       activateCategory("chrome", (activeIndex + 1) % PROFILES.length, "c", true);
     } else if (["1", "2", "3", "4"].includes(key)) {
+      selectCockpitSlot("c", false);
       activateCategory("chrome", parseInt(key, 10) - 1, key, true);
     } else if (key === "t") {
-      activateCategory("terminal", 0, "t", true);
+      selectCockpitSlot("t", true);
     } else if (key === "i") {
-      activateCategory("ide", 0, "i", true);
+      selectCockpitSlot("i", true);
     } else if (key === "a") {
-      activateCategory("ai", 0, "a", true);
+      selectCockpitSlot("a", true);
     } else if (key === "n") {
-      activateCategory("notes", 0, "n", true);
+      selectCockpitSlot("n", true);
     } else if (key === "capslock") {
       activateCategory("caps", 0, "caps", true);
     }

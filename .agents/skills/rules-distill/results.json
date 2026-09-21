@@ -1,0 +1,242 @@
+{
+  "distilled_at": "2026-09-21T09:44:41Z",
+  "focus": "Khomyak / Xomsky macOS Product, Native Engine, Polar Monetization & Web (Generic GenAI strictly excluded)",
+  "conversations_scanned": 20,
+  "rules_scanned": 1,
+  "sources": [
+    {
+      "id": "c09d8dc7-8e46-499a-b83d-3dd6611cbc18",
+      "title": "Дистилляция Навыков Из Сессий"
+    },
+    {
+      "id": "9ceece7f-78bd-4226-8b52-5edb25b8d3c6",
+      "title": "Updating Landing Page Code & Media Assets"
+    },
+    {
+      "id": "84472b70-786e-41bf-8939-9a2fff1f8163",
+      "title": "Главный дизайнер сайта / The Chomsky Metaphor Gap"
+    },
+    {
+      "id": "60a75ada-f0f9-4078-bebe-68990bcd3454",
+      "title": "Theme detection & Hero clutter / Не закрывать хомяка / Pricing minimized"
+    },
+    {
+      "id": "f4437bba-c05f-4d0c-b967-be7351958767",
+      "title": "Рекламная стратегия / Xomsky брендинг / Homebrew Cask / Polar"
+    },
+    {
+      "id": "f09de01a-8e78-4947-99f1-b9296ee7d120",
+      "title": "Релиз Xomsky App / GitHub Actions Cloud Gateways"
+    },
+    {
+      "id": "65e4095d-dae8-4150-a344-18ca6d0698fb",
+      "title": "Xomsky App Health, Polar LicenseEngine & Swift Tests (70/70)"
+    },
+    {
+      "id": "a4610d44-b450-4d39-bfdf-3f13accea960",
+      "title": "Оптимизация производительности / HUD Event Tap"
+    },
+    {
+      "id": "0ce55019-9dc4-4557-ba52-fb3f00546103",
+      "title": "UI/UX анимации в HUD / Баг залипания окна / XomskyMotion / CopyToast"
+    },
+    {
+      "id": "f90aedc6-3218-4c2b-bc98-601d2f73ddc6",
+      "title": "Implementing UI/UX Design Changes / Toolset vs Quick Apps"
+    },
+    {
+      "id": "399a5a9b-b84f-4e72-bcfa-ce1d689a5ed4",
+      "title": "UI/UX профессор ACME CHI / Устранение перегрузки HUD"
+    },
+    {
+      "id": "85124d2d-f907-4d10-a2b7-fffe73fb4d14",
+      "title": "Разделение Quick-Apps: Toolset Shortcuts & Quick Shortcuts"
+    },
+    {
+      "id": "e5f6b549-164f-45a0-bdd2-3fb252f9f48e",
+      "title": "Баг добавления Finder и System Settings в Quick-Apps"
+    },
+    {
+      "id": "b203cdad-b784-42aa-bc9e-ab7fb721df44",
+      "title": "Устранение скрытия шорткатов на одну букву в HUD"
+    },
+    {
+      "id": "d4e6d0dc-1943-419a-bc69-ed8d97607955",
+      "title": "Редизайн промо-изображений для GitHub и баннеров / Геометрия клавиатуры Apple"
+    }
+  ],
+  "candidates": {
+    "driverless-hardware-remapping-no-led": {
+      "principle": "Remap Caps Lock to dedicated modifier (F18) using driverless hardware remapping via `/usr/bin/hidutil` property matching (`UserKeyMapping`), paired with a head-insert `CGEventTap` to intercept physical keydowns without triggering the macOS Caps Lock green LED or toggling capital letters.",
+      "evidence": [
+        "CapsLockEngine.swift §1",
+        "tests/ChromeQuickAccessTests/ChromeQuickAccessTests.swift: testCapsLockEngineHidutilMapping"
+      ],
+      "violation_risk": "Caps Lock modifier usage desynchronizes case state, triggers annoying green LED blinks, and causes driver instability across macOS versions.",
+      "verdict": "Append",
+      "target": "GEMINI.md §Primary Engine (Swift 6+)",
+      "confidence": "high",
+      "status": "applied"
+    },
+    "system-app-bundle-resolution": {
+      "principle": "Never assume macOS system applications exist in `/Applications`; resolve apps dynamically via `NSWorkspace.shared.urlForApplication(withBundleIdentifier:)` and search `/System/Applications` and `/System/Library/CoreServices` for core apps like Finder and System Settings.",
+      "evidence": [
+        "e5f6b549 §1: некоторые приложения не добавляются, я заметил Finder и System Settings",
+        "85124d2d §1: Toolset Shortcuts & Quick Shortcuts separation"
+      ],
+      "violation_risk": "Core macOS system utilities fail to launch or pin to quick slots, breaking user workflows.",
+      "verdict": "Append",
+      "target": "GEMINI.md §Pinned Apps & Universal Catalog Conventions",
+      "confidence": "high",
+      "status": "applied"
+    },
+    "hud-overlay-dismissal-precedence": {
+      "principle": "Always hide the HUD overlay window (`MinimalHUDWindow.shared.hideImmediate()`) BEFORE triggering application activation (`NSWorkspace.openApplication`) or window focus transitions.",
+      "evidence": [
+        "0ce55019 §4: oops. what a bug: HUD window remains stuck on screen",
+        "a4610d44 §1: Performance optimization & Event Tap race condition fix"
+      ],
+      "violation_risk": "Window server focus races swallow keyboard events, lock the run loop, and leave the HUD permanently stuck on screen.",
+      "verdict": "Append",
+      "target": "GEMINI.md §HUD Overlay Lifecycle & Dismissal Order",
+      "confidence": "high",
+      "status": "applied"
+    },
+    "hud-shortcut-transparency-and-split-sections": {
+      "principle": "Never hide conflicting same-letter application shortcuts in collapsed submenus or nested clicks; render all apps assigned to the same key transparently with distinct badges, and cleanly demarcate pinned Toolset Shortcuts from dynamic Quick Shortcuts.",
+      "evidence": [
+        "b203cdad §1: absolutely there is no need to hide the same letter shortcuts, just list them as they are",
+        "85124d2d §1: я бы разделил quick-apps на две категории, что-то типа Toolset Shortcuts, Quick Shortcuts, и хомяк между ними"
+      ],
+      "violation_risk": "Increases cognitive friction and slows muscle memory switching as users cannot visually confirm their secondary keybindings.",
+      "verdict": "Append",
+      "target": "GEMINI.md §Pinned Apps & Universal Catalog Conventions",
+      "confidence": "high",
+      "status": "applied"
+    },
+    "chromium-profile-native-accessibility-menu-automation": {
+      "principle": "Never match Chromium profile windows by window title or profile name substrings. Automate profile switching strictly via the browser native macOS Profiles menu bar item (`kAXMenuBarAttribute`, `getProfilesMenuItems`), selecting items by exact position/index and detecting active state via `AXMenuItemMarkChar == \"✓\"`.",
+      "evidence": [
+        "GEMINI.md §Chromium Profile Automation Guardrail",
+        "ChromeProfileEngine.swift"
+      ],
+      "violation_risk": "Title-based profile matching breaks whenever page tabs change titles, or in localized browser installations.",
+      "verdict": "Append",
+      "target": "GEMINI.md §Chromium Profile Automation Guardrail",
+      "confidence": "high",
+      "status": "applied"
+    },
+    "copy-on-select-distance-and-multi-click-threshold": {
+      "principle": "Automatic Linux/X11-style clipboard copying (`CopyOnSelectEngine`) must strictly require a drag distance threshold (>10pt) or explicit multi-click selection (double/triple click) before writing to `NSPasteboard.general`. Never copy on trivial mouse clicks or micro-jitters (<10pt). Pair with non-intrusive cursor-following toast (`CopyToastWindow`) with rapid auto-dismiss (<1.2s).",
+      "evidence": [
+        "CopyOnSelectEngine.swift",
+        "CopyToastWindow.swift",
+        "tests: testCopyOnSelectEngineDragThreshold"
+      ],
+      "violation_risk": "Overwrites user clipboard history on accidental mouse clicks and causes visual toast spam.",
+      "verdict": "Append",
+      "target": "GEMINI.md §Primary Engine (Swift 6+)",
+      "confidence": "high",
+      "status": "applied"
+    },
+    "polar-licensing-async-validation": {
+      "principle": "Online Polar license key validation (`LicenseEngine`) must always execute in a non-blocking asynchronous `Task` on `@MainActor` with graceful offline fallback and explicit network failure messaging. Never block the UI thread during license key verification or checkout redirection (`LicenseEngine.polarCheckoutUrl`).",
+      "evidence": [
+        "tests: testLicenseEnginePolarValidationMockAndAsync()",
+        "0ce55019 §2: Online Polar activation via async Task on MainActor",
+        "f4437bba §10: Polar.sh checkout integration ($19 Pro)"
+      ],
+      "violation_risk": "Network timeouts or server latency freeze the entire macOS application main run loop during startup or license activation.",
+      "verdict": "Append",
+      "target": "GEMINI.md §Tech Stack & Architecture",
+      "confidence": "high",
+      "status": "applied"
+    },
+    "pricing-ui-progressive-disclosure": {
+      "principle": "In landing page architecture (`docs/site`), the Pricing & Tiers card (`#pricing-card`) must remain `minimized` by default. It should open via a top navigation action (`💎 Pricing`), and never visually compete with or occlude the primary hero interactive experience or the 3D mascot.",
+      "evidence": [
+        "60a75ada §3: смотри, как то не очень что сразу дохуя всего и аж хомяка закрывает",
+        "60a75ada:293: Карточка «Pricing & Tiers» скрыта по умолчанию (minimized)"
+      ],
+      "violation_risk": "Overwhelming visual clutter and aggressive sales pressure immediately drive developers away before they interact with the product demo.",
+      "verdict": "Append",
+      "target": "GEMINI.md §Landing Page & Web Hardware Authenticity",
+      "confidence": "high",
+      "status": "applied"
+    },
+    "apple-hardware-fidelity": {
+      "principle": "In all marketing renders, 3D graphics, and interactive web demos, accurately reproduce genuine Apple hardware geometry (MacBook chiclet key profile, centered rectangular green Caps Lock LED, San Francisco typography, authentic macOS dock icons); strictly ban generic PC keyboards, off-axis keyboard orientations, and fictionalized HUD elements that do not exist in the native app.",
+      "evidence": [
+        "9ceece7f §4: кстати насчет клавиатуры и кнопки капса, вообще-то это приложение сугубок для маков",
+        "9ceece7f §10: да но все таки визуал HUD надо сделать как в реальности",
+        "d4e6d0dc §1: клавиатура опять повернута не той стороной"
+      ],
+      "violation_risk": "Severe visual uncanny valley and loss of credibility among discerning Apple power users and developers.",
+      "verdict": "New Section",
+      "target": "GEMINI.md §Landing Page & Web Hardware Authenticity",
+      "confidence": "high",
+      "status": "applied"
+    },
+    "mascot-delight-protocol-and-procedural-motion": {
+      "principle": "In power-user productivity software, treat the 3D mascot as a rare delight or easter egg (e.g., occasional peek animation on long modifier hold, interactive website footer, or docs mascot); never render persistent, distracting mascot animations on every routine hotkey stroke or HUD invocation. Implement procedural blinking and micro-glances (`XomskyMotion.swift`) rather than looping heavy canned videos.",
+      "evidence": [
+        "9ceece7f §11: да и хомяк на HUD это пасхалка а не постоянный элемент",
+        "0ce55019 §6: HUD Mascot Peek (MinimalHUDWindow.swift), XomskyMotion.swift"
+      ],
+      "violation_risk": "Tool feels like a toy rather than a professional macOS productivity engine, driving power users to uninstall.",
+      "verdict": "Append",
+      "target": "GEMINI.md §Brand Architecture & Naming Conventions",
+      "confidence": "high",
+      "status": "applied"
+    },
+    "dual-layer-brand-separation": {
+      "principle": "Strictly separate the consumer-facing product brand (`Xomsky`) from the internal codebase/mascot codename (`Khomyak` / Хомяк); use `Xomsky` across all public facing copy, Homebrew Casks (`xomsky.rb`), binary names, documentation headers, and release tags, while reserving `Khomyak` solely for internal module names and the 3D mascot character.",
+      "evidence": [
+        "f4437bba §4: только Xomsky (не khomyak) для названия приложения",
+        "f09de01a §1: Xomsky App Release Review"
+      ],
+      "violation_risk": "Inconsistent branding, confusing Homebrew installs (brew install xomsky vs khomyak), and broken CLI discoverability.",
+      "verdict": "New Section",
+      "target": "GEMINI.md §Brand Architecture & Naming Conventions",
+      "confidence": "high",
+      "status": "applied"
+    },
+    "immediate-mechanic-comprehension-over-metaphor": {
+      "principle": "On product landing pages and documentation, lead immediately with the concrete physical input mechanic within 3 seconds (Hold Caps Lock. Tap T for Terminal, I for IDE, A for Agent); never lead with abstract philosophical metaphors (e.g. Chomsky linguistics) or ambiguous marketing jargon before the physical utility is proven.",
+      "evidence": [
+        "fac49898 §2: честно говоря-так как это выгядит сейчас, супер непонятно что будет делать аппка",
+        "84472b70 §1: The Chomsky Metaphor Gap"
+      ],
+      "violation_risk": "High visitor bounce rates (>80%) because developers cannot instantly grasp what the utility physically does.",
+      "verdict": "New Section",
+      "target": "GEMINI.md §Landing Page & Web Hardware Authenticity",
+      "confidence": "high",
+      "status": "applied"
+    },
+    "native-system-theme-sync-and-unobstructed-hero": {
+      "principle": "Synchronize landing page dark/light themes instantly with the user OS preference (`prefers-color-scheme`) on initial page load with zero flash; ensure floating interactive demonstration widgets and badge clusters never visually occlude the primary brand mascot or hero value statement.",
+      "evidence": [
+        "60a75ada §2: на сайт надо чтобы по дефолту включалась тема такая же как у юзера в данный момент",
+        "60a75ada §3: смотри, как то не очень что сразу дохуя всего и аж хомяка закрывает"
+      ],
+      "violation_risk": "Visual jarring from theme flashes and cluttered viewport blocking the primary visual identity and CTA.",
+      "verdict": "New Section",
+      "target": "GEMINI.md §Landing Page & Web Hardware Authenticity",
+      "confidence": "high",
+      "status": "applied"
+    },
+    "cloud-release-sync-and-homebrew-cask-resilience": {
+      "principle": "In release pipelines, never update or publish a Homebrew Cask formula (`Casks/xomsky.rb`) until the GitHub release tag is pushed AND the GitHub Actions cloud build has successfully attached the DMG asset; deterministically verify the remote URL with `curl -sI` and compute the SHA256 checksum directly from the published binary.",
+      "evidence": [
+        "f4437bba §9: brew install --cask Error: Download failed",
+        "f09de01a §1: Xomsky App Release Review: подтверждаю",
+        "65e4095d §1: 70/70 Swift unit tests pass"
+      ],
+      "violation_risk": "Broken installation for all Homebrew users experiencing 404 Not Found or checksum mismatch errors.",
+      "verdict": "Append",
+      "target": "GEMINI.md §Release Verification & Homebrew Cask Gate",
+      "confidence": "high",
+      "status": "applied"
+    }
+  }
+}

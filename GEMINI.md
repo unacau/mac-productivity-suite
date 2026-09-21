@@ -9,7 +9,10 @@
   - `Engine/ChromeProfileEngine.swift`: Dynamic Chromium `Local State` discovery, monogram avatar rendering, native macOS Accessibility (`AXUIElement`) menu bar profile switching, and window raising.
   - `Engine/AntigravityEngine.swift`: Discovery and fast cycling for Antigravity & Antigravity IDE.
   - `Engine/CopyOnSelectEngine.swift`: Linux/X11-style automatic clipboard copying on text drag selection (>10pt) and multi-click selection.
+  - `Engine/LicenseEngine.swift`: Polar.sh online license verification via non-blocking async `Task` on `@MainActor`, offline caching, and checkout redirection.
+  - `Engine/XomskyMotion.swift`: Procedural mascot micro-interactions (blinking, breathing, peek easter egg) using SwiftUI springs.
   - `Views/MinimalHUDWindow.swift`: Non-activating floating bezel HUD overlay with profile avatars and active card indicators.
+  - `Views/CopyToastWindow.swift`: Non-intrusive cursor-following HUD toast for copy confirmation with rapid auto-dismiss (<1.2s).
   - `AppDelegate.swift`: Menu bar status item, hotkey routing, and lifecycle management.
   - `main.swift`: Standard native application entry point.
 
@@ -44,6 +47,11 @@
 - **Pinned Apps & Universal Catalog Conventions**:
   - Enforce a hard ceiling of 4 pinned app slots. Single-app modes must hide the avatar row in the HUD to prevent visual noise.
   - Letter cycling must group apps deterministically by sanitized first letter.
+  - **HUD Shortcut Transparency & Categorization**: Never hide conflicting same-letter application shortcuts in collapsed submenus or nested clicks. Render all apps assigned to the same key transparently with distinct badges, and cleanly demarcate pinned Toolset Shortcuts from dynamic Quick Shortcuts.
+  - **System Application Bundle Resolution Guardrail**: Never assume macOS system applications exist in `/Applications`. Always resolve applications dynamically via `NSWorkspace.shared.urlForApplication(withBundleIdentifier:)` or query `/System/Applications` and `/System/Library/CoreServices` for core apps like Finder (`com.apple.finder`) and System Settings (`com.apple.systempreferences`).
+- **App Name**: The application is **Xomsky**, never Khomyak. Always use `Xomsky` for the app name, docs, binaries, and releases.
+- **Release Verification & Homebrew Cask Gate**:
+  - In release pipelines, never update or publish a Homebrew Cask formula (`Casks/xomsky.rb`) until the GitHub release tag is pushed AND the GitHub Actions cloud build has successfully attached the DMG asset. Deterministically verify the remote URL with `curl -sI` and compute the SHA256 checksum directly from the published binary.
 - **Chromium Profile Automation Guardrail**:
   - **Never match Chromium windows by profile name or title substrings.**
   - **Always automate via native macOS menu bar (`kAXMenuBarAttribute`)**: Target the browser's "Profiles" menu bar item (`getProfilesMenuItems`), select items strictly by position/index, and detect the currently active profile using `AXMenuItemMarkChar == "✓"`.
