@@ -446,6 +446,22 @@ kbd {
   border-bottom: 2px solid var(--pill-kbd-border-b);
 }
 
+.dock-sep {
+  color: var(--text-muted);
+  opacity: 0.4;
+  font-weight: 300;
+  margin: 0 4px;
+}
+
+.dock-hint {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
 /* 4. Insight 2: Spotlight Paradox Floating Card */
 .badge-btn {
   font-size: 0.82rem;
@@ -459,6 +475,13 @@ kbd {
   background: var(--glass-hover-bg);
   color: var(--glass-hover-text);
   box-shadow: 0 4px 16px rgba(56, 189, 248, 0.25);
+}
+
+.badge-btn.active {
+  background: var(--glass-hover-bg);
+  color: #38BDF8;
+  border-color: #38BDF8;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.4);
 }
 
 .insight-card.paradox-card {
@@ -669,14 +692,14 @@ kbd {
   position: absolute;
   top: 86px;
   left: 32px;
-  width: 440px;
+  width: 360px;
   max-width: calc(100vw - 64px);
   background: var(--card-bg);
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
   border: 1px solid var(--card-border);
   border-radius: 20px;
-  padding: 22px 24px;
+  padding: 18px 20px;
   box-shadow: var(--card-shadow);
   pointer-events: auto;
   z-index: 20;
@@ -687,15 +710,15 @@ kbd {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.70rem;
+  font-size: 0.68rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: #0284C7;
   background: rgba(2, 132, 199, 0.12);
-  padding: 3px 9px;
+  padding: 2px 8px;
   border-radius: 999px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 [data-theme="dark"] .hero-badge {
@@ -704,28 +727,28 @@ kbd {
 }
 
 .hero-title {
-  font-size: 2.2rem;
+  font-size: 1.85rem;
   font-weight: 900;
   letter-spacing: -0.02em;
   line-height: 1.1;
   color: var(--brand-color);
-  margin-bottom: 6px;
-}
-
-.hero-tagline {
-  font-size: 1.02rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1.35;
   margin-bottom: 4px;
 }
 
+.hero-tagline {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+  margin-bottom: 3px;
+}
+
 .hero-subtext {
-  font-size: 0.84rem;
+  font-size: 0.78rem;
   font-weight: 600;
   color: var(--text-muted);
-  line-height: 1.4;
-  margin-bottom: 16px;
+  line-height: 1.35;
+  margin-bottom: 12px;
 }
 
 /* Terminal Install Bar */
@@ -838,7 +861,7 @@ kbd {
   position: absolute;
   top: 86px;
   right: 32px;
-  width: 530px;
+  width: 480px;
   max-width: calc(100vw - 64px);
   background: var(--card-bg);
   backdrop-filter: blur(28px);

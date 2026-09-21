@@ -1908,8 +1908,10 @@ document.addEventListener("DOMContentLoaded", () => {
     pricingToggle.addEventListener("click", () => {
       const willOpen = pricingCard.classList.contains("minimized");
       pricingCard.classList.toggle("minimized");
+      pricingToggle.classList.toggle("active", willOpen);
       if (willOpen && paradoxCard) {
         paradoxCard.classList.add("minimized");
+        if (paradoxToggle) paradoxToggle.classList.remove("active");
       }
       sound.playClick();
     });
@@ -1918,6 +1920,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (pricingClose && pricingCard) {
     pricingClose.addEventListener("click", () => {
       pricingCard.classList.add("minimized");
+      if (pricingToggle) pricingToggle.classList.remove("active");
       sound.playClick();
     });
   }
@@ -1927,8 +1930,10 @@ document.addEventListener("DOMContentLoaded", () => {
     paradoxToggle.addEventListener("click", () => {
       const willOpen = paradoxCard.classList.contains("minimized");
       paradoxCard.classList.toggle("minimized");
+      paradoxToggle.classList.toggle("active", willOpen);
       if (willOpen && pricingCard) {
         pricingCard.classList.add("minimized");
+        if (pricingToggle) pricingToggle.classList.remove("active");
       }
       sound.playClick();
     });
@@ -1937,6 +1942,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (paradoxClose && paradoxCard) {
     paradoxClose.addEventListener("click", () => {
       paradoxCard.classList.add("minimized");
+      if (paradoxToggle) paradoxToggle.classList.remove("active");
       sound.playClick();
     });
   }
