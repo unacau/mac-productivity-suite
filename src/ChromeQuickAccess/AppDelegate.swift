@@ -212,8 +212,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     public func updateDynamicShortcuts() {
         let groups = AppGroupEngine.pinnedAppsGroupedByLetter()
         var triggers: [UInt32: @MainActor () -> Void] = [:]
-        // 1. Chrome browser is 'C'
-        triggers[KeyCodes.kVK_ANSI_C] = { [weak self] in
+        // 1. Primary browser shortcut matching application first letter ('B' for Brave, 'C' for Chrome)
+        let browserChar = ChromeProfileEngine.shared.primaryShortcutChar
+        let browserCode = ChromeProfileEngine.shared.primaryShortcutKeyCode
+        triggers[browserCode] = { [weak self] in
             Task { @MainActor [weak self] in
                 guard let self = self else { return }
                 self.handleChromeTrigger()
@@ -223,7 +225,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         // 2. Register every pinned letter's items
         for group in groups {
             let char = group.letter
-            if char == "C" { continue } // 'C' is reserved for Chrome profile switcher
+            if char == browserChar { continue } // Reserved for active browser profile switcher
             
             if let code = KeyCodes.keyCode(for: char) {
                 let items = group.items
@@ -1369,6 +1371,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func handleSelectBrowserClick(_ sender: NSMenuItem) {
         guard let bundleID = sender.representedObject as? String else { return }
         ChromeProfileEngine.shared.selectBrowser(bundleID: bundleID)
+        updateDynamicShortcuts()
         updateMenu()
     }
     

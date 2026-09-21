@@ -1533,6 +1533,76 @@ struct ChromeQuickAccessUnitTests {
     }
     
     @Test @MainActor
+    func testBraveBrowserVariantsAndStrictShortcutLetter() {
+        let engine = ChromeProfileEngine.shared
+        let originalBrowser = engine.browserBundleID
+        let originalPreferred = engine.preferredBrowserBundleID
+        defer {
+            engine.selectBrowser(bundleID: originalBrowser)
+            engine.preferredBrowserBundleID = originalPreferred
+        }
+        
+        // 1. Verify all 3 Brave variants are configured in supportedBrowsers
+        let supported = ChromeProfileEngine.supportedBrowsers
+        let stable = supported.first(where: { $0.bundleID == "com.brave.Browser" })
+        let beta = supported.first(where: { $0.bundleID == "com.brave.Browser.beta" })
+        let nightly = supported.first(where: { $0.bundleID == "com.brave.Browser.nightly" })
+        
+        #expect(stable != nil)
+        #expect(beta != nil)
+        #expect(nightly != nil)
+        #expect(stable?.name == "Brave Browser")
+        #expect(beta?.name == "Brave Browser Beta")
+        #expect(nightly?.name == "Brave Browser Nightly")
+        #expect(beta?.localStatePath.contains("Brave-Browser-Beta") == true)
+        #expect(nightly?.localStatePath.contains("Brave-Browser-Nightly") == true)
+        
+        // 2. Strict First-Letter Invariant: Brave MUST return 'B' and KeyCodes.kVK_ANSI_B
+        engine.selectBrowser(bundleID: "com.brave.Browser")
+        #expect(engine.primaryShortcutChar == "B")
+        #expect(engine.primaryShortcutKeyCode == KeyCodes.kVK_ANSI_B)
+        #expect(engine.activeBrowserName == "Brave Browser")
+        #expect(engine.activeBrowserAppPath.contains("Brave") == true)
+        
+        engine.selectBrowser(bundleID: "com.brave.Browser.beta")
+        #expect(engine.primaryShortcutChar == "B")
+        #expect(engine.primaryShortcutKeyCode == KeyCodes.kVK_ANSI_B)
+        #expect(engine.activeBrowserName == "Brave Browser Beta")
+        
+        engine.selectBrowser(bundleID: "com.brave.Browser.nightly")
+        #expect(engine.primaryShortcutChar == "B")
+        #expect(engine.primaryShortcutKeyCode == KeyCodes.kVK_ANSI_B)
+        #expect(engine.activeBrowserName == "Brave Browser Nightly")
+        
+        // 3. Chrome MUST return 'C' and KeyCodes.kVK_ANSI_C
+        engine.selectBrowser(bundleID: "com.google.Chrome")
+        #expect(engine.primaryShortcutChar == "C")
+        #expect(engine.primaryShortcutKeyCode == KeyCodes.kVK_ANSI_C)
+        #expect(engine.activeBrowserName == "Google Chrome")
+        
+        // 4. Edge MUST return 'E' and KeyCodes.kVK_ANSI_E
+        engine.selectBrowser(bundleID: "com.microsoft.edgemac")
+        #expect(engine.primaryShortcutChar == "E")
+        #expect(engine.primaryShortcutKeyCode == KeyCodes.kVK_ANSI_E)
+        #expect(engine.activeBrowserName == "Microsoft Edge")
+    }
+    
+    @Test @MainActor
+    func testDynamicHUDAppTitleAndIconForBrave() {
+        let engine = ChromeProfileEngine.shared
+        let originalBrowser = engine.browserBundleID
+        defer {
+            engine.selectBrowser(bundleID: originalBrowser)
+        }
+        
+        engine.selectBrowser(bundleID: "com.brave.Browser")
+        #expect(engine.activeBrowserName == "Brave Browser")
+        let icon = engine.activeBrowserIcon
+        #expect(icon.size.width > 0)
+        #expect(icon.size.height > 0)
+    }
+    
+    @Test @MainActor
     func testLicenseEngineOfflineMasterKeys() {
         let engine = LicenseEngine.shared
         defer {

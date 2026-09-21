@@ -258,11 +258,12 @@ public final class CapsLockEngine: @unchecked Sendable {
                     return nil // Swallow dynamic shortcut key
                 }
                 
-                // Check for 'C' (focus / cycle Chrome profiles)
-                if uKeyCode == KeyCodes.kVK_ANSI_C {
+                // Check for primary browser trigger (C for Chrome, B for Brave, etc.)
+                let browserKeyCode = ChromeProfileEngine.shared.primaryShortcutKeyCode
+                if uKeyCode == browserKeyCode {
                     capsUsedAsModifier = true
                     onChromeTrigger?()
-                    return nil // Swallow 'C'
+                    return nil // Swallow primary browser shortcut
                 }
                 
                 // Check for 'A' (focus / cycle Antigravity & AI Agent)

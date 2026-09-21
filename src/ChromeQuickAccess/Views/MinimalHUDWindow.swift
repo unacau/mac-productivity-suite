@@ -279,7 +279,7 @@ public struct MinimalHUDView: View {
     
     private var topIcon: NSImage {
         if state.mode == .chrome {
-            return ChromeAppIconHelper.chromeIcon()
+            return ChromeProfileEngine.shared.activeBrowserIcon
         } else if let selected = state.selectedAppItem {
             return selected.icon
         } else {
@@ -289,14 +289,15 @@ public struct MinimalHUDView: View {
     
     private var appTitle: String {
         if state.mode == .chrome {
-            return "Google Chrome"
+            return ChromeProfileEngine.shared.activeBrowserName
         }
         return state.selectedAppItem?.name ?? "Application"
     }
     
     private var activeSubtitle: String? {
         if state.mode == .chrome {
-            if let prof = state.selectedProfile?.effectiveName, prof != "Google Chrome", prof != "Chrome" {
+            let activeName = ChromeProfileEngine.shared.activeBrowserName
+            if let prof = state.selectedProfile?.effectiveName, prof != "Google Chrome", prof != "Chrome", prof != activeName {
                 return prof.capitalized
             }
         }
@@ -513,7 +514,7 @@ public final class MinimalHUDWindow: NSPanel {
         let announcementText: String
         if ChromeSwitcherState.shared.mode == .chrome {
             let prof = ChromeSwitcherState.shared.selectedProfile?.effectiveName ?? "Profile"
-            announcementText = "Google Chrome, \(prof)"
+            announcementText = "\(ChromeProfileEngine.shared.activeBrowserName), \(prof)"
         } else if let app = ChromeSwitcherState.shared.selectedAppItem {
             announcementText = app.name
         } else {

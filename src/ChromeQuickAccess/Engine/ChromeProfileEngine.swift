@@ -96,6 +96,41 @@ public final class ChromeProfileEngine: ObservableObject {
         return "Chrome"
     }
     
+    public var primaryShortcutChar: Character {
+        if browserBundleID.lowercased().contains("brave") {
+            return "B"
+        } else if browserBundleID.lowercased().contains("edgemac") {
+            return "E"
+        }
+        return "C"
+    }
+    
+    public var primaryShortcutKeyCode: UInt32 {
+        switch primaryShortcutChar {
+        case "B": return KeyCodes.kVK_ANSI_B
+        case "E": return KeyCodes.kVK_ANSI_E
+        default: return KeyCodes.kVK_ANSI_C
+        }
+    }
+    
+    public var activeBrowserAppPath: String {
+        if let appUrl = NSWorkspace.shared.urlForApplication(withBundleIdentifier: browserBundleID) {
+            return appUrl.path
+        }
+        if let found = Self.supportedBrowsers.first(where: { $0.bundleID == browserBundleID }) {
+            return found.appPath
+        }
+        return "/Applications/Google Chrome.app"
+    }
+    
+    public var activeBrowserIcon: NSImage {
+        let path = activeBrowserAppPath
+        if FileManager.default.fileExists(atPath: path) {
+            return NSWorkspace.shared.icon(forFile: path)
+        }
+        return ChromeAppIconHelper.chromeIcon()
+    }
+    
     public func selectBrowser(bundleID: String) {
         self.preferredBrowserBundleID = bundleID
         self.browserBundleID = bundleID
@@ -189,6 +224,18 @@ public final class ChromeProfileEngine: ObservableObject {
                 appPath: "/Applications/Brave Browser.app"
             ),
             ChromiumBrowserCandidate(
+                name: "Brave Browser Beta",
+                bundleID: "com.brave.Browser.beta",
+                localStatePath: "\(home)/Library/Application Support/BraveSoftware/Brave-Browser-Beta/Local State",
+                appPath: "/Applications/Brave Browser Beta.app"
+            ),
+            ChromiumBrowserCandidate(
+                name: "Brave Browser Nightly",
+                bundleID: "com.brave.Browser.nightly",
+                localStatePath: "\(home)/Library/Application Support/BraveSoftware/Brave-Browser-Nightly/Local State",
+                appPath: "/Applications/Brave Browser Nightly.app"
+            ),
+            ChromiumBrowserCandidate(
                 name: "Microsoft Edge",
                 bundleID: "com.microsoft.edgemac",
                 localStatePath: "\(home)/Library/Application Support/Microsoft Edge/Local State",
@@ -217,7 +264,9 @@ public final class ChromeProfileEngine: ObservableObject {
         // 1. If isolated test override path is set, parse directly
         if let overridePath = Self.localStatePathOverride {
             self.availableBrowsers = []
-            if overridePath.contains("Brave-Browser") { self.browserBundleID = "com.brave.Browser" }
+            if overridePath.contains("Brave-Browser-Beta") { self.browserBundleID = "com.brave.Browser.beta" }
+            else if overridePath.contains("Brave-Browser-Nightly") { self.browserBundleID = "com.brave.Browser.nightly" }
+            else if overridePath.contains("Brave-Browser") { self.browserBundleID = "com.brave.Browser" }
             else if overridePath.contains("Microsoft Edge") { self.browserBundleID = "com.microsoft.edgemac" }
             else if overridePath.contains("Chromium") { self.browserBundleID = "org.chromium.Chromium" }
             else { self.browserBundleID = "com.google.Chrome" }
@@ -239,9 +288,10 @@ public final class ChromeProfileEngine: ObservableObject {
         
         // 3. Determine active browser choice (Multi-browser priority hierarchy):
         // Priority A: Explicit user preference in UserDefaults
-        // Priority B: Currently running browser among discovered
-        // Priority C: Most recently modified Local State file (user's active browser)
-        // Priority D: First discovered candidate or fallback
+        // Priority B: System Default Browser for https:// (if among discovered candidates)
+        // Priority C: Currently running browser among discovered
+        // Priority D: Most recently modified Local State file (user's active browser)
+        // Priority E: First discovered candidate or fallback
         var chosen: ChromiumBrowserCandidate? = nil
         
         if let preferred = preferredBrowserBundleID {
@@ -251,22 +301,29 @@ public final class ChromeProfileEngine: ObservableObject {
                 chosen = supported
             }
         } else {
-            let runningApps = NSWorkspace.shared.runningApplications
-            let runningBundles = Set(runningApps.compactMap { $0.bundleIdentifier })
-            if let runningMatch = discovered.first(where: { runningBundles.contains($0.bundleID) }) {
-                chosen = runningMatch
+            // Priority B: System Default Browser
+            if let defaultBrowserURL = NSWorkspace.shared.urlForApplication(toOpen: URL(string: "https://apple.com")!),
+               let defaultBundleID = Bundle(url: defaultBrowserURL)?.bundleIdentifier,
+               let defaultMatch = discovered.first(where: { $0.bundleID == defaultBundleID }) {
+                chosen = defaultMatch
             } else {
-                var latestDate: Date = .distantPast
-                var latestCandidate: ChromiumBrowserCandidate? = nil
-                for candidate in discovered {
-                    if let attrs = try? fileManager.attributesOfItem(atPath: candidate.localStatePath),
-                       let modDate = attrs[.modificationDate] as? Date,
-                       modDate > latestDate {
-                        latestDate = modDate
-                        latestCandidate = candidate
+                let runningApps = NSWorkspace.shared.runningApplications
+                let runningBundles = Set(runningApps.compactMap { $0.bundleIdentifier })
+                if let runningMatch = discovered.first(where: { runningBundles.contains($0.bundleID) }) {
+                    chosen = runningMatch
+                } else {
+                    var latestDate: Date = .distantPast
+                    var latestCandidate: ChromiumBrowserCandidate? = nil
+                    for candidate in discovered {
+                        if let attrs = try? fileManager.attributesOfItem(atPath: candidate.localStatePath),
+                           let modDate = attrs[.modificationDate] as? Date,
+                           modDate > latestDate {
+                            latestDate = modDate
+                            latestCandidate = candidate
+                        }
                     }
+                    chosen = latestCandidate ?? discovered.first
                 }
-                chosen = latestCandidate ?? discovered.first
             }
         }
         

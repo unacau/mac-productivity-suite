@@ -109,7 +109,7 @@ const PROFILES = [
   {
     name: "Igor",
     headerName: "Igor",
-    email: "igorekishev92@gmail.com",
+    email: "igor@xomsky.app",
     avatarImg: "assets/images/profiles/igor.png",
     avatarBg: "linear-gradient(135deg, #6366F1 0%, #A855F7 100%)",
     avatarEmoji: "👤",
@@ -135,9 +135,9 @@ const PROFILES = [
     color: "#3B82F6"
   },
   {
-    name: "GCP Free Trial",
+    name: "GCP",
     headerName: "GCP Free Trial",
-    email: "igorekishev729@gmail.com",
+    email: "gcp-dev@xomsky.app",
     avatarImg: "assets/images/profiles/gcp.png",
     avatarBg: "linear-gradient(135deg, #EC4899 0%, #F43F5E 100%)",
     avatarEmoji: "🕶️",
@@ -151,7 +151,7 @@ const PROFILES = [
   {
     name: "Nastya",
     headerName: "Nastya",
-    email: "betapoozytron@gmail.com",
+    email: "nastya@xomsky.app",
     avatarImg: "assets/images/profiles/nastya.png",
     avatarBg: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
     avatarEmoji: "🖤",
@@ -307,6 +307,11 @@ function getSystemTheme() {
 
 function getPreferredTheme() {
   try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramTheme = urlParams.get("theme");
+    if (paramTheme === "dark" || paramTheme === "light") {
+      return paramTheme;
+    }
     const override = localStorage.getItem("xomsky_theme_override");
     if (override === "dark" || override === "light") {
       return override;
@@ -353,8 +358,8 @@ const THEMES = {
     ambientIntensity: 0.70,
     keyLightColor: 0x94A3B8,
     keyLightIntensity: 0.55,
-    rimLColor: 0x38BDF8, // Electric Cyan rim sculpting cheeks and keyboard
-    rimLIntensity: 2.80,
+    rimLColor: 0x818CF8, // Soft Indigo / Moonlight Lavender rim (neutralizes green clash on yellow fur)
+    rimLIntensity: 1.50,
     rimRColor: 0xF5A623, // Warm Hamster Gold rim contouring from right
     rimRIntensity: 2.20,
     fillColor: 0x0F172A,
@@ -1015,7 +1020,7 @@ function buildMechanicalKeyboardDeck() {
     };
 
     if (options.hasLed) {
-      const ledLight = new THREE.PointLight(0x22C55E, 2.5, 1.6);
+      const ledLight = new THREE.PointLight(0x22C55E, 0.4, 0.25);
       ledLight.position.set(-keyWidth * 0.26, keyHeight * 0.6, -keyDepth * 0.2);
       keyMesh.add(ledLight);
       keyMesh.userData.ledLight = ledLight;
@@ -1109,10 +1114,12 @@ function buildMechanicalKeyboardDeck() {
   addKey(curX + 0.5 * step, startZ + step * 3, 1.0, "C", { isInteractive: true, category: "chrome", keyId: "c", accentColor: "#3B82F6" });
   curX += step;
 
-  ["V", "B"].forEach(k => {
-    addKey(curX + 0.5 * step, startZ + step * 3, 1.0, k);
-    curX += step;
-  });
+  addKey(curX + 0.5 * step, startZ + step * 3, 1.0, "V");
+  curX += step;
+
+  // Dynamic B for Brave Profiles
+  addKey(curX + 0.5 * step, startZ + step * 3, 1.0, "B", { isInteractive: true, category: "chrome", keyId: "b", accentColor: "#FB542B" });
+  curX += step;
 
   // Highlighted N for Notes
   addKey(curX + 0.5 * step, startZ + step * 3, 1.0, "N", { isInteractive: true, category: "notes", keyId: "n", accentColor: "#F59E0B" });
@@ -1179,17 +1186,22 @@ function updateSimulatedHUD(category = "chrome", profileIdx = 0) {
   scheduleHUDPeek();
 
   if (category === "chrome") {
-    const profile = PROFILES[profileIdx] || PROFILES[0];
-    appIcon.src = "assets/images/icon_chrome.png";
-    appTitle.textContent = "Google Chrome";
+    const profiles = getActiveBrowserProfiles();
+    const profile = profiles[profileIdx] || profiles[0];
+    if (currentActiveBrowser === "brave") {
+      appTitle.textContent = "Brave Browser";
+    } else {
+      appIcon.src = "assets/images/icon_chrome.png";
+      appTitle.textContent = "Google Chrome";
+    }
     appSub.textContent = profile.name;
     appSub.style.display = "inline-block";
     carousel.style.display = "flex";
 
     // Build the 4 profile avatar items
-    carousel.innerHTML = PROFILES.map((p, idx) => `
+    carousel.innerHTML = profiles.map((p, idx) => `
       <div class="hud-slot-item ${idx === profileIdx ? 'active' : ''}" data-index="${idx}" title="Profile ${idx + 1}: ${p.name}">
-        <div class="hud-avatar-circle ${p.className}"><span>${p.initial}</span></div>
+        <div class="hud-avatar-circle ${p.className || ''}" style="${p.avatarBg ? `background: ${p.avatarBg}` : ''}"><span>${p.initial}</span></div>
         <span class="hud-slot-num">${idx + 1}</span>
       </div>
     `).join("");
@@ -1348,12 +1360,6 @@ function selectCockpitSlot(slotKey = "c", triggerActivation = true) {
     panel.classList.toggle("active", panel.id === `slot-panel-${slotKey}`);
   });
 
-  // Update latency tag with realistic instant 0.01ms jitter
-  const latencyTag = document.getElementById("cockpit-latency-tag");
-  if (latencyTag) {
-    const lat = (Math.random() * 0.02 + 0.01).toFixed(2);
-    latencyTag.textContent = `${lat}ms · Swift 6`;
-  }
 
   if (triggerActivation) {
     activateCategory(category, category === "chrome" ? activeIndex : 0, slotKey, true);
@@ -1380,13 +1386,163 @@ function updateCockpitWidget(category, keyId) {
   });
 }
 
+let currentActiveBrowser = "chrome";
+
+const BRAVE_PROFILES = [
+  {
+    name: "Personal",
+    headerName: "Brave · Personal",
+    email: "Shields Up · 0 Trackers Blocked",
+    avatarBg: "linear-gradient(135deg, #FF7626 0%, #FB542B 100%)",
+    avatarEmoji: "🦁",
+    initial: "P",
+    windows: 3,
+    tabs: ["Hacker News", "DuckDuckGo", "GitHub"],
+    color: "#FF7626"
+  },
+  {
+    name: "Web3",
+    headerName: "Brave · Web3 / DeFi",
+    email: "Solana · Ethereum · Metamask",
+    avatarBg: "linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)",
+    avatarEmoji: "💎",
+    initial: "W",
+    windows: 5,
+    tabs: ["Uniswap", "Etherscan", "Jupiter"],
+    color: "#8B5CF6"
+  },
+  {
+    name: "Work",
+    headerName: "Brave · Work",
+    email: "enterprise@company.com",
+    avatarBg: "linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)",
+    avatarEmoji: "💼",
+    initial: "B",
+    windows: 4,
+    tabs: ["Linear", "Slack", "Figma"],
+    color: "#3B82F6"
+  },
+  {
+    name: "Tor",
+    headerName: "Brave · Tor Private",
+    email: "Onion Routing Enabled",
+    avatarBg: "linear-gradient(135deg, #6B7280 0%, #111827 100%)",
+    avatarEmoji: "🧅",
+    initial: "T",
+    windows: 1,
+    tabs: ["Tor Circuit Active"],
+    color: "#9333EA"
+  }
+];
+
+function getActiveBrowserProfiles() {
+  return currentActiveBrowser === "brave" ? BRAVE_PROFILES : PROFILES;
+}
+
+function updateProfilePillsContent() {
+  const pills = document.querySelectorAll(".profile-pill");
+  const profiles = getActiveBrowserProfiles();
+  pills.forEach((p, idx) => {
+    const prof = profiles[idx];
+    if (!prof) return;
+    p.title = `Press ${idx + 1} or Caps+${idx + 1}`;
+    let avatarHtml = "";
+    if (prof.avatarImg) {
+      const bgAttr = prof.avatarBg ? `style="background: ${prof.avatarBg}; padding: 2px;"` : "";
+      avatarHtml = `<img src="${prof.avatarImg}" class="pill-avatar" alt="${prof.name}" ${bgAttr}>`;
+    } else {
+      avatarHtml = `<span class="pill-avatar-emoji" style="background: ${prof.avatarBg};">${prof.avatarEmoji}</span>`;
+    }
+    p.innerHTML = `<span class="pill-key">${idx + 1}</span>${avatarHtml}<span class="pill-name">${prof.name}</span>`;
+  });
+}
+
+function update3DBrowserKeycap(browser) {
+  const bKey = keyMeshMap["b"];
+  const cKey = keyMeshMap["c"];
+  if (!bKey || !cKey) return;
+
+  if (browser === "brave") {
+    bKey.material[2].map = createKeycapTexture("B", true, "#FB542B");
+    bKey.material[2].map.needsUpdate = true;
+    bKey.material[2].emissive.set("#FB542B");
+    bKey.material[2].emissiveIntensity = 0.40;
+
+    cKey.material[2].map = createKeycapTexture("C", false);
+    cKey.material[2].map.needsUpdate = true;
+    cKey.material[2].emissive.set(0x000000);
+    cKey.material[2].emissiveIntensity = 0.0;
+  } else {
+    cKey.material[2].map = createKeycapTexture("C", true, "#3B82F6");
+    cKey.material[2].map.needsUpdate = true;
+    cKey.material[2].emissive.set("#3B82F6");
+    cKey.material[2].emissiveIntensity = 0.40;
+
+    bKey.material[2].map = createKeycapTexture("B", false);
+    bKey.material[2].map.needsUpdate = true;
+    bKey.material[2].emissive.set(0x000000);
+    bKey.material[2].emissiveIntensity = 0.0;
+  }
+}
+
+function selectBrowserFlavor(browser) {
+  if (currentActiveBrowser === browser) return;
+  currentActiveBrowser = browser;
+
+  document.querySelectorAll(".browser-pill-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.getAttribute("data-browser") === browser);
+  });
+
+  const widget = document.getElementById("cockpit-widget");
+  if (widget) {
+    widget.setAttribute("data-browser", browser);
+  }
+
+  const cap = document.getElementById("browser-key-cap");
+  const label = document.getElementById("browser-key-label");
+  const keyBtn = document.getElementById("cockpit-browser-key-btn");
+  if (browser === "brave") {
+    if (cap) cap.textContent = "B";
+    if (label) label.textContent = "Brave";
+    if (keyBtn) keyBtn.title = "Press B or Caps+B";
+  } else {
+    if (cap) cap.textContent = "C";
+    if (label) label.textContent = "Chrome";
+    if (keyBtn) keyBtn.title = "Press C or Caps+C";
+  }
+
+  // Dynamic Subline KBD update
+  const sublineKbd = document.getElementById("subline-browser-kbd");
+  if (sublineKbd) {
+    sublineKbd.textContent = browser === "brave" ? "B" : "C";
+    sublineKbd.classList.toggle("brave-kbd", browser === "brave");
+  }
+
+  updateProfilePillsContent();
+  update3DBrowserKeycap(browser);
+
+  selectCockpitSlot("c", false);
+  activeIndex = 0;
+  updateChromeProfileWidget(0);
+}
+
 function initCockpitWidget() {
+  update3DBrowserKeycap(currentActiveBrowser);
   // Wire 5-key cockpit selector buttons
   document.querySelectorAll(".cockpit-key-btn").forEach(btn => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       const slot = btn.getAttribute("data-slot");
       selectCockpitSlot(slot, true);
+    });
+  });
+
+  // Wire browser switcher pills (Chrome / Brave)
+  document.querySelectorAll(".browser-pill-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const b = btn.getAttribute("data-browser");
+      selectBrowserFlavor(b);
     });
   });
 
@@ -1404,11 +1560,13 @@ function initCockpitWidget() {
   if (popupCard) {
     popupCard.addEventListener("click", () => {
       selectCockpitSlot("c", false);
-      const nextIdx = (activeIndex + 1) % PROFILES.length;
+      const profiles = getActiveBrowserProfiles();
+      const nextIdx = (activeIndex + 1) % profiles.length;
       activateCategory("chrome", nextIdx, String(nextIdx + 1), true);
     });
   }
 
+  updateProfilePillsContent();
   updateChromeProfileWidget(activeIndex);
 }
 
@@ -1417,7 +1575,8 @@ function initChromeProfileWidget() {
 }
 
 function updateChromeProfileWidget(profileIdx = 0) {
-  const profile = PROFILES[profileIdx] || PROFILES[0];
+  const profiles = getActiveBrowserProfiles();
+  const profile = profiles[profileIdx] || profiles[0];
   const activeAvatar = document.getElementById("chrome-active-avatar");
   const activeName = document.getElementById("chrome-active-name");
   const activeEmail = document.getElementById("chrome-active-email");
@@ -1469,10 +1628,11 @@ function activateCategory(category = "chrome", subIndex = null, keyId = null, fr
   currentCategory = category;
 
   if (category === "chrome") {
+    const profs = getActiveBrowserProfiles();
     if (subIndex !== null && subIndex !== undefined) {
       activeIndex = parseInt(subIndex, 10);
     } else {
-      activeIndex = (activeIndex + 1) % PROFILES.length;
+      activeIndex = (activeIndex + 1) % profs.length;
     }
   } else if (category === "ai") {
     if (subIndex !== null && subIndex !== undefined) {
@@ -1486,8 +1646,9 @@ function activateCategory(category = "chrome", subIndex = null, keyId = null, fr
   triggerHamsterSquish();
 
   // Physical 3D key depression animation
-  const targetKeyId = keyId || (category === "chrome" ? (subIndex !== null ? String(subIndex + 1) : "c") : keyId);
-  const keyMesh = keyMeshMap[targetKeyId] || (category === "chrome" ? keyMeshMap["c"] : keyMeshMap[category[0]]);
+  const defaultBrowserKey = currentActiveBrowser === "brave" ? "b" : "c";
+  const targetKeyId = keyId || (category === "chrome" ? (subIndex !== null ? String(subIndex + 1) : defaultBrowserKey) : keyId);
+  const keyMesh = keyMeshMap[targetKeyId] || (category === "chrome" ? keyMeshMap[defaultBrowserKey] : keyMeshMap[category[0]]);
 
   if (keyMesh) {
     keyMesh.position.y = keyMesh.userData.basePosY - 0.045;
@@ -2046,6 +2207,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // Initialize Native Google Chrome Profile Popup Widget
   initChromeProfileWidget();
 
+  const initialBrowser = params.get("browser");
+  if (initialBrowser === "brave") {
+    selectBrowserFlavor("brave");
+  }
+
   // Camera Perspective Toggle (🍑 Butt View vs 🐹 Face View)
   const camBtn = document.getElementById("cam-view-btn");
   if (camBtn) {
@@ -2079,10 +2245,16 @@ document.addEventListener("DOMContentLoaded", () => {
       switchTheme();
     } else if (key === "v") {
       toggleCameraView();
-    } else if (key === "c" || key === " ") {
+    } else if (key === "b" && currentActiveBrowser === "brave") {
       e.preventDefault();
       selectCockpitSlot("c", false);
-      activateCategory("chrome", (activeIndex + 1) % PROFILES.length, "c", true);
+      const profiles = getActiveBrowserProfiles();
+      activateCategory("chrome", (activeIndex + 1) % profiles.length, "b", true);
+    } else if ((key === "c" && currentActiveBrowser === "chrome") || key === " ") {
+      e.preventDefault();
+      selectCockpitSlot("c", false);
+      const profiles = getActiveBrowserProfiles();
+      activateCategory("chrome", (activeIndex + 1) % profiles.length, "c", true);
     } else if (["1", "2", "3", "4"].includes(key)) {
       selectCockpitSlot("c", false);
       activateCategory("chrome", parseInt(key, 10) - 1, key, true);

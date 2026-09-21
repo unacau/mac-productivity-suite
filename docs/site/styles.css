@@ -2022,7 +2022,7 @@ kbd {
    ========================================================================== */
 .top-tagline-container {
   position: absolute;
-  top: 64px;
+  top: 50px;
   left: 50%;
   transform: translateX(-50%);
   text-align: center;
@@ -2032,6 +2032,8 @@ kbd {
   flex-direction: column;
   align-items: center;
   gap: 6px;
+  width: max-content;
+  max-width: 92vw;
 }
 
 .hero-badge {
@@ -2073,13 +2075,14 @@ kbd {
 }
 
 .top-punchline {
-  font-size: 2.1rem;
+  font-size: clamp(1.4rem, 2.2vw, 2.05rem);
   font-weight: 900;
   letter-spacing: -0.035em;
   color: var(--text-primary);
   margin: 0;
   line-height: 1.15;
   text-shadow: 0 2px 14px rgba(0, 0, 0, 0.04);
+  white-space: nowrap;
 }
 
 .top-punchline span {
@@ -2103,9 +2106,20 @@ kbd {
   letter-spacing: -0.01em;
   margin: 0;
   opacity: 0.95;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
+}
+
+.subline-keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.subline-sep {
+  margin: 0 2px;
+  opacity: 0.45;
 }
 
 .top-kbd {
@@ -2131,6 +2145,20 @@ kbd {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 
+.top-kbd.brave-kbd {
+  color: #FB542B;
+  background: rgba(251, 84, 43, 0.08);
+  border-color: rgba(251, 84, 43, 0.35);
+  border-bottom: 2px solid rgba(251, 84, 43, 0.55);
+}
+
+[data-theme="dark"] .top-kbd.brave-kbd {
+  color: #FF7626;
+  background: rgba(251, 84, 43, 0.16);
+  border-color: rgba(251, 84, 43, 0.45);
+  border-bottom: 2px solid rgba(251, 84, 43, 0.70);
+}
+
 /* 5-Key Cockpit Widget */
 .cockpit-widget,
 .chrome-feature-widget {
@@ -2144,12 +2172,15 @@ kbd {
   z-index: 80;
   pointer-events: auto;
   width: 350px;
+  height: 436px;
+  min-height: 436px;
+  box-sizing: border-box;
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: 24px;
   padding: 14px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.03);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: box-shadow 0.3s ease, border-color 0.3s ease, background 0.3s ease;
 }
 
 [data-theme="dark"] .cockpit-widget,
@@ -2171,6 +2202,14 @@ kbd {
   display: inline-flex;
   align-items: center;
   gap: 7px;
+  flex-shrink: 0;
+}
+
+.cockpit-header-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .cockpit-live-dot {
@@ -2189,15 +2228,71 @@ kbd {
   white-space: nowrap;
 }
 
-.cockpit-0ms-tag,
+.cockpit-browser-picker {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 999px;
+  padding: 2px;
+  gap: 2px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] .cockpit-browser-picker {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.10);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.browser-pill-btn {
+  background: transparent;
+  border: none;
+  font-size: 0.64rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 3px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  line-height: 1.2;
+}
+
+.browser-pill-btn:hover {
+  color: var(--text-primary);
+}
+
+.browser-pill-btn.active {
+  background: #FFFFFF;
+  color: var(--text-primary);
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0.5px 1px rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="dark"] .browser-pill-btn.active {
+  background: rgba(255, 255, 255, 0.20);
+  color: #FFFFFF;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.browser-pill-btn[data-browser="brave"].active {
+  color: #FB542B;
+}
+
 .chrome-0ms-tag {
-  font-size: 0.66rem;
+  font-size: 0.65rem;
   font-weight: 800;
   color: #10B981;
   font-family: var(--font-mono);
-  background: rgba(16, 185, 129, 0.12);
-  padding: 2px 8px;
+  background: rgba(16, 185, 129, 0.10);
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  padding: 2px 7px;
   border-radius: 6px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 /* 5-Key Home Row Deck */
@@ -2304,17 +2399,61 @@ kbd {
   color: #38BDF8;
 }
 
+/* Brave Browser Active Slot Theming (Caps + B) */
+.cockpit-widget[data-browser="brave"] .cockpit-key-btn[data-slot="c"].active {
+  background: rgba(251, 84, 43, 0.12);
+  border-color: rgba(251, 84, 43, 0.38);
+  box-shadow: 0 2px 8px rgba(251, 84, 43, 0.16);
+}
+
+.cockpit-widget[data-browser="brave"] .cockpit-key-btn[data-slot="c"].active .key-cap {
+  background: linear-gradient(135deg, #FF7626 0%, #FB542B 100%);
+  color: #FFFFFF;
+  border-color: #EA4218;
+  border-bottom: 2px solid #C4300C;
+}
+
+.cockpit-widget[data-browser="brave"] .cockpit-key-btn[data-slot="c"].active .key-label {
+  color: #FB542B;
+}
+
+[data-theme="dark"] .cockpit-widget[data-browser="brave"] .cockpit-key-btn[data-slot="c"].active {
+  background: rgba(251, 84, 43, 0.16);
+  border-color: rgba(251, 84, 43, 0.45);
+  box-shadow: 0 2px 10px rgba(251, 84, 43, 0.22);
+}
+
+[data-theme="dark"] .cockpit-widget[data-browser="brave"] .cockpit-key-btn[data-slot="c"].active .key-cap {
+  background: linear-gradient(135deg, #FF7626 0%, #FB542B 100%);
+  color: #FFFFFF;
+  border-color: #FFA066;
+  border-bottom: 2px solid #C4300C;
+}
+
+[data-theme="dark"] .cockpit-widget[data-browser="brave"] .cockpit-key-btn[data-slot="c"].active .key-label {
+  color: #FF7626;
+}
+
 /* Dynamic Slot Panels */
 .cockpit-stage {
   width: 100%;
+  height: 246px;
+  min-height: 246px;
+  max-height: 246px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
 }
 
 .slot-panel {
   display: none;
+  height: 100%;
+  box-sizing: border-box;
 }
 
 .slot-panel.active {
-  display: block;
+  display: flex;
+  flex-direction: column;
   animation: slotFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -2328,16 +2467,35 @@ kbd {
   background: linear-gradient(135deg, rgba(2, 132, 199, 0.05) 0%, rgba(147, 51, 234, 0.04) 100%);
   border: 1px solid var(--card-border);
   border-radius: 18px;
-  padding: 16px 14px;
+  padding: 14px 14px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  justify-content: space-between;
+  height: 100%;
+  box-sizing: border-box;
   transition: all 0.25s ease;
 }
 
 [data-theme="dark"] .tool-preview-card {
   background: linear-gradient(135deg, rgba(56, 189, 248, 0.07) 0%, rgba(168, 85, 247, 0.05) 100%);
   border-color: rgba(255, 255, 255, 0.08);
+}
+
+.tool-mini-snippet {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.65rem;
+  line-height: 1.45;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  padding: 7px 10px;
+  color: var(--text-secondary);
+  overflow: hidden;
+}
+
+[data-theme="dark"] .tool-mini-snippet {
+  background: rgba(0, 0, 0, 0.35);
+  border-color: rgba(255, 255, 255, 0.06);
 }
 
 .tool-preview-top {
@@ -2414,14 +2572,14 @@ kbd {
 }
 
 .tool-telemetry-box {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-family: var(--font-system);
+  font-size: 0.70rem;
   background: rgba(0, 0, 0, 0.03);
   border: 1px solid var(--glass-border);
   border-radius: 12px;
-  padding: 10px 12px;
+  padding: 9px 12px;
   color: var(--text-secondary);
-  line-height: 1.4;
+  line-height: 1.35;
 }
 
 [data-theme="dark"] .tool-telemetry-box {
@@ -2435,6 +2593,8 @@ kbd {
   gap: 6px;
   color: var(--text-primary);
   font-weight: 600;
+  font-size: 0.72rem;
+  white-space: nowrap;
 }
 
 .telemetry-dot {
@@ -2456,7 +2616,20 @@ kbd {
   width: 100%;
   box-sizing: border-box;
   padding: 8px 12px;
-  border-radius: 14px;
+  border-radius: 12px;
+  background: rgba(24, 24, 27, 0.90);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  margin-bottom: 0;
+}
+
+[data-theme="dark"] .cockpit-widget .terminal-install-bar,
+[data-theme="dark"] .chrome-feature-widget .terminal-install-bar {
+  background: rgba(18, 18, 22, 0.92);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.40);
 }
 
 .cockpit-widget .terminal-cmd,
@@ -2488,9 +2661,9 @@ kbd {
 .profile-switch-pills {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  gap: 5px;
   width: 100%;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .profile-pill {
@@ -2500,7 +2673,7 @@ kbd {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   border-radius: 12px;
-  padding: 6px 8px;
+  padding: 5px 7px;
   font-size: 0.74rem;
   font-weight: 700;
   color: var(--text-primary);
@@ -2540,6 +2713,14 @@ kbd {
   object-fit: cover;
   flex-shrink: 0;
   display: block;
+  background: rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-sizing: border-box;
+}
+
+[data-theme="dark"] .pill-avatar {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .pill-key {
@@ -2585,10 +2766,50 @@ kbd {
   text-overflow: ellipsis;
 }
 
+.pill-avatar-emoji {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  max-width: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.70rem;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+/* Brave Browser Profile Pills Theming */
+.cockpit-widget[data-browser="brave"] .profile-pill.active {
+  background: rgba(251, 84, 43, 0.12);
+  border-color: rgba(251, 84, 43, 0.42);
+  color: #FB542B;
+  box-shadow: 0 4px 12px rgba(251, 84, 43, 0.16);
+}
+
+[data-theme="dark"] .cockpit-widget[data-browser="brave"] .profile-pill.active {
+  background: rgba(251, 84, 43, 0.18);
+  border-color: rgba(251, 84, 43, 0.48);
+  color: #FF7626;
+}
+
+.cockpit-widget[data-browser="brave"] .profile-pill.active .pill-key {
+  background: rgba(251, 84, 43, 0.22);
+  color: #FB542B;
+  border-color: rgba(251, 84, 43, 0.38);
+}
+
+[data-theme="dark"] .cockpit-widget[data-browser="brave"] .profile-pill.active .pill-key {
+  background: rgba(251, 84, 43, 0.28);
+  color: #FF7626;
+  border-color: rgba(251, 84, 43, 0.52);
+}
+
 .chrome-popup-active-card {
   background: linear-gradient(135deg, #F6EEF2 0%, #EFEBF7 100%);
   border-radius: 18px;
-  padding: 18px 14px 14px;
+  padding: 14px 12px 12px;
   text-align: center;
   position: relative;
   overflow: hidden;
@@ -2601,15 +2822,25 @@ kbd {
   border-color: rgba(255, 255, 255, 0.06);
 }
 
+.cockpit-widget[data-browser="brave"] .chrome-popup-active-card {
+  background: linear-gradient(135deg, #FFF7F2 0%, #FFECE4 100%);
+  border-color: rgba(251, 84, 43, 0.10);
+}
+
+[data-theme="dark"] .cockpit-widget[data-browser="brave"] .chrome-popup-active-card {
+  background: linear-gradient(135deg, #2D1E19 0%, #22161A 100%);
+  border-color: rgba(251, 84, 43, 0.18);
+}
+
 .chrome-avatar-container {
   display: flex;
   justify-content: center;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .chrome-avatar-circle {
-  width: 66px;
-  height: 66px;
+  width: 58px;
+  height: 58px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -2630,7 +2861,7 @@ kbd {
 }
 
 .chrome-active-name {
-  font-size: 1.12rem;
+  font-size: 1.05rem;
   font-weight: 800;
   color: var(--text-primary);
   line-height: 1.2;
@@ -2638,10 +2869,10 @@ kbd {
 }
 
 .chrome-active-email {
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
   margin-top: 2px;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
 }
 
 .chrome-active-stats {
@@ -2675,7 +2906,7 @@ kbd {
   height: 5px;
   border-radius: 50%;
   background: #10B981;
-  box-shadow: 0 0 6px #10B981;
+  opacity: 0.85;
 }
 
 .stats-sep {
@@ -2914,15 +3145,14 @@ kbd {
 .cam-view-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   background: var(--glass-bg);
-  
   border: 1px solid var(--glass-border);
-  padding: 6px 14px;
+  padding: 5px 11px;
   border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--text-primary);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
   box-shadow: var(--glass-btn-shadow);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);

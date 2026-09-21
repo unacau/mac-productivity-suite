@@ -74,36 +74,44 @@
     <div class="top-tagline-container">
       <div class="hero-badge">
         <span class="hero-badge-dot pulse-dot"></span>
-        <span>5 Free Slots Out of the Box</span>
+        <span>Instant App Switcher · 0ms</span>
       </div>
       <h1 class="top-punchline">Your Mac’s Home Row on Steroids. <span>5 Tools in 0ms.</span></h1>
       <p class="top-subline">
-        Hold <kbd class="top-kbd">Caps Lock</kbd> + tap 
-        <kbd class="top-kbd">C</kbd>
-        <kbd class="top-kbd">T</kbd>
-        <kbd class="top-kbd">I</kbd>
-        <kbd class="top-kbd">A</kbd>
-        <kbd class="top-kbd">N</kbd>
-        &nbsp;—&nbsp; Never touch your mouse
+        <span>Hold</span>
+        <kbd class="top-kbd">Caps Lock</kbd>
+        <span>+ tap</span>
+        <span class="subline-keys">
+          <kbd class="top-kbd" id="subline-browser-kbd">C</kbd>
+          <kbd class="top-kbd">T</kbd>
+          <kbd class="top-kbd">I</kbd>
+          <kbd class="top-kbd">A</kbd>
+          <kbd class="top-kbd">N</kbd>
+        </span>
+        <span class="subline-sep">—</span>
+        <span>Never touch your mouse</span>
       </p>
     </div>
 
     <!-- Right Side: 5-Key Cockpit Feature Widget -->
-    <div class="cockpit-widget" id="cockpit-widget">
+    <div class="cockpit-widget" id="cockpit-widget" data-browser="chrome">
       <!-- Cockpit Header -->
       <div class="cockpit-header">
         <div class="cockpit-header-left">
           <span class="cockpit-live-dot pulse-dot"></span>
-          <span class="cockpit-title">Cockpit Switchboard</span>
+          <span class="cockpit-title">Interactive HUD</span>
         </div>
-        <span class="cockpit-0ms-tag" id="cockpit-latency-tag">0.01ms · Swift 6</span>
+        <div class="cockpit-browser-picker" id="cockpit-browser-picker">
+          <button class="browser-pill-btn active" data-browser="chrome" title="Switch to Google Chrome (Caps+C)">Chrome</button>
+          <button class="browser-pill-btn" data-browser="brave" title="Switch to Brave Browser (Caps+B)">Brave</button>
+        </div>
       </div>
 
       <!-- 5-Key Home-Row Selector Deck -->
       <div class="cockpit-keys-deck" id="cockpit-keys-deck">
-        <button class="cockpit-key-btn active" data-slot="c" title="Press C or Caps+C">
-          <span class="key-cap">C</span>
-          <span class="key-label">Chrome</span>
+        <button class="cockpit-key-btn active" data-slot="c" id="cockpit-browser-key-btn" title="Press C or Caps+C">
+          <span class="key-cap" id="browser-key-cap">C</span>
+          <span class="key-label" id="browser-key-label">Chrome</span>
         </button>
         <button class="cockpit-key-btn" data-slot="t" title="Press T or Caps+T">
           <span class="key-cap">T</span>
@@ -137,7 +145,7 @@
               </div>
               <div class="chrome-active-meta">
                 <div class="chrome-active-name" id="chrome-active-name">Igor</div>
-                <div class="chrome-active-email" id="chrome-active-email">igorekishev92@gmail.com</div>
+                <div class="chrome-active-email" id="chrome-active-email">igor@xomsky.app</div>
                 <div class="chrome-active-stats" id="chrome-active-stats">
                   <span class="stats-badge"><span class="stats-dot"></span><span id="chrome-window-count">4 windows</span></span>
                   <span class="stats-sep">·</span>
@@ -161,7 +169,7 @@
             </button>
             <button class="profile-pill" data-index="2" title="Press 3 or Caps+3">
               <span class="pill-key">3</span>
-              <img src="assets/images/profiles/gcp.png" class="pill-avatar" alt="GCP">
+              <img src="assets/images/profiles/gcp.png" class="pill-avatar" alt="GCP" style="background: linear-gradient(135deg, #EC4899 0%, #F43F5E 100%); padding: 2px;">
               <span class="pill-name">GCP</span>
             </button>
             <button class="profile-pill" data-index="3" title="Press 4 or Caps+4">
@@ -185,8 +193,12 @@
               </div>
               <span class="tool-shortcut-tag">Caps + T</span>
             </div>
+            <div class="tool-mini-snippet">
+              <span style="color: #0284C7;">➜ ~/mac-suite</span> swift test<br>
+              <span style="color: #10B981;">✔ 70/70 tests passed (0.042s)</span>
+            </div>
             <div class="tool-telemetry-box">
-              <div class="telemetry-line"><span class="telemetry-dot"></span> <strong>0ms Hardware Tap</strong> · Zero window focus delay</div>
+              <div class="telemetry-line"><span class="telemetry-dot"></span> <strong>0ms Hardware Tap</strong> · Zero focus delay</div>
               <div class="telemetry-sub">Auto-cycles open terminal windows or spawns new tab</div>
             </div>
           </div>
@@ -205,8 +217,13 @@
               </div>
               <span class="tool-shortcut-tag">Caps + I</span>
             </div>
+            <div class="tool-mini-snippet">
+              <span style="color: #F472B6;">import</span> SwiftUI<br>
+              <span style="color: #60A5FA;">MinimalHUDWindow</span>.shared.showImmediate()<br>
+              <span style="color: var(--text-muted);">// Raised window in 0ms</span>
+            </div>
             <div class="tool-telemetry-box">
-              <div class="telemetry-line"><span class="telemetry-dot"></span> <strong>Direct Space Switch</strong> · Frontmost editor focus</div>
+              <div class="telemetry-line"><span class="telemetry-dot"></span> <strong>Direct Space Switch</strong> · Editor focus in 0ms</div>
               <div class="telemetry-sub">Instant return to code from any macOS desktop space</div>
             </div>
           </div>
@@ -224,6 +241,10 @@
                 <div class="tool-preview-desc">1-tap access to your reasoning companion</div>
               </div>
               <span class="tool-shortcut-tag">Caps + A</span>
+            </div>
+            <div class="tool-mini-snippet">
+              <span style="color: #C084FC;">$</span> agy plan "Refactor telemetry"<br>
+              <span style="color: #10B981;">✔ Plan approved · 0ms context switch</span>
             </div>
             <div class="tool-telemetry-box">
               <div class="telemetry-line"><span class="telemetry-dot"></span> <strong>Floating Bezel HUD</strong> · Non-activating overlay</div>
@@ -244,6 +265,10 @@
                 <div class="tool-preview-desc">Jot down thoughts without losing flow state</div>
               </div>
               <span class="tool-shortcut-tag">Caps + N</span>
+            </div>
+            <div class="tool-mini-snippet">
+              <span style="color: #FBBF24;">#</span> Quick Capture<br>
+              <span style="color: var(--text-muted);">- Instant floating scratchpad</span>
             </div>
             <div class="tool-telemetry-box">
               <div class="telemetry-line"><span class="telemetry-dot"></span> <strong>Instant Quick Capture</strong> · Zero friction scratchpad</div>
