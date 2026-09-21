@@ -166,7 +166,13 @@ The most beloved productivity feature of Linux and X11, brought to macOS with ze
 
 ## 🚀 Quickstart & Installation
 
-### Option 1: Direct Download (Pre-built DMG)
+### Option 1: Install via Homebrew (Recommended)
+
+```bash
+brew install unacau/tap/xomsky
+```
+
+### Option 2: Direct Download (Pre-built DMG)
 
 1. Download the latest release:  
    👉 **[Download Xomsky.dmg (2.1 MB)](https://github.com/unacau/mac-productivity-suite/releases/latest/download/Xomsky.dmg)**
@@ -174,7 +180,7 @@ The most beloved productivity feature of Linux and X11, brought to macOS with ze
 3. Launch Xomsky from `/Applications` or Spotlight.
 4. Grant **Accessibility** permission when prompted (*System Settings ➔ Privacy & Security ➔ Accessibility ➔ Enable Xomsky*).
 
-### Option 2: Build from Source (1 Command)
+### Option 3: Build from Source (1 Command)
 
 Khomyak compiles into a universal Mach-O binary (`arm64` + `x86_64`) in seconds using Swift Package Manager:
 
