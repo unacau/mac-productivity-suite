@@ -50,7 +50,7 @@ public struct InstalledAppInfo: Identifiable, Sendable, Equatable {
 @MainActor
 public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
     public let category: String
-    public let candidates: [AppCandidate]
+    public var candidates: [AppCandidate]
     
     /// Test hooks
     public var customItemsOverride: [AntigravityItem]? = nil
@@ -415,6 +415,10 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
     // MARK: - Discovery & Refresh
     
     public func refreshItems() {
+        if category == "Custom" {
+            self.candidates = Self.loadCustomAppCandidates()
+        }
+        
         if let override = self.customItemsOverride {
             self.items = override
             if let saved = UserDefaults.standard.string(forKey: "SelectedApp_\(category)"),
@@ -555,6 +559,7 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
             // Raise and unminimize windows
             let appElement = AXUIElementCreateApplication(running.processIdentifier)
             var windowsRef: CFTypeRef?
+            var windowRaised = false
             if AXUIElementCopyAttributeValue(appElement, kAXWindowsAttribute as CFString, &windowsRef) == .success,
                let windows = windowsRef as? [AXUIElement], !windows.isEmpty {
                 for window in windows {
@@ -567,6 +572,17 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
                 if let first = windows.first {
                     AXUIElementPerformAction(first, kAXRaiseAction as CFString)
                     AXUIElementSetAttributeValue(first, kAXMainAttribute as CFString, true as CFTypeRef)
+                    windowRaised = true
+                }
+            }
+            
+            // Special handling for Finder: if Finder is running but has no open windows, activating it leaves the user
+            // on the current screen with only the menu bar changed. Open a new Finder window if none was raised!
+            if bundleID == "com.apple.finder" && !windowRaised {
+                let script = "tell application \"Finder\" to make new Finder window"
+                if let appleScript = NSAppleScript(source: script) {
+                    var errorDict: NSDictionary?
+                    appleScript.executeAndReturnError(&errorDict)
                 }
             }
         } else {
@@ -742,10 +758,37 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
     }
     
     public static func pinnedAppItems() -> [AntigravityItem] {
-        let selected = selectedBundleIDs
+        let savedList = UserDefaults.standard.stringArray(forKey: "SelectedAppBundleIDs") ?? Array(selectedBundleIDs)
         let all = allDiscoveredItems()
-        let matched = all.filter { selected.contains($0.bundleID) }
-        return Array(matched.prefix(maxPinnedQuickApps))
+        var allMap = Dictionary(all.map { ($0.bundleID, $0) }, uniquingKeysWith: { first, _ in first })
+        
+        var result: [AntigravityItem] = []
+        for bundleID in savedList {
+            if let item = allMap[bundleID] {
+                if !result.contains(where: { $0.bundleID == bundleID }) {
+                    result.append(item)
+                }
+            } else if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
+                // Resilient on-the-fly resolution for system/custom apps (Finder, Settings, etc.)
+                let path = url.path
+                let name = (path as NSString).lastPathComponent.replacingOccurrences(of: ".app", with: "")
+                let icon = NSWorkspace.shared.icon(forFile: path)
+                icon.size = NSSize(width: 64, height: 64)
+                let item = AntigravityItem(
+                    name: name,
+                    bundleID: bundleID,
+                    path: path,
+                    icon: icon,
+                    index: result.count + 1
+                )
+                result.append(item)
+                allMap[bundleID] = item
+                if !custom.items.contains(where: { $0.bundleID == bundleID }) {
+                    custom.items.append(item)
+                }
+            }
+        }
+        return Array(result.prefix(maxPinnedQuickApps))
     }
     
     /// Returns pinned apps grouped by their first letter, sorted alphabetically.
@@ -763,6 +806,62 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
         return letterMap.keys.sorted().map { char in
             (letter: char, items: letterMap[char]!)
         }
+    }
+    
+    // MARK: - App Shortcut Categories (Toolset vs Quick)
+    
+    public enum AppShortcutCategory: String, Sendable, CaseIterable {
+        case toolset = "Toolset Shortcuts"
+        case quick = "Quick Shortcuts"
+    }
+    
+    /// Determines whether an application belongs to Toolset Shortcuts (Engineering / Work) or Quick Shortcuts (System / Everyday).
+    public static func category(for bundleID: String) -> AppShortcutCategory {
+        let toolsetCategoryNames: Set<String> = ["Terminal", "IDE", "AI Agent", "Notes"]
+        for engine in allEngines where toolsetCategoryNames.contains(engine.category) {
+            if engine.candidates.contains(where: { $0.bundleID == bundleID }) ||
+               engine.items.contains(where: { $0.bundleID == bundleID }) {
+                return .toolset
+            }
+        }
+        
+        let knownToolsetPrefixes = [
+            "com.apple.dt.Xcode",
+            "com.microsoft.VSCode",
+            "com.googlecode.iterm2",
+            "com.google.antigravity",
+            "md.obsidian",
+            "dev.zed.Zed",
+            "com.sublimetext",
+            "com.postmanlabs.mac",
+            "com.mitchellh.ghostty",
+            "dev.warp.Warp"
+        ]
+        if knownToolsetPrefixes.contains(where: { bundleID.hasPrefix($0) }) {
+            return .toolset
+        }
+        
+        let lowerID = bundleID.lowercased()
+        if lowerID.contains("jetbrains") || lowerID.contains("sublime") || lowerID.contains("postman") || lowerID.contains("docker") || lowerID.contains("xcode") || lowerID.contains("vscode") {
+            return .toolset
+        }
+        
+        return .quick
+    }
+    
+    /// Returns pinned application items divided cleanly into Toolset and Quick shortcuts.
+    public static func pinnedAppItemsGroupedByCategory() -> (toolset: [AntigravityItem], quick: [AntigravityItem]) {
+        let pinned = pinnedAppItems()
+        var toolset: [AntigravityItem] = []
+        var quick: [AntigravityItem] = []
+        for item in pinned {
+            if category(for: item.bundleID) == .toolset {
+                toolset.append(item)
+            } else {
+                quick.append(item)
+            }
+        }
+        return (toolset: toolset, quick: quick)
     }
     
     /// Discovers and groups all available application items strictly by their first letter.
@@ -810,6 +909,10 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
             index: custom.items.count + 1
         )
         
+        // Sync candidates and refresh custom engine
+        custom.candidates = loadCustomAppCandidates()
+        custom.refreshItems()
+        
         if !custom.items.contains(where: { $0.bundleID == bundleID }) {
             custom.items.append(item)
         }
@@ -840,16 +943,39 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
         }
         
         let fileManager = FileManager.default
-        let dirs = [
+        var dirs = [
             URL(fileURLWithPath: "/Applications"),
             URL(fileURLWithPath: "/System/Applications"),
             URL(fileURLWithPath: "/System/Applications/Utilities"),
             fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Applications")
         ]
         
+        let coreServicesAppsDir = URL(fileURLWithPath: "/System/Library/CoreServices/Applications")
+        if fileManager.fileExists(atPath: coreServicesAppsDir.path) {
+            dirs.append(coreServicesAppsDir)
+        }
+        
         var apps: [InstalledAppInfo] = []
         var seenBundleIDs = Set<String>()
         
+        // 1. Explicitly include macOS Finder
+        let finderURL = URL(fileURLWithPath: "/System/Library/CoreServices/Finder.app")
+        if fileManager.fileExists(atPath: finderURL.path) {
+            let bundleID = Bundle(url: finderURL)?.bundleIdentifier ?? "com.apple.finder"
+            let icon = NSWorkspace.shared.icon(forFile: finderURL.path)
+            icon.size = NSSize(width: 64, height: 64)
+            apps.append(
+                InstalledAppInfo(
+                    name: "Finder",
+                    bundleID: bundleID,
+                    path: finderURL.path,
+                    icon: icon
+                )
+            )
+            seenBundleIDs.insert(bundleID)
+        }
+        
+        // 2. Scan standard and additional system application directories
         for dir in dirs {
             guard let contents = try? fileManager.contentsOfDirectory(
                 at: dir,
@@ -884,6 +1010,27 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
             }
         }
         
+        // 3. Include any user-registered custom app paths
+        let customPaths = UserDefaults.standard.stringArray(forKey: "CustomAppPaths") ?? []
+        for customPath in customPaths {
+            guard fileManager.fileExists(atPath: customPath) else { continue }
+            let customURL = URL(fileURLWithPath: customPath)
+            let name = customURL.deletingPathExtension().lastPathComponent
+            let bundleID = Bundle(url: customURL)?.bundleIdentifier ?? "custom.\(name.lowercased())"
+            guard !seenBundleIDs.contains(bundleID) else { continue }
+            seenBundleIDs.insert(bundleID)
+            let icon = NSWorkspace.shared.icon(forFile: customPath)
+            icon.size = NSSize(width: 64, height: 64)
+            apps.append(
+                InstalledAppInfo(
+                    name: name,
+                    bundleID: bundleID,
+                    path: customPath,
+                    icon: icon
+                )
+            )
+        }
+        
         apps.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
         cachedInstalledApplications = apps
         return apps
@@ -896,7 +1043,15 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
         
         let q = trimmed.lowercased()
         return all.filter { app in
-            app.name.lowercased().contains(q) || app.bundleID.lowercased().contains(q)
+            let nameMatch = app.name.lowercased().contains(q)
+            let bundleMatch = app.bundleID.lowercased().contains(q)
+            var aliasMatch = false
+            if app.bundleID == "com.apple.systempreferences" {
+                aliasMatch = "settings".contains(q) || "системные настройки".contains(q) || "настройки".contains(q)
+            } else if app.bundleID == "com.apple.finder" {
+                aliasMatch = "файндер".contains(q)
+            }
+            return nameMatch || bundleMatch || aliasMatch
         }.sorted { a, b in
             let aName = a.name.lowercased()
             let bName = b.name.lowercased()

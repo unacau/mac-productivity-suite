@@ -667,9 +667,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         browserSectionHeader.isEnabled = false
         menu.addItem(browserSectionHeader)
         
-        let browserTitle = profileEngine.browserBundleID == "com.google.Chrome" ? "Chrome (Caps-Lock + C)" : "\(browserName) (Caps-Lock + C)"
+        let browserTitle = profileEngine.browserBundleID == "com.google.Chrome" ? "Chrome" : browserName
         let chromeItem = makeAlignedMenuItem(
             title: browserTitle,
+            keyEquivalent: "c",
             isHeader: false,
             icon: chromeIcon,
             accessibilityLabel: "\(browserName)",
@@ -677,20 +678,36 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             action: #selector(handleActivateBrowserClick(_:)),
             target: self
         )
+        chromeItem.toolTip = "Hold Caps-Lock and press C to switch to \(browserName)"
         menu.addItem(chromeItem)
         
+        let activeProfileDir = profileEngine.getActiveProfileDir()
         if !selectedList.isEmpty {
             for p in selectedList {
+                let isActive = p.dir == activeProfileDir
                 let pItem = makeAlignedMenuItem(
                     title: p.effectiveName,
                     keyEquivalent: "\(p.index)",
                     icon: p.avatarImage,
                     accessibilityLabel: "\(p.effectiveName)",
-                    accessibilityHelp: "Hold Caps-Lock and press \(p.index) to switch to \(p.effectiveName)",
+                    accessibilityHelp: "Hold Caps-Lock and press \(p.index) to switch to \(p.effectiveName) (Profile \(p.index) of \(selectedList.count))",
                     action: #selector(handleProfileClick(_:)),
                     target: self,
                     representedObject: p.dir
                 )
+                pItem.indentationLevel = 1
+                if isActive {
+                    let attr = NSMutableAttributedString(string: p.effectiveName)
+                    let activeBadge = NSAttributedString(
+                        string: "  ✓",
+                        attributes: [
+                            .foregroundColor: NSColor.secondaryLabelColor,
+                            .font: NSFont.systemFont(ofSize: 11, weight: .semibold)
+                        ]
+                    )
+                    attr.append(activeBadge)
+                    pItem.attributedTitle = attr
+                }
                 menu.addItem(pItem)
             }
         } else if let firstProfile = profileEngine.profiles.first {
@@ -704,44 +721,115 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                 target: self,
                 representedObject: firstProfile.dir
             )
+            pItem.indentationLevel = 1
             menu.addItem(pItem)
         }
         
-        menu.addItem(makeHamsterSeparatorItem())
+        let (rawToolsetItems, rawQuickItems) = AppGroupEngine.pinnedAppItemsGroupedByCategory()
         
-        // 2. Quick Apps section (Caps-Lock)
-        let quickAppsHeader = NSMenuItem.sectionHeader(title: "Quick Apps (Caps-Lock)")
-        quickAppsHeader.isEnabled = false
-        menu.addItem(quickAppsHeader)
+        // Group items within each category so cyclic siblings (apps sharing the same shortcut letter)
+        // are placed directly adjacent to each other for clear Gestalt proximity.
+        func groupCyclicSiblings(_ items: [AntigravityItem]) -> [AntigravityItem] {
+            var letterGroups: [Character: [AntigravityItem]] = [:]
+            var orderedLetters: [Character] = []
+            for item in items {
+                let char = Character((item.name.first(where: { $0.isLetter }) ?? "A").uppercased())
+                if letterGroups[char] == nil {
+                    orderedLetters.append(char)
+                }
+                letterGroups[char, default: []].append(item)
+            }
+            return orderedLetters.flatMap { letterGroups[$0] ?? [] }
+        }
         
-        let pinnedItems = AppGroupEngine.pinnedAppItems()
-        for item in pinnedItems {
+        let toolsetItems = groupCyclicSiblings(rawToolsetItems)
+        let quickItems = groupCyclicSiblings(rawQuickItems)
+        let allPinned = toolsetItems + quickItems
+        
+        // Track letter frequency to display cyclic signifiers for shared letters
+        var letterCounts: [Character: Int] = [:]
+        for item in allPinned {
+            let char = Character((item.name.first(where: { $0.isLetter }) ?? "A").uppercased())
+            letterCounts[char, default: 0] += 1
+        }
+        var letterSeenIndices: [Character: Int] = [:]
+        
+        func appendAppRow(item: AntigravityItem, categoryHelp: String) {
             let char = Character((item.name.first(where: { $0.isLetter }) ?? "A").uppercased())
             let charStr = String(char).lowercased()
+            
+            letterSeenIndices[char, default: 0] += 1
+            let index = letterSeenIndices[char]!
+            let total = letterCounts[char] ?? 1
+            
             let rowItem = makeAlignedMenuItem(
                 title: item.name,
                 keyEquivalent: charStr,
                 icon: item.icon,
                 accessibilityLabel: "\(item.name)",
-                accessibilityHelp: "Hold Caps-Lock and press \(char) to switch to \(item.name)",
+                accessibilityHelp: total > 1
+                    ? "Hold Caps-Lock and press \(char) to cycle (\(item.name), \(index) of \(total) in \(categoryHelp))"
+                    : "Hold Caps-Lock and press \(char) to switch to \(item.name) (\(categoryHelp))",
                 action: #selector(handleCoreAppClick(_:)),
                 target: self,
                 representedObject: item.bundleID
             )
+            
+            if total > 1 {
+                let attr = NSMutableAttributedString(string: item.name)
+                let badge = NSAttributedString(
+                    string: " · \(index)/\(total) ↻",
+                    attributes: [
+                        .foregroundColor: NSColor.secondaryLabelColor,
+                        .font: NSFont.systemFont(ofSize: 11, weight: .regular)
+                    ]
+                )
+                attr.append(badge)
+                rowItem.attributedTitle = attr
+                rowItem.toolTip = "Hold Caps-Lock and press \(char) to cycle (\(index) of \(total): \(item.name))"
+            } else {
+                rowItem.toolTip = "Hold Caps-Lock and press \(char) to switch to \(item.name)"
+            }
+            
             menu.addItem(rowItem)
+        }
+        
+        // Section 2: Core Toolset (Developer Workstation Apps)
+        if !toolsetItems.isEmpty {
+            menu.addItem(NSMenuItem.separator())
+            let toolsetHeader = NSMenuItem.sectionHeader(title: "Core Toolset")
+            toolsetHeader.isEnabled = false
+            menu.addItem(toolsetHeader)
+            for item in toolsetItems {
+                appendAppRow(item: item, categoryHelp: "Toolset")
+            }
+        }
+        
+        // Signature Khomyak Mascot Divider bridging Core Toolset and Quick Shortcuts
+        menu.addItem(makeHamsterSeparatorItem())
+        
+        // Section 3: Quick Shortcuts (Auxiliary & Communication Apps)
+        if !quickItems.isEmpty {
+            let quickHeader = NSMenuItem.sectionHeader(title: "Quick Shortcuts")
+            quickHeader.isEnabled = false
+            menu.addItem(quickHeader)
+            for item in quickItems {
+                appendAppRow(item: item, categoryHelp: "Quick Shortcut")
+            }
         }
         
         menu.addItem(NSMenuItem.separator())
         
-        // 3. Change App submenu
+        // Zone 3: Preferences & System Controls
+        // 3.1 Manage Quick Apps submenu
         let changeAppItem = makeAlignedMenuItem(
-            title: "Change App",
-            icon: NSImage(systemSymbolName: "arrow.triangle.swap", accessibilityDescription: "Change App"),
-            accessibilityHelp: "Configure pinned apps and browser profiles",
+            title: "Manage Quick Apps...",
+            icon: NSImage(systemSymbolName: "arrow.triangle.swap", accessibilityDescription: "Manage Quick Apps"),
+            accessibilityHelp: "Configure pinned apps, installed applications, and browser profiles",
             action: nil,
             target: nil
         )
-        let changeAppSubmenu = NSMenu(title: "Change App")
+        let changeAppSubmenu = NSMenu(title: "Manage Quick Apps")
         
         let transparentOffImage = NSImage(size: NSSize(width: 14, height: 14))
         
@@ -851,41 +939,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         changeAppSubmenu.addItem(customAppItem)
         
         changeAppItem.submenu = changeAppSubmenu
-        menu.addItem(changeAppItem)
         
-        menu.addItem(NSMenuItem.separator())
-        
-        // 4. Utility & Pro items
-        let proItem: NSMenuItem
-        if LicenseEngine.shared.isPro {
-            proItem = makeAlignedMenuItem(
-                title: "Xomsky Pro: Active ✓",
-                icon: NSImage(systemSymbolName: "checkmark.seal.fill", accessibilityDescription: "Xomsky Pro Active"),
-                accessibilityHelp: "Manage your Xomsky Pro license",
-                action: #selector(handleManageLicense),
-                target: self
-            )
-            menu.addItem(proItem)
-        } else {
-            proItem = makeAlignedMenuItem(
-                title: "Upgrade to Xomsky Pro (\(LicenseEngine.proPrice))...",
-                icon: NSImage(systemSymbolName: "star.fill", accessibilityDescription: "Upgrade to Xomsky Pro"),
-                accessibilityHelp: "Upgrade to Xomsky Pro for unlimited app and profile slots",
-                action: #selector(handleUpgradeToPro),
-                target: self
-            )
-            menu.addItem(proItem)
-            
-            let enterKeyItem = makeAlignedMenuItem(
-                title: "Enter License Key...",
-                icon: NSImage(systemSymbolName: "key.fill", accessibilityDescription: "Enter License Key"),
-                accessibilityHelp: "Activate your license key",
-                action: #selector(handleEnterLicenseKeyFromMenu),
-                target: self
-            )
-            menu.addItem(enterKeyItem)
-        }
-        
+        // Zone 3: Preferences & System Controls
+        let isCopyEnabled = CopyOnSelectEngine.shared.isEnabled
         let copyStatusItem = makeAlignedMenuItem(
             title: "Copy on Select",
             icon: NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: "Copy on Select"),
@@ -893,8 +949,32 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             action: #selector(handleToggleCopyOnSelect),
             target: self
         )
-        copyStatusItem.state = CopyOnSelectEngine.shared.isEnabled ? .on : .off
+        copyStatusItem.state = .off
+        let copyAttr = NSMutableAttributedString(string: "Copy on Select")
+        let copyBadgeText = isCopyEnabled ? " · On" : " · Off"
+        let copyBadge = NSAttributedString(
+            string: copyBadgeText,
+            attributes: [
+                .foregroundColor: NSColor.secondaryLabelColor,
+                .font: NSFont.systemFont(ofSize: 11, weight: .regular)
+            ]
+        )
+        copyAttr.append(copyBadge)
+        copyStatusItem.attributedTitle = copyAttr
+        copyStatusItem.toolTip = "Automatically copy selected text to the clipboard on drag selection (\(isCopyEnabled ? "Active" : "Disabled"))"
         menu.addItem(copyStatusItem)
+        menu.addItem(changeAppItem)
+        
+        let settingsItem = makeAlignedMenuItem(
+            title: "Settings...",
+            keyEquivalent: ",",
+            modifierMask: [.command],
+            icon: NSImage(systemSymbolName: "gearshape", accessibilityDescription: "Settings"),
+            accessibilityHelp: "Configure pinned apps, shortcuts, and browser profiles",
+            action: #selector(handleOpenAppSearch),
+            target: self
+        )
+        menu.addItem(settingsItem)
         
         let refreshItem = makeAlignedMenuItem(
             title: "Refresh Profiles & Apps",
@@ -919,6 +999,46 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         
         menu.addItem(NSMenuItem.separator())
+        
+        // 5. License & Lifecycle
+        if LicenseEngine.shared.isPro {
+            let proItem = makeAlignedMenuItem(
+                title: "Xomsky Pro · Active",
+                icon: NSImage(systemSymbolName: "checkmark.seal", accessibilityDescription: "Xomsky Pro Active"),
+                accessibilityHelp: "Manage your Xomsky Pro license",
+                action: #selector(handleManageLicense),
+                target: self
+            )
+            let attr = NSMutableAttributedString(string: "Xomsky Pro")
+            let badge = NSAttributedString(
+                string: " · Active",
+                attributes: [
+                    .foregroundColor: NSColor.secondaryLabelColor,
+                    .font: NSFont.systemFont(ofSize: 11, weight: .regular)
+                ]
+            )
+            attr.append(badge)
+            proItem.attributedTitle = attr
+            menu.addItem(proItem)
+        } else {
+            let proItem = makeAlignedMenuItem(
+                title: "Upgrade to Xomsky Pro (\(LicenseEngine.proPrice))...",
+                icon: NSImage(systemSymbolName: "star.fill", accessibilityDescription: "Upgrade to Xomsky Pro"),
+                accessibilityHelp: "Upgrade to Xomsky Pro for unlimited app and profile slots",
+                action: #selector(handleUpgradeToPro),
+                target: self
+            )
+            menu.addItem(proItem)
+            
+            let enterKeyItem = makeAlignedMenuItem(
+                title: "Enter License Key...",
+                icon: NSImage(systemSymbolName: "key.fill", accessibilityDescription: "Enter License Key"),
+                accessibilityHelp: "Activate your license key",
+                action: #selector(handleEnterLicenseKeyFromMenu),
+                target: self
+            )
+            menu.addItem(enterKeyItem)
+        }
         
         let quitItem = makeAlignedMenuItem(
             title: "Quit Xomsky",
@@ -1264,15 +1384,15 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.level = .floating
         if panel.runModal() == .OK, let url = panel.url {
             if let item = AppGroupEngine.registerCustomApp(url: url) {
-                if AppGroupEngine.isAppSelected(bundleID: item.bundleID) {
-                    return
-                }
                 if AppGroupEngine.canPinMoreApps {
                     AppGroupEngine.selectApp(bundleID: item.bundleID)
                     updateDynamicShortcuts()
                     updateMenu()
-                } else {
+                } else if !AppGroupEngine.isAppSelected(bundleID: item.bundleID) {
                     promptAppReplacement(newBundleID: item.bundleID)
+                } else {
+                    updateDynamicShortcuts()
+                    updateMenu()
                 }
             }
         }

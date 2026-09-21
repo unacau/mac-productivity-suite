@@ -1079,14 +1079,15 @@ struct ChromeQuickAccessUnitTests {
         #expect(quitItem?.keyEquivalentModifierMask == [.command])
         
         // Section 1: Browsers & Profiles section header present and strictly non-clickable
-        let browserSectionHeader = menu.items.first(where: { $0.title == "Browsers & Profiles" })
+        let browserSectionHeader = menu.items.first(where: { $0.title.contains("Browsers & Profiles") })
         #expect(browserSectionHeader != nil)
         #expect(browserSectionHeader?.isSectionHeader == true)
         #expect(browserSectionHeader?.isEnabled == false)
         #expect(browserSectionHeader?.action == nil)
         
-        let chromeItem = menu.items.first(where: { $0.title.contains("Chrome (Caps-Lock + C)") })
+        let chromeItem = menu.items.first(where: { $0.title.hasPrefix("Chrome") })
         #expect(chromeItem != nil)
+        #expect(chromeItem?.keyEquivalent == "c")
         #expect(chromeItem?.action != nil)
         
         // Hamster Mascot Separator present between sections
@@ -1094,12 +1095,12 @@ struct ChromeQuickAccessUnitTests {
         #expect(hamsterSeparator != nil)
         #expect(hamsterSeparator?.isEnabled == false)
         
-        // Section 2: Quick Apps header present and strictly non-clickable
-        let quickAppsHeader = menu.items.first(where: { $0.title.contains("Quick Apps (Caps-Lock)") || $0.title.contains("Toolkit (Caps-Lock)") })
-        #expect(quickAppsHeader != nil)
-        #expect(quickAppsHeader?.isSectionHeader == true)
-        #expect(quickAppsHeader?.isEnabled == false)
-        #expect(quickAppsHeader?.action == nil)
+        // Section 2: Toolset / Quick Apps header present and strictly non-clickable
+        let toolsetHeader = menu.items.first(where: { $0.title.contains("Core Toolset") || $0.title.contains("Quick Apps") || $0.title.contains("Toolset Shortcuts") || $0.title.contains("Toolkit") })
+        #expect(toolsetHeader != nil)
+        #expect(toolsetHeader?.isSectionHeader == true)
+        #expect(toolsetHeader?.isEnabled == false)
+        #expect(toolsetHeader?.action == nil)
         
         // Active Quick Apps items present with valid keyEquivalent
         let termMatch = menu.items.first(where: { $0.title.contains("iTerm") || $0.title.contains("Terminal") })
@@ -1107,12 +1108,12 @@ struct ChromeQuickAccessUnitTests {
         #expect(termMatch?.keyEquivalent.isEmpty == false)
         
         // Every pinned app is listed directly in the menu without being hidden in submenus
-        let antigravityItem = menu.items.first(where: { $0.title == "Antigravity" })
+        let antigravityItem = menu.items.first(where: { $0.title.hasPrefix("Antigravity") && !$0.title.contains("IDE") })
         #expect(antigravityItem != nil)
         #expect(antigravityItem?.keyEquivalent == "a")
         #expect(antigravityItem?.submenu == nil)
         
-        let ideItem = menu.items.first(where: { $0.title == "Antigravity IDE" })
+        let ideItem = menu.items.first(where: { $0.title.contains("Antigravity IDE") })
         #expect(ideItem != nil)
         #expect(ideItem?.keyEquivalent == "a")
         #expect(ideItem?.submenu == nil)
@@ -1121,8 +1122,8 @@ struct ChromeQuickAccessUnitTests {
         #expect(notesMatch != nil)
         #expect(notesMatch?.keyEquivalent.isEmpty == false)
         
-        // Change App item with submenu present
-        let changeAppItem = menu.items.first(where: { $0.title == "Change App" })
+        // Change App / Manage Quick Apps item with submenu present
+        let changeAppItem = menu.items.first(where: { $0.title.contains("Manage Quick Apps") || $0.title == "Change App" })
         #expect(changeAppItem != nil)
         #expect(changeAppItem?.submenu != nil)
         
@@ -1132,12 +1133,12 @@ struct ChromeQuickAccessUnitTests {
         // Headers and Actions present in Change App submenu
         #expect(subTitles.contains("Search & Add Application..."))
         #expect(subTitles.contains(where: { $0.contains("Profiles (up to 4):") }))
-        #expect(subTitles.contains("Pinned Quick Apps (up to 4):"))
+        #expect(subTitles.contains(where: { $0.contains("Pinned Quick Apps") }))
         #expect(subTitles.contains("Choose Other App..."))
         
         // App shortcuts derive strictly from first letter of app name (or slot digit for Chrome)
         for item in menu.items {
-            if item.isSeparatorItem || item.title.hasSuffix(":") || item.title.hasPrefix("Chrome") || item.title.hasPrefix("Quick Apps") || item.title.hasPrefix("Toolkit") || item.title == "Browsers & Profiles" || item.view is AppDelegate.HamsterSeparatorView { continue }
+            if item.isSeparatorItem || item.title.hasSuffix(":") || item.title.hasPrefix("Chrome") || item.title.hasPrefix("Core Toolset") || item.title.hasPrefix("Quick Apps") || item.title.hasPrefix("Toolkit") || item.title.hasPrefix("Toolset Shortcuts") || item.title.hasPrefix("Quick Shortcuts") || item.title.contains("Browsers & Profiles") || item.title.hasPrefix("Manage Quick Apps") || item.title == "Change App" || item.view is AppDelegate.HamsterSeparatorView { continue }
             if !item.keyEquivalent.isEmpty && item.keyEquivalentModifierMask == [] {
                 let appName = item.title.trimmingCharacters(in: .whitespaces)
                 let key = item.keyEquivalent
@@ -1149,6 +1150,60 @@ struct ChromeQuickAccessUnitTests {
                 }
             }
         }
+    }
+    
+    @Test @MainActor
+    func testAppShortcutCategoryClassification() {
+        // Toolset categories: Terminal, IDE, AI Agent, Notes
+        #expect(AppGroupEngine.category(for: "com.googlecode.iterm2") == .toolset)
+        #expect(AppGroupEngine.category(for: "com.mitchellh.ghostty") == .toolset)
+        #expect(AppGroupEngine.category(for: "com.apple.Terminal") == .toolset)
+        #expect(AppGroupEngine.category(for: "com.google.antigravity") == .toolset)
+        #expect(AppGroupEngine.category(for: "com.google.antigravity-ide") == .toolset)
+        #expect(AppGroupEngine.category(for: "com.microsoft.VSCode") == .toolset)
+        #expect(AppGroupEngine.category(for: "com.apple.Notes") == .toolset)
+        #expect(AppGroupEngine.category(for: "md.obsidian") == .toolset)
+        
+        // Quick categories: Finder, System Settings, Communication, Media
+        #expect(AppGroupEngine.category(for: "com.apple.finder") == .quick)
+        #expect(AppGroupEngine.category(for: "com.apple.systempreferences") == .quick)
+        #expect(AppGroupEngine.category(for: "com.tdesktop.Telegram") == .quick)
+        #expect(AppGroupEngine.category(for: "com.spotify.client") == .quick)
+    }
+    
+    @Test @MainActor
+    func testTwoTierMenuLayoutWithMascotBetween() {
+        let appDelegate = AppDelegate()
+        
+        // Mock a pinned set containing both Toolset and Quick shortcuts
+        let mockPinned = [
+            "com.google.antigravity",        // Toolset (A)
+            "com.google.antigravity-ide",    // Toolset (A)
+            "com.apple.finder",              // Quick (F)
+            "com.apple.systempreferences"    // Quick (S)
+        ]
+        UserDefaults.standard.set(mockPinned, forKey: "SelectedAppBundleIDs")
+        AppGroupEngine.selectedBundleIDs = Set(mockPinned)
+        
+        let menu = appDelegate.buildStatusMenu()
+        
+        let toolsetHeaderIdx = menu.items.firstIndex(where: { $0.title.contains("Core Toolset") || $0.title.contains("Toolset Shortcuts") })
+        let mascotSeparatorIdx = menu.items.firstIndex(where: { $0.view is AppDelegate.HamsterSeparatorView })
+        let quickHeaderIdx = menu.items.firstIndex(where: { $0.title.contains("Quick Shortcuts") || $0.title.contains("Quick Apps") })
+        
+        #expect(toolsetHeaderIdx != nil, "Core Toolset header must exist")
+        #expect(mascotSeparatorIdx != nil, "Hamster mascot separator must exist")
+        #expect(quickHeaderIdx != nil, "Quick Shortcuts header must exist")
+        
+        if let tIdx = toolsetHeaderIdx, let mIdx = mascotSeparatorIdx, let qIdx = quickHeaderIdx {
+            // Mascot sits as the elegant bridge between Core Toolset and Quick Shortcuts
+            #expect(tIdx < mIdx, "Toolset section must appear before mascot separator")
+            #expect(mIdx < qIdx, "Mascot separator must appear before Quick section")
+        }
+        
+        // Reset defaults
+        UserDefaults.standard.set(AppGroupEngine.defaultPinnedBundleIDs, forKey: "SelectedAppBundleIDs")
+        AppGroupEngine.selectedBundleIDs = Set(AppGroupEngine.defaultPinnedBundleIDs)
     }
     
     @Test @MainActor
@@ -1621,6 +1676,149 @@ struct ChromeQuickAccessUnitTests {
         vm.toggleApp(app: testApp)
         #expect(AppGroupEngine.isAppSelected(bundleID: testApp.bundleID) == false)
         #expect(vm.pinnedBundleIDs.contains(testApp.bundleID) == false)
+    }
+    
+    @Test @MainActor
+    func testFinderAndSystemSettingsDiscoveryAndPinning() {
+        // 1. Finder discovery
+        let apps = AppGroupEngine.scanInstalledApplications(forceRefresh: true)
+        let finderApp = apps.first(where: { $0.bundleID == "com.apple.finder" })
+        #expect(finderApp != nil)
+        #expect(finderApp?.name == "Finder")
+        #expect(finderApp?.path == "/System/Library/CoreServices/Finder.app")
+        
+        // 2. Search filtering for Finder and Settings
+        let finderResults = AppGroupEngine.searchInstalledApplications(query: "Finder")
+        #expect(finderResults.contains(where: { $0.bundleID == "com.apple.finder" }))
+        
+        let settingsResults = AppGroupEngine.searchInstalledApplications(query: "Settings")
+        #expect(settingsResults.contains(where: { $0.bundleID == "com.apple.systempreferences" }))
+        
+        // 3. Custom Engine candidate reloading and persistence across refreshItems
+        let prevCustomPaths = UserDefaults.standard.stringArray(forKey: "CustomAppPaths")
+        let prevSelected = UserDefaults.standard.stringArray(forKey: "SelectedAppBundleIDs")
+        defer {
+            if let prev = prevCustomPaths {
+                UserDefaults.standard.set(prev, forKey: "CustomAppPaths")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "CustomAppPaths")
+            }
+            if let prev = prevSelected {
+                UserDefaults.standard.set(prev, forKey: "SelectedAppBundleIDs")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "SelectedAppBundleIDs")
+            }
+            AppGroupEngine.custom.refreshItems()
+        }
+        
+        let finderURL = URL(fileURLWithPath: "/System/Library/CoreServices/Finder.app")
+        let registeredFinder = AppGroupEngine.registerCustomApp(url: finderURL)
+        #expect(registeredFinder != nil)
+        #expect(registeredFinder?.bundleID == "com.apple.finder")
+        
+        // Ensure refreshItems() preserves Finder in custom.items
+        AppGroupEngine.custom.refreshItems()
+        #expect(AppGroupEngine.custom.items.contains(where: { $0.bundleID == "com.apple.finder" }))
+        
+        // 4. pinnedAppItems retains Finder and preserves order
+        AppGroupEngine.selectApp(bundleID: "com.apple.finder")
+        let pinned = AppGroupEngine.pinnedAppItems()
+        #expect(pinned.contains(where: { $0.bundleID == "com.apple.finder" }))
+    }
+    
+    @Test @MainActor
+    func testStreamlinedMenuHierarchyAndCyclicAffordance() {
+        let dummyIcon = NSImage(size: NSSize(width: 32, height: 32))
+        let mockAiAgent = [
+            AntigravityItem(name: "Antigravity", bundleID: "com.google.antigravity", path: "/Applications/Antigravity.app", icon: dummyIcon, index: 1)
+        ]
+        let mockIde = [
+            AntigravityItem(name: "Antigravity IDE", bundleID: "com.google.antigravity-ide", path: "/Applications/Antigravity IDE.app", icon: dummyIcon, index: 1)
+        ]
+        AppGroupEngine.aiAgent.customItemsOverride = mockAiAgent
+        AppGroupEngine.ide.customItemsOverride = mockIde
+        AppGroupEngine.aiAgent.refreshItems()
+        AppGroupEngine.ide.refreshItems()
+        
+        let previousSelected = UserDefaults.standard.stringArray(forKey: "SelectedAppBundleIDs")
+        defer {
+            AppGroupEngine.aiAgent.customItemsOverride = nil
+            AppGroupEngine.ide.customItemsOverride = nil
+            AppGroupEngine.aiAgent.refreshItems()
+            AppGroupEngine.ide.refreshItems()
+            if let prev = previousSelected {
+                UserDefaults.standard.set(prev, forKey: "SelectedAppBundleIDs")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "SelectedAppBundleIDs")
+            }
+        }
+        
+        UserDefaults.standard.set(["com.google.antigravity", "com.google.antigravity-ide"], forKey: "SelectedAppBundleIDs")
+        let appDelegate = AppDelegate()
+        let menu = appDelegate.buildStatusMenu()
+        
+        // 1. Cyclic signifiers for shared letters ('A') with single-line compactness
+        let antigravityItem = menu.items.first(where: { $0.title.hasPrefix("Antigravity") && !$0.title.contains("IDE") })
+        let ideItem = menu.items.first(where: { $0.title.contains("Antigravity IDE") })
+        #expect(antigravityItem != nil)
+        #expect(ideItem != nil)
+        
+        #expect(antigravityItem?.toolTip?.contains("cycle") == true)
+        #expect(antigravityItem?.toolTip?.contains("1 of 2") == true)
+        #expect(ideItem?.toolTip?.contains("cycle") == true)
+        #expect(ideItem?.toolTip?.contains("2 of 2") == true)
+        
+        // Single-line compact affordance: inline in title, NO double-height subtitle expansion
+        #expect(antigravityItem?.title.contains("1/2 ↻") == true)
+        #expect(ideItem?.title.contains("2/2 ↻") == true)
+        if #available(macOS 14.4, *) {
+            #expect(antigravityItem?.subtitle == nil, "Single-line compact menu items must not use subtitle")
+            #expect(ideItem?.subtitle == nil, "Single-line compact menu items must not use subtitle")
+        }
+        
+        // 2. Profile Indentation
+        let profileItems = menu.items.filter { item in
+            item.indentationLevel == 1
+        }
+        #expect(!profileItems.isEmpty, "Profile items should have indentationLevel = 1 for Gestalt hierarchy")
+        
+        // 3. Settings Menu Item with ⌘,
+        let settingsItem = menu.items.first(where: { $0.title == "Settings..." })
+        #expect(settingsItem != nil)
+        #expect(settingsItem?.keyEquivalent == ",")
+        #expect(settingsItem?.keyEquivalentModifierMask == [.command])
+        #expect(settingsItem?.action != nil)
+        
+        // 4. Utility section ordering and checkmark hygiene
+        let copyItem = menu.items.first(where: { $0.title.hasPrefix("Copy on Select") })
+        let refreshItem = menu.items.first(where: { $0.title.contains("Refresh Profiles & Apps") })
+        let quitItem = menu.items.first(where: { $0.title.contains("Quit Xomsky") })
+        #expect(copyItem != nil)
+        #expect(copyItem?.state == .off, "Copy on Select must not use gutter checkmark to prevent left margin collision")
+        #expect(copyItem?.title.contains("· On") == true || copyItem?.title.contains("· Off") == true, "Copy on Select must display inline state badge")
+        #expect(refreshItem != nil)
+        #expect(quitItem != nil)
+        
+        if let copyIdx = menu.items.firstIndex(where: { $0.title.hasPrefix("Copy on Select") }),
+           let manageAppIdx = menu.items.firstIndex(where: { $0.title.contains("Manage Quick Apps") || $0.title == "Change App" }),
+           let settingsIdx = menu.items.firstIndex(where: { $0.title == "Settings..." }),
+           let refreshIdx = menu.items.firstIndex(where: { $0.title.contains("Refresh Profiles & Apps") }),
+           let quitIdx = menu.items.firstIndex(where: { $0.title.contains("Quit Xomsky") }) {
+            #expect(copyIdx < manageAppIdx)
+            #expect(manageAppIdx < settingsIdx)
+            #expect(settingsIdx < refreshIdx)
+            #expect(refreshIdx < quitIdx)
+        }
+        
+        // Ensure Pro item (when active) does not carry a conflicting trailing checkmark
+        let proItem = menu.items.first(where: { $0.title.contains("Xomsky Pro") })
+        #expect(proItem != nil)
+        #expect(proItem?.title.hasSuffix("✓") == false, "Xomsky Pro must not carry trailing checkmark to prevent clash with Copy on Select")
+        
+        // Ensure Manage Quick Apps is not isolated by a redundant preceding separator
+        if let changeAppIdx = menu.items.firstIndex(where: { $0.title.contains("Manage Quick Apps") || $0.title == "Change App" }), changeAppIdx > 0 {
+            #expect(!menu.items[changeAppIdx - 1].isSeparatorItem, "Manage Quick Apps must not be preceded by a separator creating a 1-item island")
+        }
     }
 }
 
