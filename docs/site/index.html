@@ -14,6 +14,18 @@
   <link rel="icon" type="image/png" href="assets/images/AppIcon.png">
   <link rel="stylesheet" href="styles.css">
 
+  <!-- Immediate Zero-Flicker System Theme Detector -->
+  <script>
+    (function() {
+      try {
+        var override = localStorage.getItem("xomsky_theme_override");
+        var systemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        var theme = (override === "dark" || override === "light") ? override : (systemDark ? "dark" : "light");
+        document.documentElement.setAttribute("data-theme", theme);
+      } catch (e) {}
+    })();
+  </script>
+
   <!-- Local Offline Three.js & Controls -->
   <script src="assets/js/three.min.js"></script>
   <script src="assets/js/OrbitControls.js"></script>
@@ -205,6 +217,6 @@
 
   </div>
 
-  <script src="app.js?v=xomsky_launch"></script>
+  <script src="app.js?v=system_theme"></script>
 </body>
 </html>

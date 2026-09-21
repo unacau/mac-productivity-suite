@@ -220,8 +220,22 @@ let ambientLight, keyLight, rimLightL, rimLightR, fillLight;
 let pillarMat, pillarMeshes = [];
 let chassisMesh, chassisMat, plateMesh, plateMat, glowStripMesh, glowStripMat;
 
-// Theme Engine: Concept A (Midnight Obsidian Studio) vs Bright Liminal
-let currentTheme = localStorage.getItem("xomsky_theme") || localStorage.getItem("khomyak_theme") || "dark";
+// Theme Engine: System Theme Auto-Detection (dark/light) with user manual toggle
+function getSystemTheme() {
+  return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function getPreferredTheme() {
+  try {
+    const override = localStorage.getItem("xomsky_theme_override");
+    if (override === "dark" || override === "light") {
+      return override;
+    }
+  } catch (e) {}
+  return getSystemTheme();
+}
+
+let currentTheme = getPreferredTheme();
 
 const THEMES = {
   light: {
@@ -1541,7 +1555,7 @@ function onWindowResize() {
 // --------------------------------------------------------------------------
 // Theme Transition & Dynamic Lighting Engine
 // --------------------------------------------------------------------------
-function applyTheme(themeName, animate = true) {
+function applyTheme(themeName, animate = true, persist = false) {
   currentTheme = themeName;
   const target = THEMES[themeName] || THEMES.dark;
 
@@ -1549,10 +1563,13 @@ function applyTheme(themeName, animate = true) {
   document.documentElement.setAttribute("data-theme", themeName);
   const themeIcon = document.getElementById("theme-icon");
   if (themeIcon) themeIcon.textContent = themeName === "dark" ? "☀️" : "🌙";
-  try {
-    localStorage.setItem("xomsky_theme", themeName);
-    localStorage.setItem("khomyak_theme", themeName);
-  } catch(e) {}
+  if (persist) {
+    try {
+      localStorage.setItem("xomsky_theme_override", themeName);
+      localStorage.setItem("xomsky_theme", themeName);
+      localStorage.setItem("khomyak_theme", themeName);
+    } catch(e) {}
+  }
 
   if (!scene || !floorMat) return;
 
@@ -1671,7 +1688,7 @@ function applyTheme(themeName, animate = true) {
 function switchTheme(targetTheme = null) {
   const next = targetTheme || (currentTheme === "dark" ? "light" : "dark");
   sound.playRelayClick(next === "dark");
-  applyTheme(next, true);
+  applyTheme(next, true, true);
 }
 
 // --------------------------------------------------------------------------
@@ -1801,8 +1818,22 @@ function animate() {
 document.addEventListener("DOMContentLoaded", () => {
   initThreeJS();
 
-  // Apply Initial Theme
-  applyTheme(currentTheme, false);
+  // Apply Initial Theme (defaults to user's system theme without saving override)
+  applyTheme(currentTheme, false, false);
+
+  // Auto-adapt to OS system theme changes if user hasn't set an explicit manual override
+  if (window.matchMedia) {
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
+      try {
+        const hasOverride = localStorage.getItem("xomsky_theme_override");
+        if (!hasOverride) {
+          applyTheme(e.matches ? "dark" : "light", true, false);
+        }
+      } catch (err) {
+        applyTheme(e.matches ? "dark" : "light", true, false);
+      }
+    });
+  }
 
   // Theme Toggle Button
   const themeBtn = document.getElementById("theme-toggle");
