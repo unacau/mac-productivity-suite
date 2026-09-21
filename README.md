@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/xomsky_hero_banner.png" alt="Xomsky — Your Mac’s Home Row on Steroids (5 Tools in 0ms)" width="100%">
+  <img src="assets/xomsky_canonical_hero.png" alt="Xomsky — Your Mac’s Home Row on Steroids (5 Tools in 0ms)" width="100%">
 </p>
 
 <p align="center">
