@@ -21,7 +21,7 @@
 - **System Health & Diagnostics**: `make health` or `./scripts/health_check.sh` (3-point validation).
 - **Semantic Version Bumping**: `make bump-patch`, `make bump-minor`, `make bump-major` (Synchronizes `VERSION.txt`, `BUILD.txt`, and `Info.plist`).
 - **Telemetry & Direct Log Ingestion**:
-  - `make monitor`: Real-time streaming from macOS Unified Logging (`os_log` subsystem `com.almosteleven.khomyak`).
+  - `make monitor`: Real-time streaming from macOS Unified Logging (`os_log` subsystem `com.almosteleven.xomsky`).
   - `make diagnostics`: Aggregated log level and category distribution summary over the last hour.
   - `./scripts/monitor_telemetry.sh errors 30m`: Filter errors and faults directly from system log stream.
 - **Validation & Quality Gates**: `make validate` (verifies version synchronization and shell script syntax).
@@ -41,7 +41,7 @@
   - Keep low-level `CGEvent` monitoring/filtering logic strictly separated in `Engine/` services away from SwiftUI Views.
   - **Always** ensure explicit accessibility permission checks (`AXIsProcessTrusted()`) before registering global event taps.
   - Gracefully handle event tap disablement events (`kCGEventTapDisabledByTimeout`, `kCGEventTapDisabledByUserInput`) by re-enabling the tap via `CGEvent.tapEnable(tap: true)`.
-  - Instrument structured logs using `os.Logger(subsystem: "com.almosteleven.khomyak", category: ...)` rather than raw `print()` statements.
+  - Instrument structured logs using `os.Logger(subsystem: "com.almosteleven.xomsky", category: ...)` rather than raw `print()` statements.
 - **HUD Overlay Lifecycle & Dismissal Order**:
   - **Always hide the HUD overlay window (`MinimalHUDWindow.shared.hideImmediate()`) BEFORE triggering application activation or window focus**. External window launches cause macOS window server transitions that can swallow keyboard events and block the run loop, trapping the HUD on screen if hidden after the launch.
 - **Pinned Apps & Universal Catalog Conventions**:

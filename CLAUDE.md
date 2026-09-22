@@ -5,7 +5,7 @@
 - **Toolchain**: Swift 6+ (Strict Concurrency, `@MainActor`, `Sendable`), Swift Package Manager (SPM).
 - **Core Frameworks**: AppKit, CoreGraphics (`CGEventTap`), ApplicationServices (Accessibility `AXUIElement`), IOHID (`hidutil`), SwiftUI.
 - **Zero Heavy Runtime Dependencies**: No Karabiner daemon, no Hammerspoon runtime.
-- **Unified Logging Subsystem**: `com.almosteleven.khomyak`.
+- **Unified Logging Subsystem**: `com.almosteleven.xomsky`.
 
 ## Key Build & Verification Commands
 - **Run Tests**: `make test` or `swift test` or `./tests/run_tests.sh`

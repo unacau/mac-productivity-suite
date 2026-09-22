@@ -2,17 +2,17 @@
 set -euo pipefail
 
 # ==============================================================================
-# Khomyak - Native Telemetry & Log Ingestion Utility
+# Xomsky - Native Telemetry & Log Ingestion Utility
 # Directly queries and streams macOS Unified Logging System (os_log)
 # ==============================================================================
 
-SUBSYSTEM="com.almosteleven.khomyak"
-BUNDLE_ID="com.almosteleven.khomyak"
-PREDICATE="subsystem == \"${SUBSYSTEM}\" or process == \"Khomyak\""
+SUBSYSTEM="com.almosteleven.xomsky"
+BUNDLE_ID="com.almosteleven.xomsky"
+PREDICATE="subsystem == \"${SUBSYSTEM}\" or process == \"Xomsky\""
 
 usage() {
     cat << EOF
-Khomyak (Хомяк) — Telemetry & Log Monitor
+Xomsky — Telemetry & Log Monitor
 
 Usage:
   ./scripts/monitor_telemetry.sh [command] [options]

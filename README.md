@@ -105,7 +105,7 @@ make test             # Runs 73 unit tests in <0.05s
 
 ## 📊 Telemetry & Health
 
-Xomsky logs directly to Apple's native **macOS Unified Logging System (`os_log`)** under subsystem `com.almosteleven.khomyak`:
+Xomsky logs directly to Apple's native **macOS Unified Logging System (`os_log`)** under subsystem `com.almosteleven.xomsky`:
 
 ```bash
 make monitor       # Stream live telemetry
