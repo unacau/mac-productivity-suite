@@ -25,6 +25,7 @@ Options:
   --push           Create git tag '$TAG' and push to origin (triggers GitHub Actions release).
   --tag-only       Create git tag '$TAG' locally without pushing.
   --local          Build locally, generate checksums, and publish via local 'gh' CLI.
+  --sync-tap       Synchronize unacau/homebrew-tap with the current version and release DMG.
   --dry-run        Perform pre-flight verification without creating tags or publishing.
   -h, --help       Show this help message.
 
@@ -32,6 +33,48 @@ Default behavior:
   Runs pre-flight verification and guides you through triggering the automated
   GitHub Actions cloud release pipeline.
 EOF
+}
+
+sync_homebrew_tap() {
+    local version="$1"
+    local dmg_path="dist/Xomsky.dmg"
+    local sha=""
+
+    if [ -f "$dmg_path" ]; then
+        sha=$(shasum -a 256 "$dmg_path" | awk '{print $1}')
+    else
+        echo "Fetching checksum from GitHub release v${version}..."
+        sha=$(curl -sL "https://github.com/$REPO/releases/download/v${version}/checksums.txt" | awk '{print $1}' || echo "")
+    fi
+
+    if [ -z "$sha" ]; then
+        echo "❌ Could not determine SHA-256 checksum for Xomsky.dmg"
+        return 1
+    fi
+
+    echo "🚀 Updating local formula Casks/xomsky.rb..."
+    sed -i '' -e "s/version \".*\"/version \"${version}\"/" Casks/xomsky.rb || sed -i -e "s/version \".*\"/version \"${version}\"/" Casks/xomsky.rb
+    sed -i '' -e "s/sha256 \".*\"/sha256 \"${sha}\"/" Casks/xomsky.rb || sed -i -e "s/sha256 \".*\"/sha256 \"${sha}\"/" Casks/xomsky.rb
+
+    if command -v gh >/dev/null 2>&1; then
+        echo "🚀 Updating remote tap unacau/homebrew-tap via gh API..."
+        local file_sha
+        file_sha=$(gh api repos/unacau/homebrew-tap/contents/Casks/xomsky.rb --jq .sha 2>/dev/null || echo "")
+        local content
+        content=$(cat Casks/xomsky.rb | base64)
+
+        if [ -n "$file_sha" ]; then
+            gh api -X PUT repos/unacau/homebrew-tap/contents/Casks/xomsky.rb \
+                -F message="chore(cask): update xomsky to v${version}" \
+                -F content="$content" \
+                -F sha="$file_sha" >/dev/null
+            echo "✅ unacau/homebrew-tap updated successfully to v${version}!"
+        else
+            echo "⚠️ Could not read Casks/xomsky.rb from unacau/homebrew-tap via gh API."
+        fi
+    else
+        echo "⚠️ gh CLI not found; unable to update unacau/homebrew-tap."
+    fi
 }
 
 for arg in "$@"; do
@@ -44,6 +87,9 @@ for arg in "$@"; do
             ;;
         --local)
             MODE="local"
+            ;;
+        --sync-tap)
+            MODE="sync-tap"
             ;;
         --dry-run)
             DRY_RUN=1
@@ -130,10 +176,20 @@ case "$MODE" in
         else
             echo "ℹ️ GitHub CLI (gh) not installed. Artifacts available at $DMG_FILE and $CHECKSUM_FILE."
         fi
+
+        echo "Synchronizing Homebrew Tap..."
+        sync_homebrew_tap "$VERSION"
+
         echo "=================================================="
         echo " ✅ Local Release $TAG Completed!"
         echo " Artifacts: $DMG_FILE, $CHECKSUM_FILE"
         echo "=================================================="
+        ;;
+
+    sync-tap)
+        echo "[2/2] Synchronizing Homebrew Tap for $TAG..."
+        sync_homebrew_tap "$VERSION"
+        exit 0
         ;;
 
     cloud)

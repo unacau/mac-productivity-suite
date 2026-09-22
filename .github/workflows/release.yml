@@ -83,6 +83,34 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Update Homebrew Tap Formula
+        if: success()
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          if [ -n "$TAP_TOKEN" ]; then
+            echo "🚀 Updating Homebrew tap formula in unacau/homebrew-tap..."
+            VERSION="${GITHUB_REF_NAME#v}"
+            SHA=$(shasum -a 256 dist/Xomsky.dmg | awk '{print $1}')
+
+            sed -i '' -e "s/version \".*\"/version \"${VERSION}\"/" Casks/xomsky.rb || sed -i -e "s/version \".*\"/version \"${VERSION}\"/" Casks/xomsky.rb
+            sed -i '' -e "s/sha256 \".*\"/sha256 \"${SHA}\"/" Casks/xomsky.rb || sed -i -e "s/sha256 \".*\"/sha256 \"${SHA}\"/" Casks/xomsky.rb
+
+            FILE_SHA=$(curl -s -H "Authorization: Bearer $TAP_TOKEN" \
+              "https://api.github.com/repos/unacau/homebrew-tap/contents/Casks/xomsky.rb" | jq -r .sha)
+
+            CONTENT=$(cat Casks/xomsky.rb | base64 | tr -d '\n')
+
+            curl -s -X PUT \
+              -H "Authorization: Bearer $TAP_TOKEN" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/repos/unacau/homebrew-tap/contents/Casks/xomsky.rb" \
+              -d "{\"message\":\"chore(cask): update xomsky to v${VERSION}\",\"content\":\"${CONTENT}\",\"sha\":\"${FILE_SHA}\"}"
+            echo "✅ Homebrew tap formula updated to v${VERSION} (${SHA})"
+          else
+            echo "ℹ️ HOMEBREW_TAP_TOKEN secret not configured. Skipping automated tap update."
+          fi
+
       - name: Generate Release Telemetry & Step Summary
         if: always()
         run: |
