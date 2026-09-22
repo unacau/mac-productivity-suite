@@ -27,6 +27,7 @@ SOURCES=(
     "src/ChromeQuickAccess/Engine/AppGroupEngine.swift"
     "src/ChromeQuickAccess/Engine/CopyOnSelectEngine.swift"
     "src/ChromeQuickAccess/Engine/LicenseEngine.swift"
+    "src/ChromeQuickAccess/Engine/UpdateEngine.swift"
     "src/ChromeQuickAccess/Views/CopyToastWindow.swift"
     "src/ChromeQuickAccess/Views/MinimalHUDWindow.swift"
     "src/ChromeQuickAccess/Views/AppSearchPickerWindow.swift"

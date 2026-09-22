@@ -1980,6 +1980,41 @@ struct ChromeQuickAccessUnitTests {
         #expect(updateItem != nil, "Check for Updates menu item must exist")
         #expect(updateItem?.action == #selector(AppDelegate.handleCheckForUpdates))
     }
+    
+    // MARK: - UpdateEngine Tests
+    @Test
+    func testUpdateEngineDetectsHomebrewViaBundlePath() {
+        let bundlePath = "/opt/homebrew/Caskroom/xomsky/1.1.1/Xomsky.app"
+        let source = UpdateEngine.detectInstallationSource(bundlePath: bundlePath) { _ in false }
+        #expect(source == .homebrew)
+    }
+
+    @Test
+    func testUpdateEngineDetectsHomebrewViaCaskroomDirectory() {
+        let bundlePath = "/Applications/Xomsky.app"
+        let source = UpdateEngine.detectInstallationSource(bundlePath: bundlePath) { path in
+            path == "/opt/homebrew/Caskroom/xomsky"
+        }
+        #expect(source == .homebrew)
+
+        let sourceIntel = UpdateEngine.detectInstallationSource(bundlePath: bundlePath) { path in
+            path == "/usr/local/Caskroom/xomsky"
+        }
+        #expect(sourceIntel == .homebrew)
+    }
+
+    @Test
+    func testUpdateEngineDetectsDirectDownloadWhenNoCaskroom() {
+        let bundlePath = "/Applications/Xomsky.app"
+        let source = UpdateEngine.detectInstallationSource(bundlePath: bundlePath) { _ in false }
+        #expect(source == .directDownload)
+    }
+
+    @Test
+    func testUpdateEngineDownloadUrlAndCommand() {
+        #expect(UpdateEngine.directDmgDownloadUrl.absoluteString == "https://github.com/unacau/mac-productivity-suite/releases/latest/download/Xomsky.dmg")
+        #expect(UpdateEngine.homebrewUpgradeCommand == "brew upgrade xomsky")
+    }
 }
 
 

@@ -1665,25 +1665,49 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     private func showUpdateAvailableAlert(latestVersion: String, releaseUrl: String) {
         let alert = NSAlert()
         alert.messageText = "New Update Available: v\(latestVersion)"
-        alert.informativeText = """
-        You are currently running Xomsky v\(AppDelegate.appVersion).
-
-        To upgrade via Homebrew, run:
-        brew upgrade xomsky
-        """
         alert.alertStyle = .informational
         alert.icon = AppDelegate.makeKhomyakStatusIcon()
-        alert.addButton(withTitle: "Copy 'brew upgrade'")
-        alert.addButton(withTitle: "View Release ↗")
-        alert.addButton(withTitle: "Later")
         
-        let response = alert.runModal()
-        if response == .alertFirstButtonReturn {
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString("brew upgrade xomsky", forType: .string)
-        } else if response == .alertSecondButtonReturn {
-            if let url = URL(string: releaseUrl) {
-                NSWorkspace.shared.open(url)
+        let source = UpdateEngine.detectInstallationSource()
+        switch source {
+        case .homebrew:
+            alert.informativeText = """
+            You are currently running Xomsky v\(AppDelegate.appVersion).
+
+            A new version is available on Homebrew.
+            Click 'Update in Terminal' to upgrade automatically, or view the release notes.
+            """
+            alert.addButton(withTitle: "Update in Terminal")
+            alert.addButton(withTitle: "View Release ↗")
+            alert.addButton(withTitle: "Later")
+            
+            let response = alert.runModal()
+            if response == .alertFirstButtonReturn {
+                UpdateEngine.runHomebrewUpgradeInTerminal()
+            } else if response == .alertSecondButtonReturn {
+                if let url = URL(string: releaseUrl) {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+            
+        case .directDownload:
+            alert.informativeText = """
+            You are currently running Xomsky v\(AppDelegate.appVersion).
+
+            A new version is available for download.
+            Click 'Download DMG' to get the latest version.
+            """
+            alert.addButton(withTitle: "Download DMG")
+            alert.addButton(withTitle: "View Release ↗")
+            alert.addButton(withTitle: "Later")
+            
+            let response = alert.runModal()
+            if response == .alertFirstButtonReturn {
+                NSWorkspace.shared.open(UpdateEngine.directDmgDownloadUrl)
+            } else if response == .alertSecondButtonReturn {
+                if let url = URL(string: releaseUrl) {
+                    NSWorkspace.shared.open(url)
+                }
             }
         }
     }
