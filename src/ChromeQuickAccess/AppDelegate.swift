@@ -1423,23 +1423,13 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             let key = input.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !key.isEmpty else { return }
             
-            // 1. Offline master key fast-path: activates immediately in 0ms without network
-            if LicenseEngine.isOfflineMasterKey(key) {
-                if LicenseEngine.shared.activate(key: key) {
-                    showActivationSuccess(thenPinBundleID: thenPinBundleID)
-                } else {
-                    showActivationError(message: "The offline master key provided could not be activated.")
-                }
-                return
-            }
-            
-            // 2. Key format validation check before making network calls
+            // 1. Key format validation check before making network calls
             guard LicenseEngine.shared.validateLicenseKey(key) else {
                 showActivationError(message: "Invalid license key format. Xomsky license keys start with 'XOMSKY-'.")
                 return
             }
             
-            // 3. Online Polar activation via async Task on MainActor
+            // 2. Online Polar activation via async Task on MainActor
             Task { @MainActor [weak self] in
                 guard let self = self else { return }
                 let result = await LicenseEngine.shared.activateOnlineDetailed(key: key)

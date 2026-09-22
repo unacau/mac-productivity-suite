@@ -81,37 +81,12 @@ public final class LicenseEngine: ObservableObject, @unchecked Sendable {
         self.activeActivationId = nil
     }
     
-    public static func isOfflineMasterKey(_ key: String) -> Bool {
-        let normalized = key.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-        let prefixes = [
-            "XOMSKY-OWNER-",
-            "XOMSKY-VIP-",
-            "XOMSKY-GIVEAWAY-",
-            "KHOMYAK-OWNER-",
-            "KHOMYAK-VIP-",
-            "KHOMYAK-GIVEAWAY-"
-        ]
-        if prefixes.contains(where: { normalized.hasPrefix($0) }) {
-            return true
-        }
-        if normalized == "XOMSKY-OWNER" || normalized == "XOMSKY-VIP" || normalized == "XOMSKY-GIVEAWAY" ||
-           normalized == "KHOMYAK-OWNER" || normalized == "KHOMYAK-VIP" || normalized == "KHOMYAK-GIVEAWAY" {
-            return true
-        }
-        return false
-    }
-    
     public func validateLicenseKey(_ key: String) -> Bool {
         let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return false }
         let upper = trimmed.uppercased()
         
-        // 1. Offline master keys
-        if Self.isOfflineMasterKey(trimmed) {
-            return true
-        }
-        
-        // 2. Polar customer keys (prefix XOMSKY- or legacy KHOMYAK-)
+        // Polar customer keys (prefix XOMSKY- or legacy KHOMYAK-)
         if (upper.hasPrefix("XOMSKY-") || upper.hasPrefix("KHOMYAK-")) && trimmed.count >= 8 {
             return true
         }
@@ -194,12 +169,6 @@ public final class LicenseEngine: ObservableObject, @unchecked Sendable {
             return .invalidKey("Invalid key format. Xomsky license keys start with 'XOMSKY-'.")
         }
         
-        if Self.isOfflineMasterKey(trimmed) {
-            logger.info("Activating via offline master key: '\(trimmed)'.")
-            _ = activateOffline(key: trimmed)
-            return .success
-        }
-        
         if let mock = testMockOnlineValidationResult {
             if mock {
                 _ = activateOffline(key: trimmed)
@@ -280,13 +249,7 @@ public final class LicenseEngine: ObservableObject, @unchecked Sendable {
             return false
         }
         
-        // 1. Offline master key: activate immediately without network
-        if Self.isOfflineMasterKey(trimmed) {
-            logger.info("Activating via offline master key: '\(trimmed)'.")
-            return activateOffline(key: trimmed)
-        }
-        
-        // 2. Customer key: validate with Polar endpoint
+        // Customer key: validate with Polar endpoint
         let valid = validateWithPolar(key: trimmed)
         guard valid else {
             logger.warning("License validation failed via Polar endpoint for '\(key)'.")
@@ -312,7 +275,7 @@ public final class LicenseEngine: ObservableObject, @unchecked Sendable {
     }
     
     public func deactivate() {
-        if let key = activeLicenseKey, let aid = activeActivationId, !Self.isOfflineMasterKey(key) {
+        if let key = activeLicenseKey, let aid = activeActivationId {
             deactivateOnPolar(key: key, activationId: aid)
         }
         deleteKeychainLicense()

@@ -1407,8 +1407,9 @@ struct ChromeQuickAccessUnitTests {
         #expect(engine.isPro == false)
         #expect(engine.activeLicenseKey == nil)
         
-        // Attempt activation with valid offline master key
-        let validKey = "XOMSKY-OWNER-PRO-TEST"
+        // Attempt activation with valid key via mocked Polar validation
+        engine.testMockOnlineValidationResult = true
+        let validKey = "XOMSKY-TEST-MOCKED-LICENSE"
         let validResult = engine.activate(key: "  \(validKey)  ")
         #expect(validResult == true)
         #expect(engine.isPro == true)
@@ -1422,6 +1423,7 @@ struct ChromeQuickAccessUnitTests {
         #expect(engine.isPro == false)
         #expect(engine.activeLicenseKey == nil)
         #expect(UserDefaults.standard.string(forKey: "XomskyProLicenseKey") == nil)
+        engine.testMockOnlineValidationResult = nil
     }
     
     @Test @MainActor
@@ -1496,10 +1498,12 @@ struct ChromeQuickAccessUnitTests {
         engine.testOverrideProStatus = false
         #expect(engine.isPro == false)
         
-        let success = engine.activate(key: "XOMSKY-OWNER-OVERRIDE-KEY")
+        engine.testMockOnlineValidationResult = true
+        let success = engine.activate(key: "XOMSKY-OVERRIDE-CLEAR-KEY")
         #expect(success == true)
         #expect(engine.isPro == true)
         #expect(engine.testOverrideProStatus == nil)
+        engine.testMockOnlineValidationResult = nil
     }
     
     @Test @MainActor
@@ -1603,46 +1607,42 @@ struct ChromeQuickAccessUnitTests {
     }
     
     @Test @MainActor
-    func testLicenseEngineOfflineMasterKeys() {
+    func testLicenseEngineRejectsUnmockedKeysWithoutPolar() {
         let engine = LicenseEngine.shared
         defer {
+            engine.testMockOnlineValidationResult = nil
             engine.deactivate()
         }
         
-        // 1. Prefix detection
-        #expect(LicenseEngine.isOfflineMasterKey("XOMSKY-OWNER-KEY-001") == true)
-        #expect(LicenseEngine.isOfflineMasterKey("xomsky-owner-lowercase") == true)
-        #expect(LicenseEngine.isOfflineMasterKey("XOMSKY-VIP-CHAMPION-2026") == true)
-        #expect(LicenseEngine.isOfflineMasterKey("XOMSKY-GIVEAWAY-FREE-ACCESS") == true)
-        #expect(LicenseEngine.isOfflineMasterKey("KHOMYAK-OWNER-RETRO") == true)
-        #expect(LicenseEngine.isOfflineMasterKey("KHOMYAK-VIP-RETRO") == true)
-        #expect(LicenseEngine.isOfflineMasterKey("XOMSKY-CUSTOMER-REGULAR") == false)
-        #expect(LicenseEngine.isOfflineMasterKey("RANDOM-KEY-123") == false)
+        // 1. Format validation: XOMSKY- and KHOMYAK- prefixes pass basic format check
+        #expect(engine.validateLicenseKey("XOMSKY-OWNER-KEY-001") == true)
+        #expect(engine.validateLicenseKey("xomsky-owner-lowercase") == true)
+        #expect(engine.validateLicenseKey("XOMSKY-VIP-CHAMPION-2026") == true)
+        #expect(engine.validateLicenseKey("XOMSKY-GIVEAWAY-FREE-ACCESS") == true)
+        #expect(engine.validateLicenseKey("KHOMYAK-OWNER-RETRO") == true)
+        #expect(engine.validateLicenseKey("KHOMYAK-VIP-RETRO") == true)
+        #expect(engine.validateLicenseKey("RANDOM-KEY-123") == false)
+        #expect(engine.validateLicenseKey("XOMSKY") == false) // too short (< 8 chars)
         
-        // 2. Offline master key activation succeeds and persists
+        // 2. Unmocked backdoor keys MUST NOT activate offline without Polar validation
         engine.deactivate()
+        engine.testMockOnlineValidationResult = nil
         #expect(engine.isPro == false)
         
-        let ownerKey = "XOMSKY-OWNER-DIRECT-ACCESS"
-        let res = engine.activate(key: ownerKey)
-        #expect(res == true)
-        #expect(engine.isPro == true)
-        #expect(engine.activeLicenseKey == ownerKey)
-        #expect(UserDefaults.standard.string(forKey: "XomskyProLicenseKey") == ownerKey)
+        let formerBackdoorKeys = [
+            "XOMSKY-OWNER-DIRECT-ACCESS",
+            "XOMSKY-VIP-CONTEST-WINNER",
+            "XOMSKY-GIVEAWAY-OFFLINE",
+            "KHOMYAK-OWNER-RETRO",
+            "KHOMYAK-GIVEAWAY-TEST"
+        ]
         
-        // 3. VIP master key activation
-        let vipKey = "XOMSKY-VIP-CONTEST-WINNER"
-        let vipRes = engine.activate(key: vipKey)
-        #expect(vipRes == true)
-        #expect(engine.isPro == true)
-        #expect(engine.activeLicenseKey == vipKey)
-        
-        // 4. Giveaway master key activation
-        let giveawayKey = "XOMSKY-GIVEAWAY-OFFLINE"
-        let giveawayRes = engine.activate(key: giveawayKey)
-        #expect(giveawayRes == true)
-        #expect(engine.isPro == true)
-        #expect(engine.activeLicenseKey == giveawayKey)
+        for key in formerBackdoorKeys {
+            let res = engine.activate(key: key)
+            #expect(res == false)
+            #expect(engine.isPro == false)
+            #expect(engine.activeLicenseKey == nil)
+        }
     }
     
     @Test @MainActor
