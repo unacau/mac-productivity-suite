@@ -28,9 +28,12 @@ SOURCES=(
     "src/ChromeQuickAccess/Engine/CopyOnSelectEngine.swift"
     "src/ChromeQuickAccess/Engine/LicenseEngine.swift"
     "src/ChromeQuickAccess/Engine/UpdateEngine.swift"
+    "src/ChromeQuickAccess/Engine/TelemetryBuffer.swift"
+    "src/ChromeQuickAccess/Engine/DiagnosticBundleService.swift"
     "src/ChromeQuickAccess/Views/CopyToastWindow.swift"
     "src/ChromeQuickAccess/Views/MinimalHUDWindow.swift"
     "src/ChromeQuickAccess/Views/AppSearchPickerWindow.swift"
+    "src/ChromeQuickAccess/Views/FeedbackWindow.swift"
     "src/ChromeQuickAccess/AppDelegate.swift"
     "src/ChromeQuickAccess/main.swift"
 )
