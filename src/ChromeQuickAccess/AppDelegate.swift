@@ -1,5 +1,6 @@
 import Cocoa
 import AppKit
+import SwiftUI
 import UniformTypeIdentifiers
 import os
 
@@ -139,6 +140,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         keyName: String
     ) {
         logger.info("Caps-Lock + \(keyName) triggered.")
+        TelemetryBuffer.shared.append(category: "switcher", level: "INFO", message: "Caps-Lock + \(keyName) triggered.")
         guard let item = engine.selectedItem else { return }
         
         if !isCyclingHUDActive || activeMode != mode {
@@ -150,6 +152,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     
     private func handleAppLetterTrigger(char: Character, items: [AntigravityItem]) {
         logger.info("Caps-Lock + \(char) triggered for \(items.map { $0.name }).")
+        TelemetryBuffer.shared.append(category: "switcher", level: "INFO", message: "Caps-Lock + \(char) letter cycle.")
         guard !items.isEmpty else { return }
         
         let targetMode = ActiveSwitcherMode.appLetter(char)
@@ -1195,6 +1198,15 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         aboutItem.attributedTitle = aboutAttr
         menu.addItem(aboutItem)
         
+        let reportItem = makeAlignedMenuItem(
+            title: "Report an Issue...",
+            icon: NSImage(systemSymbolName: "ladybug", accessibilityDescription: "Report an Issue"),
+            accessibilityHelp: "Open diagnostics and report an issue",
+            action: #selector(handleReportIssue),
+            target: self
+        )
+        menu.addItem(reportItem)
+        
         let updateItem = makeAlignedMenuItem(
             title: "Check for Updates...",
             icon: NSImage(systemSymbolName: "arrow.triangle.2.circlepath", accessibilityDescription: "Check for Updates"),
@@ -1725,5 +1737,33 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     private func promptForAccessibilityPermissions() {
         let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
         _ = AXIsProcessTrustedWithOptions(options)
+    }
+
+    // MARK: - Feedback & Diagnostics Window
+    private var feedbackWindow: NSWindow?
+
+    @objc public func handleReportIssue() {
+        if let existing = feedbackWindow {
+            existing.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        let hostingView = NSHostingView(rootView: FeedbackWindowView())
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 460, height: 340),
+            styleMask: [.titled, .closable, .miniaturizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.center()
+        window.title = "Report an Issue — Xomsky"
+        window.contentView = hostingView
+        window.isReleasedWhenClosed = false
+        window.level = .floating
+
+        self.feedbackWindow = window
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 }

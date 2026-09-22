@@ -1,0 +1,119 @@
+import Foundation
+import AppKit
+
+/// Service responsible for gathering system diagnostic data, bundling logs,
+/// and creating a compressed .zip archive using macOS native `/usr/bin/ditto`.
+@MainActor
+public enum DiagnosticBundleService {
+
+    public struct SystemSummary: Codable {
+        public let appVersion: String
+        public let buildNumber: String
+        public let macosVersion: String
+        public let architecture: String
+        public let isAccessibilityTrusted: Bool
+        public let isProLicensed: Bool
+        public let timestamp: String
+    }
+
+    /// Prepares a .zip diagnostic archive in `NSTemporaryDirectory()` and returns its URL.
+    public static func createDiagnosticArchive() throws -> URL {
+        let fileManager = FileManager.default
+        let tempDir = fileManager.temporaryDirectory.appendingPathComponent("xomsky_diag_\(UUID().uuidString)")
+        try fileManager.createDirectory(at: tempDir, withIntermediateDirectories: true)
+
+        defer {
+            // Clean up raw staging directory after zipping
+            try? fileManager.removeItem(at: tempDir)
+        }
+
+        // 1. Gather System Summary
+        let summary = SystemSummary(
+            appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0",
+            buildNumber: Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1",
+            macosVersion: ProcessInfo.processInfo.operatingSystemVersionString,
+            architecture: getArchitecture(),
+            isAccessibilityTrusted: AXIsProcessTrusted(),
+            isProLicensed: LicenseEngine.shared.isPro,
+            timestamp: ISO8601DateFormatter().string(from: Date())
+        )
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let summaryData = try encoder.encode(summary)
+        let summaryFile = tempDir.appendingPathComponent("system-summary.json")
+        try summaryData.write(to: summaryFile)
+
+        // 2. Gather Timeline Log from TelemetryBuffer
+        let timelineText = TelemetryBuffer.shared.exportTimelineText()
+        let timelineFile = tempDir.appendingPathComponent("event-timeline.log")
+        try timelineText.write(to: timelineFile, atomically: true, encoding: .utf8)
+
+        // 3. Compress using /usr/bin/ditto into final .zip file
+        let outputZipURL = fileManager.temporaryDirectory.appendingPathComponent("xomsky-diagnostic.zip")
+        if fileManager.fileExists(atPath: outputZipURL.path) {
+            try? fileManager.removeItem(at: outputZipURL)
+        }
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
+        process.arguments = [
+            "-c",
+            "-k",
+            "--sequesterRsrc",
+            "--keepParent",
+            tempDir.path,
+            outputZipURL.path
+        ]
+
+        try process.run()
+        process.waitUntilExit()
+
+        guard process.terminationStatus == 0 && fileManager.fileExists(atPath: outputZipURL.path) else {
+            throw NSError(
+                domain: "com.almosteleven.xomsky.diagnostic",
+                code: Int(process.terminationStatus),
+                userInfo: [NSLocalizedDescriptionKey: "Failed to create diagnostic archive via ditto."]
+            )
+        }
+
+        return outputZipURL
+    }
+
+    /// Formats a concise markdown summary for GitHub Issue body.
+    public static func makeGitHubIssueURL(description: String = "") -> URL? {
+        let osVer = ProcessInfo.processInfo.operatingSystemVersionString
+        let arch = getArchitecture()
+        let appVer = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+        let isPro = LicenseEngine.shared.isPro ? "Pro Active" : "Free Tier"
+        let axStatus = AXIsProcessTrusted() ? "Granted ✅" : "Missing ❌"
+
+        let body = """
+        ### 💻 System Information
+        - **Xomsky:** v\(appVer) (\(isPro))
+        - **macOS:** \(osVer) (\(arch))
+        - **Accessibility:** \(axStatus)
+
+        ### 📝 Issue Description
+        \(description.isEmpty ? "<!-- Please describe what happened or what didn't work -->" : description)
+
+        ### 📎 Diagnostics
+        *(Please attach `xomsky-diagnostic.zip` by dragging it into this issue box)*
+        """
+
+        var components = URLComponents(string: "https://github.com/almosteleven/xomsky/issues/new")
+        components?.queryItems = [
+            URLQueryItem(name: "title", value: "[Bug Report] "),
+            URLQueryItem(name: "body", value: body)
+        ]
+        return components?.url
+    }
+
+    private static func getArchitecture() -> String {
+        #if arch(arm64)
+        return "Apple Silicon (arm64)"
+        #else
+        return "Intel (x86_64)"
+        #endif
+    }
+}

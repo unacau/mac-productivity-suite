@@ -2015,6 +2015,60 @@ struct ChromeQuickAccessUnitTests {
         #expect(UpdateEngine.directDmgDownloadUrl.absoluteString == "https://github.com/unacau/mac-productivity-suite/releases/latest/download/Xomsky.dmg")
         #expect(UpdateEngine.homebrewUpgradeCommand == "brew upgrade xomsky")
     }
+
+    // MARK: - Telemetry & Diagnostics Tests
+    @Test
+    func testTelemetryBufferRingCapacityAndFIFO() {
+        let buffer = TelemetryBuffer.shared
+        buffer.clear()
+        #expect(buffer.getAll().isEmpty)
+
+        // Append 350 items to verify 300-capacity FIFO truncation
+        for i in 1...350 {
+            buffer.append(category: "test", level: "INFO", message: "Event #\(i)")
+        }
+
+        let events = buffer.getAll()
+        #expect(events.count == 300)
+        #expect(events.first?.message == "Event #51")
+        #expect(events.last?.message == "Event #350")
+
+        let exportText = buffer.exportTimelineText()
+        #expect(exportText.contains("Event #51"))
+        #expect(exportText.contains("Event #350"))
+        #expect(!exportText.contains("Event #1\n") && !exportText.contains("Event #50\n"))
+    }
+
+    @Test @MainActor
+    func testDiagnosticArchiveCreation() throws {
+        TelemetryBuffer.shared.clear()
+        TelemetryBuffer.shared.append(category: "engine", level: "INFO", message: "Diagnostic test start")
+
+        let zipURL = try DiagnosticBundleService.createDiagnosticArchive()
+        defer { try? FileManager.default.removeItem(at: zipURL) }
+
+        #expect(FileManager.default.fileExists(atPath: zipURL.path))
+        #expect(zipURL.lastPathComponent == "xomsky-diagnostic.zip")
+
+        let attr = try FileManager.default.attributesOfItem(atPath: zipURL.path)
+        let size = attr[.size] as? Int64 ?? 0
+        #expect(size > 0, "ZIP archive must not be empty")
+
+        let ghURL = DiagnosticBundleService.makeGitHubIssueURL(description: "Test issue")
+        #expect(ghURL != nil)
+        #expect(ghURL?.host == "github.com")
+        #expect(ghURL?.absoluteString.contains("%5BBug%20Report%5D") == true || ghURL?.absoluteString.contains("[Bug") == true)
+    }
+
+    @Test @MainActor
+    func testAppDelegateHasReportIssueMenuItem() {
+        let appDelegate = AppDelegate()
+        let menu = appDelegate.buildStatusMenu()
+        
+        let reportItem = menu.items.first(where: { $0.title.contains("Report an Issue") })
+        #expect(reportItem != nil, "Report an Issue menu item must exist")
+        #expect(reportItem?.action == #selector(AppDelegate.handleReportIssue))
+    }
 }
 
 

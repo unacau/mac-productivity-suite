@@ -114,6 +114,7 @@ public final class CapsLockEngine: @unchecked Sendable {
             userInfo: selfPtr
         ) else {
             logger.error("Failed to create CGEventTap for CapsLockEngine.")
+            TelemetryBuffer.shared.append(category: "engine", level: "ERROR", message: "Failed to create CGEventTap.")
             Task { @MainActor in
                 let alert = NSAlert()
                 alert.messageText = "Accessibility Bug Detected"
@@ -132,6 +133,7 @@ public final class CapsLockEngine: @unchecked Sendable {
         isStarted = true
         
         logger.info("CapsLockEngine event tap started successfully.")
+        TelemetryBuffer.shared.append(category: "engine", level: "INFO", message: "CapsLockEngine event tap started.")
     }
     
     public func stop() {
@@ -173,6 +175,7 @@ public final class CapsLockEngine: @unchecked Sendable {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             if let port = eventTapPort {
                 CGEvent.tapEnable(tap: port, enable: true)
+                TelemetryBuffer.shared.append(category: "engine", level: "WARN", message: "Auto-recovered disabled event tap (\(type.rawValue)).")
             }
             return Unmanaged.passUnretained(event)
         }
