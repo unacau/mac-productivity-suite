@@ -2013,7 +2013,19 @@ struct ChromeQuickAccessUnitTests {
     @Test
     func testUpdateEngineDownloadUrlAndCommand() {
         #expect(UpdateEngine.directDmgDownloadUrl.absoluteString == "https://github.com/unacau/mac-productivity-suite/releases/latest/download/Xomsky.dmg")
-        #expect(UpdateEngine.homebrewUpgradeCommand == "brew upgrade xomsky")
+        #expect(UpdateEngine.homebrewUpgradeCommand == "brew update && brew upgrade --cask xomsky")
+    }
+
+    @Test
+    func testRunHomebrewUpgradeInTerminalUsesWorkspaceWithoutTouchingPasteboard() {
+        var openedUrl: URL?
+        let success = UpdateEngine.runHomebrewUpgradeInTerminal { url in
+            openedUrl = url
+            return true
+        }
+        
+        #expect(success == true)
+        #expect(openedUrl?.pathExtension == "command")
     }
 
     // MARK: - Telemetry & Diagnostics Tests
