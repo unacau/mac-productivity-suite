@@ -22,17 +22,24 @@
 
 ## 2. Visual Identity & Iconography
 
-![Khomyak Bauhaus Identity App Icon](file:///Users/igorekishev/Igor/igorekishev/mac-productivity-suite/assets/explorations/khomyak_bauhaus_identity_appicon.jpg)
+### 2.1 The 2D Bauhaus Hamster Mascot (Unified Identity)
+The core brand identity of Xomsky is grounded in the **2D Bauhaus Hamster Mascot**—a bold, high-contrast constructivist figure synthesized directly into a native macOS squircle:
 
-### The Geometric Deconstruction (Geon Theory)
+* **AppIcon (`AppIcon.icns`, `AppIcon.png`):** High-precision vector mascot on an ivory studio squircle (`#FBFBFD`) with Apple HIG curvature, subtle inner specular rim, and grounded soft contact shadow.
+* **Favicons & Brand Mark (`favicon.svg`, `16x16`, `32x32`, `apple-touch-icon.png`):** Direct vector mascot geometry without container borders, maximizing pixel density and character visibility across browser tabs.
+* **Menu Bar Status Item (`AppDelegate.makeKhomyakStatusIcon`):** Real-time procedural vector glyph (18pt) featuring live pupil gaze shifts and natural blinking.
+
+### 2.2 The Geometric Deconstruction (Geon Theory)
 In 1987, cognitive neuroscientist Irving Biederman proposed **Recognition-by-Components (RBC)**: the human ventral visual stream (V4/IT) parses complex objects into fundamental 3D volumetric primitives called **geons** (cylinders, spheres, wedges, blocks). 
 
 The Bauhaus Khomyak reduces the mascot into five pure geometric geons:
-1. **The Dual Cheek Spheres (🟡 Cadmium Yellow):** Intersecting Euclidean circular disks delivering the mandatory 60% horizontal facial width.
-2. **Concentric Ocular Rings (⚪ Warm Cream & 🔘 Obsidian):** Two high-contrast concentric circular discs creating a fixation target for the Fusiform Face Area (FFA).
-3. **The Vitality Triangle (🔴 Vermilion Red):** An inverted equilateral triangle serving as the nose/muzzle, driving acute attention (salience network).
+1. **The Dual Cheek Spheres (🟡 Cadmium Yellow `#F6BC14`):** Intersecting Euclidean circular disks delivering the mandatory 60% horizontal facial width.
+2. **Concentric Ocular Rings (⚪ Warm Cream & 🔘 Obsidian `#161B26`):** High-contrast concentric circular discs creating a fixation target for the Fusiform Face Area (FFA).
+3. **The Vitality Triangle (🔴 Vermilion Red `#E63946`):** An inverted equilateral triangle serving as the nose/muzzle, driving acute attention (salience network).
 4. **The Sensorimotor Paws (⚪ Porcelain White):** Minimal semicircular contact pads with red tactile stress indicators.
-5. **The Mac Caps Lock Keycap Monolith (🔵 Cobalt Blue):** An authentic 1.75U mechanical keycap with beveled skirt, cylindrical concave dish, the iconic Apple glowing emerald green LED indicator light (`#00E676`), the illuminated Cadmium Yellow `⇪` arrow with rectangular stem, and micro Futura `caps lock` typography.
+5. **Adaptive Level-of-Detail (LOD):**
+   * **Full Scale (128px – 1024px):** Triple-ring concentric ocular optics, tactile paw stress dots, and subtle contact shadow.
+   * **Micro Scale (16px – 32px Favicon):** Single bold outer stroke, simplified high-contrast pupils, and solid paw contours to eliminate subpixel raster blur.
 
 ---
 
