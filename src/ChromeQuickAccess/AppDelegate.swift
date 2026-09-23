@@ -1788,13 +1788,14 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             struct GitHubRelease: Decodable {
                 let tag_name: String
                 let html_url: String
+                let body: String?
             }
             let release = try JSONDecoder().decode(GitHubRelease.self, from: data)
             let latestVersion = release.tag_name.trimmingCharacters(in: CharacterSet(charactersIn: "vV "))
             let current = AppDelegate.appVersion
             
             if latestVersion.compare(current, options: .numeric) == .orderedDescending {
-                showUpdateAvailableAlert(latestVersion: latestVersion, releaseUrl: release.html_url)
+                showUpdateAvailableAlert(latestVersion: latestVersion, releaseUrl: release.html_url, releaseNotes: release.body)
             } else {
                 showUpToDateAlert(currentVersion: current)
             }
@@ -1803,18 +1804,24 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
-    private func showUpdateAvailableAlert(latestVersion: String, releaseUrl: String) {
+    private func showUpdateAvailableAlert(latestVersion: String, releaseUrl: String, releaseNotes: String? = nil) {
         let alert = NSAlert()
         alert.messageText = "New Update Available: v\(latestVersion)"
         alert.alertStyle = .informational
         alert.icon = AppDelegate.makeKhomyakStatusIcon()
         
+        let highlights = UpdateEngine.parseReleaseHighlights(from: releaseNotes, maxBullets: 4)
+        var highlightsBlock = ""
+        if !highlights.isEmpty {
+            let bulletLines = highlights.map { "• \($0)" }.joined(separator: "\n")
+            highlightsBlock = "\n\nWhat's new in v\(latestVersion):\n\(bulletLines)\n"
+        }
+        
         let source = UpdateEngine.detectInstallationSource()
         switch source {
         case .homebrew:
             alert.informativeText = """
-            You are currently running Xomsky v\(AppDelegate.appVersion).
-
+            You are currently running Xomsky v\(AppDelegate.appVersion).\(highlightsBlock)
             A new version is available on Homebrew.
             Click 'Update in Terminal' to upgrade automatically, or view the release notes.
             """
@@ -1833,8 +1840,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             
         case .directDownload:
             alert.informativeText = """
-            You are currently running Xomsky v\(AppDelegate.appVersion).
-
+            You are currently running Xomsky v\(AppDelegate.appVersion).\(highlightsBlock)
             A new version is available for download.
             Click 'Download DMG' to get the latest version.
             """

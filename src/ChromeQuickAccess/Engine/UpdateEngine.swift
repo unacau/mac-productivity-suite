@@ -103,4 +103,48 @@ public final class UpdateEngine: Sendable {
         logger.error("Could not instantiate NSAppleScript for Terminal launch.")
         return false
     }
+    
+    /// Extracts concise bullet points from a markdown release notes body.
+    /// Filters out changelog compare links, trims markdown symbols, and enforces maximum bullet count.
+    public static func parseReleaseHighlights(from body: String?, maxBullets: Int = 4) -> [String] {
+        guard let body = body, !body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return []
+        }
+        
+        var highlights: [String] = []
+        let lines = body.components(separatedBy: .newlines)
+        
+        for rawLine in lines {
+            let line = rawLine.trimmingCharacters(in: .whitespaces)
+            guard line.hasPrefix("* ") || line.hasPrefix("- ") || line.hasPrefix("• ") else {
+                continue
+            }
+            
+            // Drop bullet prefix
+            var content = String(line.dropFirst(2)).trimmingCharacters(in: .whitespaces)
+            
+            // Filter out git log / compare links or empty lines
+            if content.lowercased().hasPrefix("full changelog") || content.hasPrefix("http") {
+                continue
+            }
+            
+            // Remove markdown bold / code formatting for clean Cocoa text
+            content = content.replacingOccurrences(of: "**", with: "")
+            content = content.replacingOccurrences(of: "`", with: "")
+            
+            // Trim author PR suffixes like "by @author in https://..."
+            if let prRange = content.range(of: " by @") {
+                content = String(content[..<prRange.lowerBound]).trimmingCharacters(in: .whitespaces)
+            }
+            
+            if !content.isEmpty {
+                highlights.append(content)
+                if highlights.count >= maxBullets {
+                    break
+                }
+            }
+        }
+        
+        return highlights
+    }
 }

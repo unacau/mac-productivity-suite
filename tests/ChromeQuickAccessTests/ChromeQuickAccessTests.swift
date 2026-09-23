@@ -2028,6 +2028,40 @@ struct ChromeQuickAccessUnitTests {
         #expect(openedUrl?.pathExtension == "command")
     }
 
+    @Test
+    func testParseReleaseHighlightsFromMarkdownBody() {
+        let sampleMarkdown = """
+        ## What's Changed in v1.1.5
+        
+        ### 🎨 Branding & Web Identity
+        * **Optically Centered Brand Mark (LOD 0):** Replaced heavy macOS squircle with a crisp vector mascot.
+        * **Contrast & Theme Fix:** Eliminated white container cutout in dark mode.
+        * Tactile Micro-Hover: Smooth 8% scale spring on navbar branding hover.
+        
+        ### ⚡ Navigation & Core Engine
+        * **Unified Browser Letter Cycling (C):** Seamless cyclic rotation (`· 1/2 ↻`).
+        * **Smart App Discovery:** Prevented invalid missing bundle pins by @developer in https://github.com/pulls/42
+        * Monolithic HUD Geometry: Standardized app cards.
+        
+        --------
+        
+        Full Changelog: https://github.com/unacau/mac-productivity-suite/compare/v1.1.4...v1.1.5
+        """
+        
+        let highlights = UpdateEngine.parseReleaseHighlights(from: sampleMarkdown, maxBullets: 4)
+        #expect(highlights.count == 4)
+        #expect(highlights[0] == "Optically Centered Brand Mark (LOD 0): Replaced heavy macOS squircle with a crisp vector mascot.")
+        #expect(highlights[1] == "Contrast & Theme Fix: Eliminated white container cutout in dark mode.")
+        #expect(highlights[2] == "Tactile Micro-Hover: Smooth 8% scale spring on navbar branding hover.")
+        #expect(highlights[3] == "Unified Browser Letter Cycling (C): Seamless cyclic rotation (· 1/2 ↻).")
+        
+        let emptyHighlights = UpdateEngine.parseReleaseHighlights(from: nil)
+        #expect(emptyHighlights.isEmpty)
+        
+        let singleBullet = UpdateEngine.parseReleaseHighlights(from: "- Simple fix", maxBullets: 1)
+        #expect(singleBullet == ["Simple fix"])
+    }
+
     // MARK: - Telemetry & Diagnostics Tests
     @Test
     func testTelemetryBufferRingCapacityAndFIFO() {
