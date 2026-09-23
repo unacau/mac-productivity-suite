@@ -71,6 +71,15 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
         KeyCodes.keyCode(for: activeShortcutChar) ?? KeyCodes.kVK_ANSI_A
     }
     
+    /// When running in test environments, bypasses actual external process launches
+    public static var bypassLaunchInTests: Bool = {
+        ProcessInfo.processInfo.environment["SWIFT_DETERMINISTIC_TESTING"] != nil ||
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil ||
+        ProcessInfo.processInfo.processName.contains("Tests") ||
+        ProcessInfo.processInfo.arguments.first?.contains("PackageTests") == true ||
+        NSClassFromString("XCTest") != nil
+    }()
+    
     public func candidate(for bundleID: String) -> AppCandidate? {
         candidates.first(where: { $0.bundleID == bundleID })
     }
@@ -588,6 +597,10 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
             }
         } else {
             // Cold start
+            if Self.bypassLaunchInTests {
+                logger.info("[Test] Cold starting bypassed for: \(item.name)")
+                return
+            }
             logger.info("Cold starting application: \(item.name) at path \(item.path)")
             if !item.path.isEmpty && FileManager.default.fileExists(atPath: item.path) {
                 let url = URL(fileURLWithPath: item.path)
@@ -1051,6 +1064,10 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
     
     /// Focus an application item across all engines, browsers, and installed macOS applications.
     public static func focusItem(bundleID: String) {
+        if Self.bypassLaunchInTests {
+            return
+        }
+        
         // 1. Browser focus
         if bundleID == ChromeProfileEngine.shared.browserBundleID ||
            ChromeProfileEngine.supportedBrowsers.contains(where: { $0.bundleID == bundleID }) {

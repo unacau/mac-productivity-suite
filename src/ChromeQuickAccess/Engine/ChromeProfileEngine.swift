@@ -201,6 +201,15 @@ public final class ChromeProfileEngine: ObservableObject {
     /// Optional override for isolated unit testing
     public static var localStatePathOverride: String? = nil
     
+    /// When running in test environments, bypasses actual external process launches
+    public static var bypassLaunchInTests: Bool = {
+        ProcessInfo.processInfo.environment["SWIFT_DETERMINISTIC_TESTING"] != nil ||
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil ||
+        ProcessInfo.processInfo.processName.contains("Tests") ||
+        ProcessInfo.processInfo.arguments.first?.contains("PackageTests") == true ||
+        NSClassFromString("XCTest") != nil
+    }()
+    
     private var cachedAvatars: [String: NSImage] = [:]
     private let logger = Logger(subsystem: "com.almosteleven.xomsky", category: "profiles")
     
@@ -564,6 +573,10 @@ public final class ChromeProfileEngine: ObservableObject {
     }
     
     private func launchColdStart(profileDir: String) {
+        if Self.bypassLaunchInTests || AppGroupEngine.bypassLaunchInTests {
+            logger.info("[Test] launchColdStart bypassed for profileDir: \(profileDir)")
+            return
+        }
         let task = Process()
         task.launchPath = "/usr/bin/open"
         task.arguments = ["-b", self.browserBundleID, "--args", "--profile-directory=\(profileDir)"]

@@ -7,7 +7,7 @@ echo "=================================================="
 
 # Compile and run Swift unit tests
 echo "[1/1] Running Swift Unit Tests via SPM..."
-swift test
+SWIFT_DETERMINISTIC_TESTING=1 swift test
 
 echo "=================================================="
 echo " ALL AUTOMATED TESTS COMPLETED SUCCESSFULLY!      "
