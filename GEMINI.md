@@ -52,6 +52,8 @@
 - **App Name**: The application is **Xomsky**, never Khomyak. Always use `Xomsky` for the app name, docs, binaries, and releases.
 - **Release Verification & Homebrew Cask Gate**:
   - In release pipelines, never update or publish a Homebrew Cask formula (`Casks/xomsky.rb`) until the GitHub release tag is pushed AND the GitHub Actions cloud build has successfully attached the DMG asset. Deterministically verify the remote URL with `curl -sI` and compute the SHA256 checksum directly from the published binary.
+- **Concise Release Changelog Mandate**:
+  - Whenever cutting, tagging, or announcing a new release, always compile and output a concise, structured bulleted list of changes (Changelog) directly in the release notes and user communication. Group updates into clear categories (`Features`, `Improvements`, `Fixes`, `Branding`), highlighting the tangible user-facing value in 1 sentence per item. Never publish a silent release without a summary.
 - **Chromium Profile Automation Guardrail**:
   - **Never match Chromium windows by profile name or title substrings.**
   - **Always automate via native macOS menu bar (`kAXMenuBarAttribute`)**: Target the browser's "Profiles" menu bar item (`getProfilesMenuItems`), select items strictly by position/index, and detect the currently active profile using `AXMenuItemMarkChar == "✓"`.
@@ -61,3 +63,7 @@
   - Tests must run deterministically in headless environments without real GUI spawning.
 - **Bash Scripting**:
   - Use defensive bash patterns (`set -euo pipefail`) in all build, verification, and release scripts to prevent silent failures.
+- **Telemetry & Bug Reporting UI**: Never auto-transmit telemetry. Do NOT rely on macOS `NSSharingService` (Share Sheet) as it fails to detect standalone apps like Telegram. Use a dual-path custom UI: (1) Draggable ZIP file for direct drag-and-drop into any messenger, and (2) GitHub Issue pre-filled button.
+- **Zero Hardcoded Licensing**: Never hardcode Polar promotional codes or offline "giveaway" overrides in the Swift client application. All license validation must execute server-side.
+- **Deterministic Buffer Sizing**: Never use arbitrary "magic numbers" for memory bounds, circular buffers, or cache sizes. Always justify the exact integer choice based on empirical calculations and document it.
+- **Doubt-Driven Architecture**: Before implementing complex pipelines, explicitly pause to execute an adversarial self-critique. Actively seek out memory leaks, single points of failure, and UX edge cases before writing Swift code.

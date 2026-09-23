@@ -2061,6 +2061,7 @@ struct ChromeQuickAccessUnitTests {
 
         #expect(FileManager.default.fileExists(atPath: zipURL.path))
         #expect(zipURL.lastPathComponent == "xomsky-diagnostic.zip")
+        #expect(zipURL.path.contains("Downloads"))
 
         let attr = try FileManager.default.attributesOfItem(atPath: zipURL.path)
         let size = attr[.size] as? Int64 ?? 0
@@ -2069,7 +2070,53 @@ struct ChromeQuickAccessUnitTests {
         let ghURL = DiagnosticBundleService.makeGitHubIssueURL(description: "Test issue")
         #expect(ghURL != nil)
         #expect(ghURL?.host == "github.com")
+        #expect(ghURL?.path.contains("unacau/mac-productivity-suite/issues/new") == true)
         #expect(ghURL?.absoluteString.contains("%5BBug%20Report%5D") == true || ghURL?.absoluteString.contains("[Bug") == true)
+    }
+
+    @Test @MainActor
+    func testFullDiagnosticReportIncludesSystemSummaryAndTimeline() {
+        TelemetryBuffer.shared.clear()
+        TelemetryBuffer.shared.append(category: "switcher", level: "INFO", message: "User triggered CapsLock+C")
+        TelemetryBuffer.shared.append(category: "copy-on-select", level: "INFO", message: "Selection evaluated")
+
+        let report = DiagnosticBundleService.makeFullDiagnosticReport()
+        #expect(report.contains("=== Xomsky System Diagnostic Summary ==="))
+        #expect(report.contains("App Version:"))
+        #expect(report.contains("macOS Version:"))
+        #expect(report.contains("Accessibility Permissions:"))
+        #expect(report.contains("License Status:"))
+        #expect(report.contains("Copy-on-Select:"))
+        #expect(report.contains("=== Event Timeline ==="))
+        #expect(report.contains("User triggered CapsLock+C"))
+        #expect(report.contains("Selection evaluated"))
+    }
+
+    @Test @MainActor
+    func testFeedbackWindowNativeIconsAndDragItemProvider() {
+        let finderIcon = FeedbackWindowView.finderIcon
+        #expect(finderIcon.isValid)
+        #expect(finderIcon.size.width > 0)
+
+        let telegramIcon = FeedbackWindowView.telegramIcon
+        #expect(telegramIcon.isValid)
+        #expect(telegramIcon.size.width > 0)
+
+        let gitHubIcon = FeedbackWindowView.gitHubIcon
+        #expect(gitHubIcon.isValid)
+        #expect(gitHubIcon.size.width > 0)
+
+        let testURL = URL(fileURLWithPath: "/tmp/xomsky-diagnostic.zip")
+        let provider = NSItemProvider(object: testURL as NSURL)
+        provider.suggestedName = "xomsky-diagnostic.zip"
+        #expect(provider.registeredTypeIdentifiers.contains("public.file-url"))
+    }
+
+    @Test @MainActor
+    func testCopyOnSelectXomskyWindowDetection() {
+        let engine = CopyOnSelectEngine()
+        _ = engine.isInteractingWithXomskyWindow
+        #expect(engine.dragThreshold == 10.0)
     }
 
     @Test @MainActor
@@ -2080,6 +2127,179 @@ struct ChromeQuickAccessUnitTests {
         let reportItem = menu.items.first(where: { $0.title.contains("Report an Issue") })
         #expect(reportItem != nil, "Report an Issue menu item must exist")
         #expect(reportItem?.action == #selector(AppDelegate.handleReportIssue))
+    }
+
+    @Test @MainActor
+    func testSmartDefaultPinnedBundleIDsNeverIncludeMissingApps() {
+        let defaults = AppGroupEngine.discoverSmartDefaultPinnedBundleIDs()
+        #expect(!defaults.isEmpty, "Smart defaults must return candidate apps")
+        #expect(defaults.count <= AppGroupEngine.freePinnedAppsLimit, "Must not exceed free limit of 4")
+        
+        // Every discovered app must actually exist on this system
+        for bundle in defaults {
+            let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle)
+            #expect(url != nil, "Smart default bundle \(bundle) must be installed on disk")
+        }
+    }
+
+    @Test @MainActor
+    func testUnifiedBrowserLetterCyclingRing() {
+        let prev = UserDefaults.standard.stringArray(forKey: "SelectedAppBundleIDs")
+        defer {
+            if let p = prev {
+                UserDefaults.standard.set(p, forKey: "SelectedAppBundleIDs")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "SelectedAppBundleIDs")
+            }
+        }
+        
+        // Pin an app that starts with 'C' (e.g. Calculator) alongside other apps
+        let calcBundle = "com.apple.calculator"
+        UserDefaults.standard.set([calcBundle, "com.apple.Notes", "com.apple.Terminal"], forKey: "SelectedAppBundleIDs")
+        
+        let appDelegate = AppDelegate()
+        appDelegate.updateDynamicShortcuts()
+        
+        let browserChar = ChromeProfileEngine.shared.primaryShortcutChar
+        #expect(browserChar == "C")
+        
+        let browserCode = ChromeProfileEngine.shared.primaryShortcutKeyCode
+        #expect(browserCode == KeyCodes.kVK_ANSI_C)
+        
+        // CapsLockEngine must have trigger for browserCode
+        let trigger = CapsLockEngine.shared.dynamicKeyTriggers[browserCode]
+        #expect(trigger != nil, "Trigger for C must be registered in dynamicKeyTriggers")
+    }
+
+    @Test @MainActor
+    func testStatusMenuCyclicBadgesIncludeBrowser() {
+        let prev = UserDefaults.standard.stringArray(forKey: "SelectedAppBundleIDs")
+        defer {
+            if let p = prev {
+                UserDefaults.standard.set(p, forKey: "SelectedAppBundleIDs")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "SelectedAppBundleIDs")
+            }
+        }
+        
+        // 1. With an app sharing the browser letter 'C' (e.g. Calculator)
+        let calcBundle = "com.apple.calculator"
+        UserDefaults.standard.set([calcBundle, "com.apple.Notes"], forKey: "SelectedAppBundleIDs")
+        
+        let appDelegate = AppDelegate()
+        let menuWithC = appDelegate.buildStatusMenu()
+        
+        let chromeItem = menuWithC.items.first(where: { $0.title.hasPrefix("Chrome") || $0.attributedTitle?.string.hasPrefix("Chrome") == true })
+        #expect(chromeItem != nil)
+        let chromeTitle = chromeItem?.attributedTitle?.string ?? chromeItem?.title ?? ""
+        #expect(chromeTitle.contains("· 1/2 ↻"), "Chrome must display 1/2 cyclic badge when Calculator shares letter C")
+        
+        let calcItem = menuWithC.items.first(where: { $0.title.contains("Calculator") || $0.attributedTitle?.string.contains("Calculator") == true })
+        #expect(calcItem != nil)
+        let calcTitle = calcItem?.attributedTitle?.string ?? calcItem?.title ?? ""
+        #expect(calcTitle.contains("· 2/2 ↻"), "Calculator must display 2/2 cyclic badge")
+        
+        // 2. Without any app sharing letter 'C'
+        UserDefaults.standard.set(["com.apple.Notes", "com.apple.Terminal"], forKey: "SelectedAppBundleIDs")
+        let menuWithoutC = appDelegate.buildStatusMenu()
+        let soloChromeItem = menuWithoutC.items.first(where: { $0.title.hasPrefix("Chrome") || $0.attributedTitle?.string.hasPrefix("Chrome") == true })
+        let soloChromeTitle = soloChromeItem?.attributedTitle?.string ?? soloChromeItem?.title ?? ""
+        #expect(!soloChromeTitle.contains("↻"), "Solo Chrome must NOT display cyclic badge when no pinned apps share letter C")
+    }
+
+    @Test @MainActor
+    func testAppGroupEngineFocusItemSupportsBrowsersAndSystemApps() {
+        // Must not crash or fail when focusing browser or system apps
+        AppGroupEngine.focusItem(bundleID: "com.google.Chrome")
+        AppGroupEngine.focusItem(bundleID: "com.apple.finder")
+    }
+
+    @Test @MainActor
+    func testHorizontalSwitcherLetterCyclingAndDirectProfileJump() {
+        let state = ChromeSwitcherState()
+        state.mode = .antigravity
+        
+        let dummyIcon = NSImage(size: NSSize(width: 32, height: 32))
+        let browserItem = AntigravityItem(name: "Google Chrome", bundleID: "com.google.Chrome", path: "/Applications/Google Chrome.app", icon: dummyIcon, index: 1)
+        let calendarItem = AntigravityItem(name: "Calendar", bundleID: "com.apple.iCal", path: "/System/Applications/Calendar.app", icon: dummyIcon, index: 2)
+        state.antigravityItems = [browserItem, calendarItem]
+        
+        let sampleProfiles = [
+            ChromeProfile(index: 1, dir: "Default", name: "Personal"),
+            ChromeProfile(index: 2, dir: "Profile 1", name: "Work"),
+            ChromeProfile(index: 3, dir: "Profile 2", name: "Dev")
+        ]
+        state.profiles = sampleProfiles
+        state.selectedIndex = 0
+        state.selectedProfileIndex = 0
+        
+        #expect(state.selectedAppItem?.name == "Google Chrome")
+        #expect(state.selectedProfile?.effectiveName == "Personal")
+        
+        // Letter cycling: advances application strictly without stepping through profiles
+        state.selectNext()
+        #expect(state.selectedIndex == 1)
+        #expect(state.selectedAppItem?.name == "Calendar")
+        #expect(state.selectedProfileIndex == 0, "Profile index should not be stepped during app cycling")
+        
+        // Loop back to Chrome
+        state.selectNext()
+        #expect(state.selectedIndex == 0)
+        #expect(state.selectedAppItem?.name == "Google Chrome")
+        #expect(state.selectedProfileIndex == 0)
+        
+        // Backward cycling
+        state.selectPrevious()
+        #expect(state.selectedIndex == 1)
+        #expect(state.selectedAppItem?.name == "Calendar")
+        
+        state.selectPrevious()
+        #expect(state.selectedIndex == 0)
+        #expect(state.selectedAppItem?.name == "Google Chrome")
+        
+        // Direct digit jump from Calendar to Chrome Profile 2 (Work)
+        state.selectedIndex = 1
+        #expect(state.selectedAppItem?.name == "Calendar")
+        state.selectChromeProfile(index: 1)
+        #expect(state.selectedIndex == 0)
+        #expect(state.selectedProfileIndex == 1)
+        #expect(state.selectedProfile?.effectiveName == "Work")
+    }
+    
+    @Test @MainActor
+    func testHUDCardViewInitialization() {
+        let dummyIcon = NSImage(size: NSSize(width: 32, height: 32))
+        let sampleProfiles = [
+            ChromeProfile(index: 1, dir: "Default", name: "Personal"),
+            ChromeProfile(index: 2, dir: "Profile 1", name: "Work")
+        ]
+        let chromeCard = HUDCardView(
+            name: "Google Chrome",
+            icon: dummyIcon,
+            isSelected: true,
+            isBrowser: true,
+            profiles: sampleProfiles,
+            selectedProfileIndex: 0
+        )
+        let clockCard = HUDCardView(
+            name: "Clock",
+            icon: dummyIcon,
+            isSelected: false,
+            isBrowser: false,
+            profiles: [],
+            selectedProfileIndex: 0
+        )
+        
+        #expect(chromeCard.name == "Google Chrome")
+        #expect(chromeCard.isSelected == true)
+        #expect(chromeCard.isBrowser == true)
+        #expect(chromeCard.profiles.count == 2)
+        
+        // Uniform card width invariant
+        #expect(chromeCard.cardWidth == HUDCardView.standardCardWidth)
+        #expect(clockCard.cardWidth == HUDCardView.standardCardWidth)
+        #expect(chromeCard.cardWidth == clockCard.cardWidth, "All application cards must have identical width")
+        #expect(HUDCardView.standardCardWidth == 132)
     }
 }
 

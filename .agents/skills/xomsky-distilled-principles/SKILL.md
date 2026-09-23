@@ -52,3 +52,29 @@ This skill codifies the complete set of hard-won engineering, design, monetizati
 - **`cloud-release-sync-and-homebrew-cask-resilience`**:
   In release pipelines, never update or publish a Homebrew Cask formula (`Casks/xomsky.rb`) until the GitHub release tag is pushed AND the GitHub Actions cloud build has successfully attached the DMG asset. Deterministically verify the remote URL with `curl -sI` and compute the SHA256 checksum directly from the published binary.
   *Violation Risk*: Broken installation for all Homebrew users experiencing 404 Not Found or checksum mismatch errors.
+
+## 5. Development & CI/CD Invariants
+
+- **`opt-in-local-telemetry-and-export`**:
+  Never implement silent, auto-transmitting remote crash reporting. Buffer logs locally (e.g., using a deterministic `os_log` ring buffer). Do NOT rely on macOS `NSSharingService` (Share Sheet) to export logs, as it often fails to detect standalone apps like Telegram (.dmg). Instead, present a custom feedback UI window providing two reliable paths: (1) A draggable ZIP file proxy (drag-and-drop directly into any messenger) and (2) A button to open a GitHub Issue with pre-filled URL parameters.
+  *Violation Risk*: Silently sending data violates privacy. Relying on macOS Share Sheet leads to missing messaging apps and frustrated users.
+
+- **`zero-hardcoded-secrets-and-promo`**:
+  Never hardcode promotional codes, bypass keys, or offline "giveaway" overrides in the Swift client application or public GitHub repository. All license validation, including 100% discount promotions, must be strictly delegated to the server-side Polar API.
+  *Violation Risk*: Source code leaks secrets, leading to uncontrollable pirate bypasses.
+
+- **`atomic-release-and-homebrew-pipeline`**:
+  The CI/CD release pipeline must be fully atomic. A push to `main` (or tag) must compile the DMG, publish the GitHub Release, and *immediately/automatically* update the Homebrew Cask formula (`Casks/xomsky.rb`) with the correct version and SHA256 checksum in the same automated flow. Never treat Homebrew updates as an isolated manual step.
+  *Violation Risk*: Users downloading via Homebrew receive outdated binaries or 404/Checksum errors when the Cask falls behind the GitHub release.
+
+- **`deterministic-magic-numbers`**:
+  When defining memory bounds, circular buffers, or cache sizes in the Swift engine, never use arbitrary "magic numbers" guessed by the LLM. Always justify the exact integer choice based on empirical calculations (e.g., average log string bytes * N limits = max memory footprint) and document the rationale in inline comments.
+  *Violation Risk*: Unjustified buffer sizes lead to silent OOM (Out of Memory) crashes or truncated critical logs.
+
+- **`adversarial-design-critique`**:
+  Before implementing complex features (licensing, telemetry pipelines, global event taps), explicitly pause to execute an adversarial self-critique of the proposed design. Actively seek out memory leaks, race conditions, single points of failure, and UX edge cases in the plan before writing the first line of Swift code.
+  *Violation Risk*: Shipping fundamentally flawed architecture that requires complete rewrites days later.
+
+- **`concise-release-changelog-mandate`**:
+  Whenever cutting, tagging, or announcing a new release, always generate and attach a concise bulleted changelog (List of Changes) directly in the release notes and user response. Group changes into clear categories (`Features`, `Improvements`, `Fixes`, `Branding`), stating the tangible user-facing value in 1 sentence per item.
+  *Violation Risk*: Users and maintainers receive opaque version bumps without visibility into what changed or broke.

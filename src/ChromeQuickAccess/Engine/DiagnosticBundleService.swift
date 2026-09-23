@@ -44,13 +44,19 @@ public enum DiagnosticBundleService {
         let summaryFile = tempDir.appendingPathComponent("system-summary.json")
         try summaryData.write(to: summaryFile)
 
-        // 2. Gather Timeline Log from TelemetryBuffer
+        // 2. Gather Timeline Log from TelemetryBuffer and Full Report
+        let reportText = makeFullDiagnosticReport()
+        let reportFile = tempDir.appendingPathComponent("diagnostic-report.txt")
+        try reportText.write(to: reportFile, atomically: true, encoding: .utf8)
+
         let timelineText = TelemetryBuffer.shared.exportTimelineText()
         let timelineFile = tempDir.appendingPathComponent("event-timeline.log")
         try timelineText.write(to: timelineFile, atomically: true, encoding: .utf8)
 
-        // 3. Compress using /usr/bin/ditto into final .zip file
-        let outputZipURL = fileManager.temporaryDirectory.appendingPathComponent("xomsky-diagnostic.zip")
+        // 3. Compress using /usr/bin/ditto into final .zip file in ~/Downloads
+        let downloadsDir = fileManager.urls(for: .downloadsDirectory, in: .userDomainMask).first
+            ?? fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Downloads")
+        let outputZipURL = downloadsDir.appendingPathComponent("xomsky-diagnostic.zip")
         if fileManager.fileExists(atPath: outputZipURL.path) {
             try? fileManager.removeItem(at: outputZipURL)
         }
@@ -80,6 +86,35 @@ public enum DiagnosticBundleService {
         return outputZipURL
     }
 
+    /// Formats a complete human-readable diagnostic report containing the system summary
+    /// and the full chronological breadcrumb timeline from TelemetryBuffer.
+    public static func makeFullDiagnosticReport() -> String {
+        let appVer = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+        let buildNum = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        let osVer = ProcessInfo.processInfo.operatingSystemVersionString
+        let arch = getArchitecture()
+        let axStatus = AXIsProcessTrusted() ? "Granted ✅" : "Missing ❌"
+        let isPro = LicenseEngine.shared.isPro ? "Pro Active" : "Free Tier"
+        let copyEngine = CopyOnSelectEngine.shared
+        let copyStatus = copyEngine.isEnabled ? "Enabled (threshold: \(copyEngine.dragThreshold)pt, delay: \(copyEngine.copyDelayMs)ms)" : "Disabled"
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+
+        let summaryHeader = """
+        === Xomsky System Diagnostic Summary ===
+        App Version: v\(appVer) (Build \(buildNum))
+        macOS Version: \(osVer) (\(arch))
+        Accessibility Permissions: \(axStatus)
+        License Status: \(isPro)
+        Copy-on-Select: \(copyStatus)
+        Generated At: \(timestamp)
+
+        === Event Timeline ===
+        """
+
+        let timelineText = TelemetryBuffer.shared.exportTimelineText()
+        return "\(summaryHeader)\n\(timelineText)"
+    }
+
     /// Formats a concise markdown summary for GitHub Issue body.
     public static func makeGitHubIssueURL(description: String = "") -> URL? {
         let osVer = ProcessInfo.processInfo.operatingSystemVersionString
@@ -101,7 +136,7 @@ public enum DiagnosticBundleService {
         *(Please attach `xomsky-diagnostic.zip` by dragging it into this issue box)*
         """
 
-        var components = URLComponents(string: "https://github.com/almosteleven/xomsky/issues/new")
+        var components = URLComponents(string: "https://github.com/unacau/mac-productivity-suite/issues/new")
         components?.queryItems = [
             URLQueryItem(name: "title", value: "[Bug Report] "),
             URLQueryItem(name: "body", value: body)

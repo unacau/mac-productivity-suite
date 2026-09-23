@@ -2,6 +2,7 @@ import Foundation
 import Cocoa
 import AppKit
 import ApplicationServices
+import CoreServices
 import UniformTypeIdentifiers
 import os
 
@@ -653,13 +654,113 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
     
     public static let freePinnedAppsLimit = 4
     
-    /// Default pinned quick apps (4 core apps + 1 Chrome/browser = 5 quick apps total)
+    /// Default pinned quick apps fallback (4 core apps + 1 Chrome/browser = 5 quick apps total)
     public static let defaultPinnedBundleIDs: [String] = [
         "com.google.antigravity",
         "com.google.antigravity-ide",
         "com.googlecode.iterm2",
         "com.apple.Notes"
     ]
+    
+    /// Discovers smart default pinned application bundle IDs on fresh installations.
+    /// Prioritizes verified installed developer/workstation applications and user Dock favorites,
+    /// ensuring zero dashed placeholder ('app.dashed') icons on clean macOS machines.
+    public static func discoverSmartDefaultPinnedBundleIDs() -> [String] {
+        var chosen: [String] = []
+        let activeBrowserBundleID = ChromeProfileEngine.shared.browserBundleID
+        
+        // Helper to check if an app is installed on this Mac
+        func isInstalled(_ bundleID: String) -> Bool {
+            NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) != nil
+        }
+        
+        // Helper to query launch count from Spotlight metadata
+        func usageCount(for bundleID: String) -> Int {
+            guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID),
+                  let item = MDItemCreate(kCFAllocatorDefault, url.path as CFString),
+                  let count = MDItemCopyAttribute(item, "kMDItemUseCount" as CFString) as? Int else {
+                return 0
+            }
+            return count
+        }
+        
+        // 1. Core workstation category preferences: select the best installed app per slot
+        let workstationCategories: [[String]] = [
+            // Terminal slot: Ghostty -> iTerm2 -> Warp -> Terminal.app (Terminal.app always present on macOS)
+            ["com.mitchellh.ghostty", "com.googlecode.iterm2", "dev.warp.Warp-Stable", "com.apple.Terminal"],
+            // IDE / Code editor slot: Antigravity IDE -> VSCode -> Cursor -> Xcode -> Zed -> TextEdit
+            ["com.google.antigravity-ide", "com.microsoft.VSCode", "com.todesktop.230313mzl4w4u92", "com.apple.dt.Xcode", "dev.zed.Zed", "com.sublimetext.4", "com.apple.TextEdit"],
+            // AI Assistant / Communication slot: Antigravity -> Telegram -> Slack -> Discord -> Messages
+            ["com.google.antigravity", "com.tdesktop.Telegram", "com.tinyspeck.slackmacgap", "com.hnc.Discord", "com.apple.MobileSMS"],
+            // Notes & Knowledge slot: Notes.app -> Obsidian -> Notion -> Bear
+            ["com.apple.Notes", "md.obsidian", "notion.id", "net.shinyfrog.bear-mac"]
+        ]
+        
+        for category in workstationCategories {
+            for bundle in category {
+                if bundle != activeBrowserBundleID && isInstalled(bundle) {
+                    if !chosen.contains(bundle) {
+                        chosen.append(bundle)
+                        break
+                    }
+                }
+            }
+        }
+        
+        // 2. If slots remain (< 4), inspect user's Dock persistent-apps (user-curated favorites)
+        if chosen.count < freePinnedAppsLimit {
+            let dockPlistPath = ("~/Library/Preferences/com.apple.dock.plist" as NSString).expandingTildeInPath
+            if let dict = NSDictionary(contentsOfFile: dockPlistPath),
+               let persistentApps = dict["persistent-apps"] as? [[String: Any]] {
+                var dockCandidates: [(bundle: String, count: Int)] = []
+                for item in persistentApps {
+                    if let tileData = item["tile-data"] as? [String: Any],
+                       let bundle = tileData["bundle-identifier"] as? String {
+                        if bundle != activeBrowserBundleID &&
+                           !bundle.lowercased().contains("chrome") &&
+                           !bundle.lowercased().contains("safari") &&
+                           !chosen.contains(bundle) &&
+                           isInstalled(bundle) {
+                            dockCandidates.append((bundle: bundle, count: usageCount(for: bundle)))
+                        }
+                    }
+                }
+                dockCandidates.sort(by: { $0.count > $1.count })
+                for candidate in dockCandidates {
+                    chosen.append(candidate.bundle)
+                    if chosen.count >= freePinnedAppsLimit { break }
+                }
+            }
+        }
+        
+        // 3. Fallback: if still fewer than 4, check defaultPinnedBundleIDs that are actually installed
+        if chosen.count < freePinnedAppsLimit {
+            for bundle in defaultPinnedBundleIDs {
+                if !chosen.contains(bundle) && isInstalled(bundle) {
+                    chosen.append(bundle)
+                    if chosen.count >= freePinnedAppsLimit { break }
+                }
+            }
+        }
+        
+        // 4. Guaranteed macOS native fallbacks
+        let nativeFallbacks = ["com.apple.Terminal", "com.apple.Notes", "com.apple.TextEdit", "com.apple.calculator"]
+        if chosen.count < freePinnedAppsLimit {
+            for bundle in nativeFallbacks {
+                if !chosen.contains(bundle) && isInstalled(bundle) {
+                    chosen.append(bundle)
+                    if chosen.count >= freePinnedAppsLimit { break }
+                }
+            }
+        }
+        
+        // 5. Ultimate fallback for headless test runners with mocked candidates
+        if chosen.isEmpty {
+            return defaultPinnedBundleIDs
+        }
+        
+        return Array(chosen.prefix(freePinnedAppsLimit))
+    }
     
     public static var selectedBundleIDs: Set<String> {
         get {
@@ -679,7 +780,7 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
                 }
             }
             if initial.isEmpty {
-                initial = defaultPinnedBundleIDs
+                initial = discoverSmartDefaultPinnedBundleIDs()
             }
             let list = Array(initial.prefix(maxPinnedQuickApps))
             UserDefaults.standard.set(list, forKey: "SelectedAppBundleIDs")
@@ -936,13 +1037,51 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
         return item
     }
     
-    /// Focus an application item across all engines.
+    /// Returns an AntigravityItem representation of the active browser from ChromeProfileEngine.
+    public static func browserAsAntigravityItem() -> AntigravityItem {
+        let profileEngine = ChromeProfileEngine.shared
+        return AntigravityItem(
+            name: profileEngine.activeBrowserName,
+            bundleID: profileEngine.browserBundleID,
+            path: profileEngine.activeBrowserAppPath,
+            icon: profileEngine.activeBrowserIcon,
+            index: 1
+        )
+    }
+    
+    /// Focus an application item across all engines, browsers, and installed macOS applications.
     public static func focusItem(bundleID: String) {
+        // 1. Browser focus
+        if bundleID == ChromeProfileEngine.shared.browserBundleID ||
+           ChromeProfileEngine.supportedBrowsers.contains(where: { $0.bundleID == bundleID }) {
+            ChromeProfileEngine.shared.focusChrome()
+            return
+        }
+        
+        // 2. Pre-configured group engines
         if let engine = allEngines.first(where: { $0.items.contains(where: { $0.bundleID == bundleID }) }) {
             engine.focusItem(bundleID: bundleID)
-        } else {
-            AntigravityEngine.shared.focusItem(bundleID: bundleID)
+            return
         }
+        
+        // 3. Running application (activate directly)
+        if let running = NSWorkspace.shared.runningApplications.first(where: { $0.bundleIdentifier == bundleID }) {
+            if #available(macOS 14.0, *) {
+                running.activate()
+            } else {
+                running.activate(options: .activateIgnoringOtherApps)
+            }
+            return
+        }
+        
+        // 4. Installed application on disk
+        if let appUrl = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
+            NSWorkspace.shared.openApplication(at: appUrl, configuration: NSWorkspace.OpenConfiguration())
+            return
+        }
+        
+        // 5. Antigravity fallback
+        AntigravityEngine.shared.focusItem(bundleID: bundleID)
     }
     
     // MARK: - Installed Applications Scanning & Search

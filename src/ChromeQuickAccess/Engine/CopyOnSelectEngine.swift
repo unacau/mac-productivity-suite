@@ -32,6 +32,19 @@ public final class CopyOnSelectEngine: @unchecked Sendable {
         pendingCopyTask = nil
     }
     
+    public var isInteractingWithXomskyWindow: Bool {
+        if NSApp.isActive { return true }
+        if let frontID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
+           let myID = Bundle.main.bundleIdentifier,
+           frontID == myID {
+            return true
+        }
+        let mouseLoc = NSEvent.mouseLocation
+        return NSApp.windows.contains { window in
+            window.isVisible && !(window is CopyToastWindow) && !(window is MinimalHUDWindow) && NSPointInRect(mouseLoc, window.frame)
+        }
+    }
+    
     private let logger = Logger(subsystem: "com.almosteleven.xomsky", category: "copy-on-select")
     
     public init() {}
@@ -70,6 +83,7 @@ public final class CopyOnSelectEngine: @unchecked Sendable {
             CGEvent.tapEnable(tap: tap, enable: true)
             isStarted = true
             logger.info("CopyOnSelectEngine started with CGEventTap (.listenOnly).")
+            TelemetryBuffer.shared.append(category: "copy-on-select", level: "INFO", message: "CopyOnSelectEngine started with CGEventTap.")
         } else {
             logger.warning("CGEventTap creation failed. Falling back to NSEvent global monitors.")
             installNSEventMonitors()
@@ -97,6 +111,7 @@ public final class CopyOnSelectEngine: @unchecked Sendable {
         mouseDownLocation = nil
         isStarted = false
         logger.info("CopyOnSelectEngine stopped.")
+        TelemetryBuffer.shared.append(category: "copy-on-select", level: "INFO", message: "CopyOnSelectEngine stopped.")
     }
     
     private func installNSEventMonitors() {
@@ -104,6 +119,10 @@ public final class CopyOnSelectEngine: @unchecked Sendable {
         globalMouseDownMonitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDown) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let engine = self, engine.isEnabled else { return }
+                guard !engine.isInteractingWithXomskyWindow else {
+                    engine.mouseDownLocation = nil
+                    return
+                }
                 engine.cancelPendingCopy()
                 let flags = NSEvent.modifierFlags
                 if flags.contains(.command) || flags.contains(.control) {
@@ -116,6 +135,10 @@ public final class CopyOnSelectEngine: @unchecked Sendable {
         globalMouseUpMonitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseUp) { [weak self] event in
             Task { @MainActor [weak self] in
                 guard let engine = self, engine.isEnabled else { return }
+                guard !engine.isInteractingWithXomskyWindow else {
+                    engine.mouseDownLocation = nil
+                    return
+                }
                 let flags = event.modifierFlags
                 if flags.contains(.command) || flags.contains(.control) {
                     engine.mouseDownLocation = nil
@@ -132,6 +155,7 @@ public final class CopyOnSelectEngine: @unchecked Sendable {
         }
         isStarted = true
         logger.info("CopyOnSelectEngine started with NSEvent global monitors.")
+        TelemetryBuffer.shared.append(category: "copy-on-select", level: "INFO", message: "CopyOnSelectEngine started with NSEvent monitors.")
     }
     
     public func handleTapEvent(type: CGEventType, event: CGEvent) {
@@ -145,6 +169,12 @@ public final class CopyOnSelectEngine: @unchecked Sendable {
         }
         
         guard isEnabled else { return }
+        
+        if isInteractingWithXomskyWindow {
+            cancelPendingCopy()
+            mouseDownLocation = nil
+            return
+        }
         
         // Ignore drags with Command or Control held (e.g. Cmd-drag windows, Ctrl-drag Xcode outlets)
         if event.flags.contains(.maskCommand) || event.flags.contains(.maskControl) {
@@ -169,6 +199,7 @@ public final class CopyOnSelectEngine: @unchecked Sendable {
     
     public func shouldTriggerCopy(start: CGPoint, end: CGPoint, clickCount: Int) -> Bool {
         guard isEnabled else { return false }
+        if isInteractingWithXomskyWindow { return false }
         if clickCount > 1 {
             return true
         }
@@ -180,17 +211,23 @@ public final class CopyOnSelectEngine: @unchecked Sendable {
     public func scheduleCopy() {
         cancelPendingCopy()
         let delay = copyDelayMs
+        TelemetryBuffer.shared.append(
+            category: "copy-on-select",
+            level: "INFO",
+            message: "Text selection detected; scheduling Cmd+C in \(delay)ms."
+        )
         pendingCopyTask = Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: delay * 1_000_000)
             guard !Task.isCancelled else { return }
             guard let engine = self, engine.isEnabled && engine.isStarted else { return }
+            guard !engine.isInteractingWithXomskyWindow else { return }
             engine.postCopyKeystroke()
         }
     }
     
     public func postCopyKeystroke() {
-        onCopyKeystrokePosted?()
-        CopyToastWindow.shared.show(at: NSEvent.mouseLocation)
+        let initialChangeCount = NSPasteboard.general.changeCount
+        
         let src = CGEventSource(stateID: .hidSystemState)
         let cKeyCode: CGKeyCode = CGKeyCode(KeyCodes.kVK_ANSI_C)
         guard let down = CGEvent(keyboardEventSource: src, virtualKey: cKeyCode, keyDown: true),
@@ -204,5 +241,41 @@ public final class CopyOnSelectEngine: @unchecked Sendable {
         down.post(tap: .cghidEventTap)
         up.post(tap: .cghidEventTap)
         logger.debug("Synthesized Cmd+C copy keystroke.")
+        onCopyKeystrokePosted?()
+        
+        let mousePos = NSEvent.mouseLocation
+        
+        Task { @MainActor [weak self] in
+            guard let self = self else { return }
+            // Wait 50ms for target application to process Cmd+C keystroke
+            try? await Task.sleep(nanoseconds: 50_000_000)
+            guard self.isEnabled && self.isStarted else { return }
+            
+            var newCount = NSPasteboard.general.changeCount
+            if newCount == initialChangeCount {
+                // Poll once more after another 70ms for heavier applications (e.g. Chromium, Electron)
+                try? await Task.sleep(nanoseconds: 70_000_000)
+                guard self.isEnabled && self.isStarted else { return }
+                newCount = NSPasteboard.general.changeCount
+            }
+            
+            let didChange = newCount != initialChangeCount
+            TelemetryBuffer.shared.append(
+                category: "copy-on-select",
+                level: "INFO",
+                message: "Cmd+C evaluated: changeCount \(initialChangeCount) -> \(newCount) (copied: \(didChange))"
+            )
+            
+            if didChange {
+                CopyToastWindow.shared.show(at: mousePos)
+                TelemetryBuffer.shared.append(
+                    category: "copy-on-select",
+                    level: "INFO",
+                    message: "Toast 'Copied!' displayed at (\(Int(mousePos.x)), \(Int(mousePos.y)))"
+                )
+            } else {
+                self.logger.debug("Pasteboard unchanged after Cmd+C; suppressing false Copied toast.")
+            }
+        }
     }
 }

@@ -160,27 +160,88 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             isCyclingHUDActive = true
             activeMode = targetMode
             
+            let profileEngine = ChromeProfileEngine.shared
+            let containsBrowser = items.contains(where: { item in
+                item.bundleID == profileEngine.browserBundleID ||
+                ChromeProfileEngine.supportedBrowsers.contains(where: { b in b.bundleID == item.bundleID })
+            })
+            
             var initialIdx = 0
+            var initialProfIdx = 0
+            
+            if containsBrowser {
+                let profiles = profileEngine.selectedProfiles
+                let activeDir = profileEngine.getActiveProfileDir()
+                initialProfIdx = profiles.firstIndex(where: { $0.dir == activeDir }) ?? 0
+            }
+            
             if items.count > 1 {
                 let frontBundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
-                if let currentIdx = items.firstIndex(where: { $0.bundleID == frontBundleID }) {
+                if let currentIdx = items.firstIndex(where: { item in
+                    if item.bundleID == frontBundleID { return true }
+                    let itemIsBrowser = item.bundleID == profileEngine.browserBundleID ||
+                                        ChromeProfileEngine.supportedBrowsers.contains(where: { $0.bundleID == item.bundleID })
+                    let frontIsBrowser = frontBundleID == profileEngine.browserBundleID ||
+                                         (frontBundleID != nil && ChromeProfileEngine.supportedBrowsers.contains(where: { $0.bundleID == frontBundleID! }))
+                    return itemIsBrowser && frontIsBrowser
+                }) {
                     initialIdx = (currentIdx + 1) % items.count
                 }
             }
             
-            MinimalHUDWindow.shared.showAppGroup(mode: .antigravity, items: items, selectedIndex: initialIdx)
+            MinimalHUDWindow.shared.showAppGroup(mode: .antigravity, items: items, selectedIndex: initialIdx, profileIndex: initialProfIdx)
         } else {
             MinimalHUDWindow.shared.selectNext()
         }
     }
     
+    public var onPromptForMissingApp: ((String) -> Void)? = nil
+    
+    private func promptForMissingApp(bundleID: String) {
+        if let hook = onPromptForMissingApp {
+            hook(bundleID)
+            return
+        }
+        guard NSApp.activationPolicy() == .regular else {
+            logger.warning("Application \(bundleID) is not installed; skipping prompt in non-regular app environment.")
+            return
+        }
+        
+        let appName = AppGroupEngine.allDiscoveredItems().first(where: { $0.bundleID == bundleID })?.name
+            ?? AppGroupEngine.allEngines.flatMap({ $0.candidates }).first(where: { $0.bundleID == bundleID })?.name
+            ?? bundleID
+        
+        let alert = NSAlert()
+        alert.messageText = "\(appName) is not installed"
+        alert.informativeText = "'\(appName)' is pinned to your Quick Apps, but it is not installed on this Mac. Would you like to choose a replacement application?"
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Choose Replacement...")
+        alert.addButton(withTitle: "Cancel")
+        
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            self.handleOpenAppSearch()
+        }
+    }
+    
     private func focusApp(bundleID: String) {
-        AppGroupEngine.focusItem(bundleID: bundleID)
+        if bundleID == ChromeProfileEngine.shared.browserBundleID ||
+           ChromeProfileEngine.supportedBrowsers.contains(where: { $0.bundleID == bundleID }) {
+            ChromeProfileEngine.shared.focusChrome()
+        } else {
+            if NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) == nil,
+               !NSWorkspace.shared.runningApplications.contains(where: { $0.bundleIdentifier == bundleID }) {
+                promptForMissingApp(bundleID: bundleID)
+                return
+            }
+            AppGroupEngine.focusItem(bundleID: bundleID)
+        }
     }
     
     private func handleChromeTrigger() {
         let profileEngine = ChromeProfileEngine.shared
         logger.info("Caps-Lock + C triggered.")
+        TelemetryBuffer.shared.append(category: "switcher", level: "INFO", message: "Caps-Lock + C triggered.")
         
         let profiles = profileEngine.selectedProfiles
         guard !profiles.isEmpty else {
@@ -215,20 +276,37 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     public func updateDynamicShortcuts() {
         let groups = AppGroupEngine.pinnedAppsGroupedByLetter()
         var triggers: [UInt32: @MainActor () -> Void] = [:]
-        // 1. Primary browser shortcut matching application first letter ('B' for Brave, 'C' for Chrome)
+        
         let browserChar = ChromeProfileEngine.shared.primaryShortcutChar
         let browserCode = ChromeProfileEngine.shared.primaryShortcutKeyCode
-        triggers[browserCode] = { [weak self] in
-            Task { @MainActor [weak self] in
-                guard let self = self else { return }
-                self.handleChromeTrigger()
+        let browserGroup = groups.first(where: { $0.letter == browserChar })
+        
+        // 1. Primary browser trigger (Unified ring if pinned apps share browser letter; classic profile HUD otherwise)
+        if let browserGroup = browserGroup, !browserGroup.items.isEmpty {
+            let browserItem = AppGroupEngine.browserAsAntigravityItem()
+            let unifiedItems = [browserItem] + browserGroup.items
+            let indexedItems = unifiedItems.enumerated().map { idx, item in
+                AntigravityItem(name: item.name, bundleID: item.bundleID, path: item.path, icon: item.icon, index: idx + 1)
+            }
+            triggers[browserCode] = { [weak self] in
+                Task { @MainActor [weak self] in
+                    guard let self = self else { return }
+                    self.handleAppLetterTrigger(char: browserChar, items: indexedItems)
+                }
+            }
+        } else {
+            triggers[browserCode] = { [weak self] in
+                Task { @MainActor [weak self] in
+                    guard let self = self else { return }
+                    self.handleChromeTrigger()
+                }
             }
         }
         
-        // 2. Register every pinned letter's items
+        // 2. Register every other pinned letter's items
         for group in groups {
             let char = group.letter
-            if char == browserChar { continue } // Reserved for active browser profile switcher
+            if char == browserChar { continue } // Handled above in unified ring
             
             if let code = KeyCodes.keyCode(for: char) {
                 let items = group.items
@@ -313,6 +391,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             Task { @MainActor [weak self] in
                 guard let self = self else { return }
                 self.logger.info("Caps-Lock + \(digit) triggered.")
+                TelemetryBuffer.shared.append(category: "switcher", level: "INFO", message: "Caps-Lock + \(digit) profile select triggered.")
                 self.triggerMascotGaze(offset: digit <= 2 ? -0.8 : 0.8)
                 
                 let profiles = profileEngine.selectedProfiles
@@ -322,8 +401,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                     self.isCyclingHUDActive = true
                     self.activeMode = .chrome
                     MinimalHUDWindow.shared.show(profiles: profiles, selectedIndex: targetIdx)
-                } else {
+                } else if self.activeMode == .chrome {
                     MinimalHUDWindow.shared.updateSelection(to: targetIdx)
+                } else {
+                    MinimalHUDWindow.shared.selectChromeProfile(index: targetIdx)
                 }
             }
         }
@@ -332,7 +413,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             Task { @MainActor [weak self] in
                 guard let self = self, self.isCyclingHUDActive else { return }
                 self.triggerMascotGaze(offset: -0.8)
-                MinimalHUDWindow.shared.selectPrevious()
+                MinimalHUDWindow.shared.selectPreviousCard()
             }
         }
         
@@ -340,7 +421,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             Task { @MainActor [weak self] in
                 guard let self = self, self.isCyclingHUDActive else { return }
                 self.triggerMascotGaze(offset: 0.8)
-                MinimalHUDWindow.shared.selectNext()
+                MinimalHUDWindow.shared.selectNextCard()
             }
         }
         
@@ -348,6 +429,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             Task { @MainActor [weak self] in
                 guard let self = self else { return }
                 self.logger.info("Escape pressed: cancelling switcher HUD.")
+                TelemetryBuffer.shared.append(category: "switcher", level: "INFO", message: "Switcher HUD cancelled via Escape.")
                 self.isCyclingHUDActive = false
                 self.activeMode = .none
                 MinimalHUDWindow.shared.hideImmediate()
@@ -371,33 +453,54 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                     let targetProfile = ChromeSwitcherState.shared.selectedProfile
                     if let target = targetProfile {
                         self.logger.info("Caps-Lock released: switching to profile '\(target.effectiveName)' (\(target.dir)).")
+                        TelemetryBuffer.shared.append(category: "switcher", level: "INFO", message: "Switched to Chrome profile '\(target.effectiveName)' (\(target.dir)).")
                         profileEngine.focusProfile(dir: target.dir)
                     } else {
+                        TelemetryBuffer.shared.append(category: "switcher", level: "INFO", message: "Switched to Chrome.")
                         profileEngine.focusChrome()
                     }
                 case .appLetter(let char):
                     if let target = ChromeSwitcherState.shared.selectedAppItem {
-                        self.logger.info("Caps-Lock released: switching to '\(target.name)' (\(target.bundleID)) for key \(char).")
-                        self.focusApp(bundleID: target.bundleID)
+                        let isBrowser = target.bundleID == profileEngine.browserBundleID ||
+                                        ChromeProfileEngine.supportedBrowsers.contains(where: { $0.bundleID == target.bundleID })
+                        if isBrowser {
+                            let targetProfile = ChromeSwitcherState.shared.selectedProfile
+                            if let prof = targetProfile {
+                                self.logger.info("Caps-Lock released: switching to Chrome profile '\(prof.effectiveName)' (\(prof.dir)).")
+                                TelemetryBuffer.shared.append(category: "switcher", level: "INFO", message: "Switched to browser profile '\(prof.effectiveName)' (\(prof.dir)).")
+                                profileEngine.focusProfile(dir: prof.dir)
+                            } else {
+                                TelemetryBuffer.shared.append(category: "switcher", level: "INFO", message: "Switched to browser.")
+                                profileEngine.focusChrome()
+                            }
+                        } else {
+                            self.logger.info("Caps-Lock released: switching to '\(target.name)' (\(target.bundleID)) for key \(char).")
+                            TelemetryBuffer.shared.append(category: "switcher", level: "INFO", message: "Switched to '\(target.name)' (\(target.bundleID)) for key \(char).")
+                            self.focusApp(bundleID: target.bundleID)
+                        }
                     }
                 case .antigravity:
                     if let target = aiAgentEngine.selectedItem {
                         self.logger.info("Caps-Lock released: switching to AI Agent '\(target.name)' (\(target.bundleID)).")
+                        TelemetryBuffer.shared.append(category: "switcher", level: "INFO", message: "Switched to AI Agent '\(target.name)' (\(target.bundleID)).")
                         aiAgentEngine.focusItem(bundleID: target.bundleID)
                     }
                 case .terminal:
                     if let target = terminalEngine.selectedItem {
                         self.logger.info("Caps-Lock released: switching to Terminal app '\(target.name)' (\(target.bundleID)).")
+                        TelemetryBuffer.shared.append(category: "switcher", level: "INFO", message: "Switched to Terminal app '\(target.name)' (\(target.bundleID)).")
                         terminalEngine.focusItem(bundleID: target.bundleID)
                     }
                 case .notes:
                     if let target = notesEngine.selectedItem {
                         self.logger.info("Caps-Lock released: switching to Notes app '\(target.name)' (\(target.bundleID)).")
+                        TelemetryBuffer.shared.append(category: "switcher", level: "INFO", message: "Switched to Notes app '\(target.name)' (\(target.bundleID)).")
                         notesEngine.focusItem(bundleID: target.bundleID)
                     }
                 case .ide:
                     if let target = ideEngine.selectedItem {
                         self.logger.info("Caps-Lock released: switching to IDE app '\(target.name)' (\(target.bundleID)).")
+                        TelemetryBuffer.shared.append(category: "switcher", level: "INFO", message: "Switched to IDE app '\(target.name)' (\(target.bundleID)).")
                         ideEngine.focusItem(bundleID: target.bundleID)
                     }
                 case .none:
@@ -786,7 +889,47 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         let profileEngine = ChromeProfileEngine.shared
         let selectedList = profileEngine.selectedProfiles
         
-        // 1. Chrome / Browser section (caps lock + C)
+        let (rawToolsetItems, rawQuickItems) = AppGroupEngine.pinnedAppItemsGroupedByCategory()
+        
+        // Group items within each category so cyclic siblings (apps sharing the same shortcut letter)
+        // are placed directly adjacent to each other for clear Gestalt proximity.
+        func groupCyclicSiblings(_ items: [AntigravityItem]) -> [AntigravityItem] {
+            var letterGroups: [Character: [AntigravityItem]] = [:]
+            var orderedLetters: [Character] = []
+            for item in items {
+                let char = Character((item.name.first(where: { $0.isLetter }) ?? "A").uppercased())
+                if letterGroups[char] == nil {
+                    orderedLetters.append(char)
+                }
+                letterGroups[char, default: []].append(item)
+            }
+            return orderedLetters.flatMap { letterGroups[$0] ?? [] }
+        }
+        
+        let toolsetItems = groupCyclicSiblings(rawToolsetItems)
+        let quickItems = groupCyclicSiblings(rawQuickItems)
+        let allPinned = toolsetItems + quickItems
+        
+        // Track letter frequency to display cyclic signifiers for shared letters
+        var letterCounts: [Character: Int] = [:]
+        for item in allPinned {
+            let char = Character((item.name.first(where: { $0.isLetter }) ?? "A").uppercased())
+            letterCounts[char, default: 0] += 1
+        }
+        
+        let browserChar = profileEngine.primaryShortcutChar
+        let browserCharStr = String(browserChar).lowercased()
+        let hasBrowserLetterSiblings = (letterCounts[browserChar] ?? 0) > 0
+        if hasBrowserLetterSiblings {
+            letterCounts[browserChar, default: 0] += 1
+        }
+        
+        var letterSeenIndices: [Character: Int] = [:]
+        if hasBrowserLetterSiblings {
+            letterSeenIndices[browserChar] = 1
+        }
+        
+        // 1. Chrome / Browser section (caps lock + browser shortcut)
         let browserName = profileEngine.activeBrowserName
         let chromeIcon: NSImage
         if let candidate = ChromeProfileEngine.supportedBrowsers.first(where: { $0.bundleID == profileEngine.browserBundleID }),
@@ -807,15 +950,30 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         let browserTitle = profileEngine.browserBundleID == "com.google.Chrome" ? "Chrome" : browserName
         let chromeItem = makeAlignedMenuItem(
             title: browserTitle,
-            keyEquivalent: "c",
+            keyEquivalent: browserCharStr,
             isHeader: false,
             icon: chromeIcon,
             accessibilityLabel: "\(browserName)",
-            accessibilityHelp: "Hold Caps-Lock and press C to switch to \(browserName)",
+            accessibilityHelp: "Hold Caps-Lock and press \(browserChar) to switch to \(browserName)",
             action: #selector(handleActivateBrowserClick(_:)),
             target: self
         )
-        chromeItem.toolTip = "Hold Caps-Lock and press C to switch to \(browserName)"
+        
+        if let total = letterCounts[browserChar], total > 1 {
+            let attr = NSMutableAttributedString(string: browserTitle)
+            let badge = NSAttributedString(
+                string: " · 1/\(total) ↻",
+                attributes: [
+                    .foregroundColor: NSColor.secondaryLabelColor,
+                    .font: NSFont.systemFont(ofSize: 11, weight: .regular)
+                ]
+            )
+            attr.append(badge)
+            chromeItem.attributedTitle = attr
+            chromeItem.toolTip = "Hold Caps-Lock and press \(browserChar) to cycle (1 of \(total): \(browserName))"
+        } else {
+            chromeItem.toolTip = "Hold Caps-Lock and press \(browserChar) to switch to \(browserName)"
+        }
         menu.addItem(chromeItem)
         
         let activeProfileDir = profileEngine.getActiveProfileDir()
@@ -861,35 +1019,6 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             pItem.indentationLevel = 1
             menu.addItem(pItem)
         }
-        
-        let (rawToolsetItems, rawQuickItems) = AppGroupEngine.pinnedAppItemsGroupedByCategory()
-        
-        // Group items within each category so cyclic siblings (apps sharing the same shortcut letter)
-        // are placed directly adjacent to each other for clear Gestalt proximity.
-        func groupCyclicSiblings(_ items: [AntigravityItem]) -> [AntigravityItem] {
-            var letterGroups: [Character: [AntigravityItem]] = [:]
-            var orderedLetters: [Character] = []
-            for item in items {
-                let char = Character((item.name.first(where: { $0.isLetter }) ?? "A").uppercased())
-                if letterGroups[char] == nil {
-                    orderedLetters.append(char)
-                }
-                letterGroups[char, default: []].append(item)
-            }
-            return orderedLetters.flatMap { letterGroups[$0] ?? [] }
-        }
-        
-        let toolsetItems = groupCyclicSiblings(rawToolsetItems)
-        let quickItems = groupCyclicSiblings(rawQuickItems)
-        let allPinned = toolsetItems + quickItems
-        
-        // Track letter frequency to display cyclic signifiers for shared letters
-        var letterCounts: [Character: Int] = [:]
-        for item in allPinned {
-            let char = Character((item.name.first(where: { $0.isLetter }) ?? "A").uppercased())
-            letterCounts[char, default: 0] += 1
-        }
-        var letterSeenIndices: [Character: Int] = [:]
         
         func appendAppRow(item: AntigravityItem, categoryHelp: String) {
             let char = Character((item.name.first(where: { $0.isLetter }) ?? "A").uppercased())
