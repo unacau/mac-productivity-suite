@@ -2,14 +2,47 @@ import Foundation
 import CoreGraphics
 import AppKit
 import Cocoa
+import Carbon
 import os
 
 @MainActor
 public final class CopyOnSelectEngine: @unchecked Sendable {
     public static let shared = CopyOnSelectEngine()
     
+    /// Blacklisted applications where automated copy-on-select must NEVER trigger (Security & UX protection)
+    public static let sensitiveBundleIDs: Set<String> = [
+        // Password Managers & Vaults
+        "com.apple.keychainaccess",
+        "com.apple.Passwords",
+        "com.1password.1password",
+        "com.agilebits.onepassword7",
+        "com.bitwarden.desktop",
+        "org.keepassxc.keepassxc",
+        "com.dashlane.dashlanephone",
+        "com.dashlane.Dashlane",
+        "com.enpass.Enpass-Desktop",
+        "com.nordpass.macos",
+        "com.roboform.mac",
+        "com.lastpass.LastPass",
+        "org.whispersystems.signal-desktop",
+        // Terminal Emulators (Sudo, SSH, Private Keys, Secret Environment Variables)
+        "com.apple.Terminal",
+        "com.googlecode.iterm2",
+        "dev.warp.Warp-Stable",
+        "com.mitchellh.ghostty",
+        "net.kovidgoyal.kitty",
+        "org.alacritty",
+        "com.alacritty",
+        "com.github.wez.wezterm",
+        "co.zeit.hyper"
+    ]
+    
     public var isEnabled: Bool = false
+    
+    // 10.0pt threshold prevents false positive copies during micro-jitters or single clicks
     public var dragThreshold: CGFloat = 10.0
+    // 150ms delay accommodates the macOS double-click timeframe (typically up to 500ms) 
+    // and ensures UI highlighting is fully rendered before Cmd+C dispatch
     public var copyDelayMs: UInt64 = 150
     
     public var onCopyKeystrokePosted: (@MainActor () -> Void)?
@@ -69,8 +102,12 @@ public final class CopyOnSelectEngine: @unchecked Sendable {
             options: .listenOnly,
             eventsOfInterest: eventMask,
             callback: { proxy, type, event, refcon in
-                guard let refcon = refcon else { return Unmanaged.passUnretained(event) }
+                guard let refcon = refcon else { return nil }
                 let engine = Unmanaged<CopyOnSelectEngine>.fromOpaque(refcon).takeUnretainedValue()
+                if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+                    engine.handleTapEvent(type: type, event: event)
+                    return nil
+                }
                 engine.handleTapEvent(type: type, event: event)
                 return Unmanaged.passUnretained(event)
             },
@@ -197,9 +234,57 @@ public final class CopyOnSelectEngine: @unchecked Sendable {
         }
     }
     
+    public func isFocusedElementSecure() -> Bool {
+        if IsSecureEventInputEnabled() { return true }
+        var focusedElement: CFTypeRef?
+        let systemWide = AXUIElementCreateSystemWide()
+        guard AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focusedElement) == .success,
+              let element = focusedElement,
+              CFGetTypeID(element) == AXUIElementGetTypeID() else {
+            return false
+        }
+        
+        // Safe cast verified via CFGetTypeID
+        let axElement = element as! AXUIElement
+        
+        // 1. Check Subrole (e.g. AXSecureTextField)
+        var subrole: CFTypeRef?
+        if AXUIElementCopyAttributeValue(axElement, kAXSubroleAttribute as CFString, &subrole) == .success,
+           let subroleStr = subrole as? String {
+            if subroleStr == "AXSecureTextField" || subroleStr == (kAXSecureTextFieldSubrole as String) {
+                return true
+            }
+        }
+        
+        // 2. Check Role directly (some custom apps / WebKit controls set AXRole to AXSecureTextField)
+        var role: CFTypeRef?
+        if AXUIElementCopyAttributeValue(axElement, kAXRoleAttribute as CFString, &role) == .success,
+           let roleStr = role as? String {
+            if roleStr == "AXSecureTextField" || roleStr == (kAXSecureTextFieldSubrole as String) {
+                return true
+            }
+        }
+        
+        return false
+    }
+    
     public func shouldTriggerCopy(start: CGPoint, end: CGPoint, clickCount: Int) -> Bool {
         guard isEnabled else { return false }
         if isInteractingWithXomskyWindow { return false }
+        
+        // Level 1: System-wide Secure Event Input check (e.g. password field / sudo active)
+        if IsSecureEventInputEnabled() {
+            logger.debug("Copy skipped: IsSecureEventInputEnabled is true.")
+            return false
+        }
+        
+        // Level 2: Frontmost application sensitive blacklist (Password managers & terminal)
+        if let frontmostID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
+           Self.sensitiveBundleIDs.contains(frontmostID) {
+            logger.debug("Copy skipped: Frontmost app '\(frontmostID)' is sensitive.")
+            return false
+        }
+        
         if clickCount > 1 {
             return true
         }
@@ -221,6 +306,13 @@ public final class CopyOnSelectEngine: @unchecked Sendable {
             guard !Task.isCancelled else { return }
             guard let engine = self, engine.isEnabled && engine.isStarted else { return }
             guard !engine.isInteractingWithXomskyWindow else { return }
+            
+            // Level 3: Accessibility field check right before posting synthetic keystroke
+            guard !engine.isFocusedElementSecure() else {
+                engine.logger.info("Copy skipped: Focused element is secure or password field.")
+                return
+            }
+            
             engine.postCopyKeystroke()
         }
     }

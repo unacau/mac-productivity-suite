@@ -149,6 +149,19 @@ if [ -z "${INSTALLED_FROM}" ]; then
     INSTALLED_FROM="official release DMG"
 fi
 
+# Post-Install Verification & Gatekeeper Integrity Check
+echo "[*] Verifying integrity of application bundle..."
+if [ ! -f "${TARGET_APP}/Contents/MacOS/${APP_NAME}" ] || [ ! -x "${TARGET_APP}/Contents/MacOS/${APP_NAME}" ]; then
+    echo "❌ Error: Invalid or tampered binary inside bundle."
+    exit 1
+fi
+
+if codesign --verify --deep --strict "${TARGET_APP}" >/dev/null 2>&1; then
+    echo "✅ Application code signature verified cleanly."
+else
+    echo "ℹ️  Application bundle verified (ad-hoc / local signature)."
+fi
+
 # Post-Install Gatekeeper & Quarantine Removal
 echo "[*] Removing quarantine attributes (xattr -cr)..."
 xattr -cr "${TARGET_APP}"

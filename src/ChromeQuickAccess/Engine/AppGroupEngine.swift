@@ -590,10 +590,12 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
             // Special handling for Finder: if Finder is running but has no open windows, activating it leaves the user
             // on the current screen with only the menu bar changed. Open a new Finder window if none was raised!
             if bundleID == "com.apple.finder" && !windowRaised {
-                let script = "tell application \"Finder\" to make new Finder window"
-                if let appleScript = NSAppleScript(source: script) {
-                    var errorDict: NSDictionary?
-                    appleScript.executeAndReturnError(&errorDict)
+                Task.detached(priority: .userInitiated) {
+                    let script = "tell application \"Finder\" to make new Finder window"
+                    if let appleScript = NSAppleScript(source: script) {
+                        var errorDict: NSDictionary?
+                        appleScript.executeAndReturnError(&errorDict)
+                    }
                 }
             }
         } else {
@@ -1080,7 +1082,11 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
     @discardableResult
     public static func registerCustomApp(url: URL) -> AntigravityItem? {
         let path = url.path
-        guard FileManager.default.fileExists(atPath: path) else { return nil }
+        guard url.isFileURL,
+              url.pathExtension.lowercased() == "app",
+              FileManager.default.fileExists(atPath: path) else {
+            return nil
+        }
         var paths = UserDefaults.standard.stringArray(forKey: "CustomAppPaths") ?? []
         if !paths.contains(path) {
             paths.append(path)

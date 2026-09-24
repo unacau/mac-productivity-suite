@@ -29,6 +29,8 @@ public final class TelemetryBuffer: Sendable {
 
     private struct State {
         var buffer: [Breadcrumb] = []
+        // Capacity of 300 events ensures ~30 minutes of deep interaction history 
+        // without exceeding ~25KB of active memory (Assuming ~80 bytes per breadcrumb).
         let capacity: Int = 300
     }
 
@@ -53,13 +55,32 @@ public final class TelemetryBuffer: Sendable {
         lock.withLock { $0.buffer }
     }
 
-    /// Formats all events as a multi-line plain text log.
+    /// Redacts sensitive Personally Identifiable Information (PII) such as email addresses
+    /// from diagnostic export strings before writing to disk or public bundles.
+    public static func sanitizePII(_ text: String) -> String {
+        guard let regex = try? NSRegularExpression(
+            pattern: "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}",
+            options: []
+        ) else {
+            return text
+        }
+        let range = NSRange(text.startIndex..., in: text)
+        return regex.stringByReplacingMatches(
+            in: text,
+            options: [],
+            range: range,
+            withTemplate: "[REDACTED_EMAIL]"
+        )
+    }
+
+    /// Formats all events as a multi-line plain text log with automatic PII sanitization.
     public func exportTimelineText() -> String {
         let entries = getAll()
         if entries.isEmpty {
             return "--- No telemetry events recorded ---"
         }
-        return entries.map(\.formattedLine).joined(separator: "\n")
+        let rawLog = entries.map(\.formattedLine).joined(separator: "\n")
+        return Self.sanitizePII(rawLog)
     }
 
     /// Clears the ring buffer.

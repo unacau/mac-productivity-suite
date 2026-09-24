@@ -2410,6 +2410,76 @@ struct ChromeQuickAccessUnitTests {
         let pinned = AppGroupEngine.pinnedAppItems()
         #expect(!pinned.contains(where: { $0.bundleID == "com.fake.app.doesnotexist12345" }), "Production mode must omit uninstalled app from pinnedAppItems")
     }
+
+    @Test @MainActor
+    func testTelemetryBufferPIISanitization() {
+        let input = "Switched to Chrome profile 'john.appleseed@company.com' (Profile 1) for user alice.smith+work@gmail.com"
+        let sanitized = TelemetryBuffer.sanitizePII(input)
+        #expect(!sanitized.contains("john.appleseed@company.com"))
+        #expect(!sanitized.contains("alice.smith+work@gmail.com"))
+        #expect(sanitized.contains("[REDACTED_EMAIL]"))
+    }
+
+    @Test @MainActor
+    func testCopyOnSelectSensitiveBundleIDsProtection() {
+        #expect(CopyOnSelectEngine.sensitiveBundleIDs.contains("com.apple.Passwords"))
+        #expect(CopyOnSelectEngine.sensitiveBundleIDs.contains("com.1password.1password"))
+        #expect(CopyOnSelectEngine.sensitiveBundleIDs.contains("com.bitwarden.desktop"))
+        #expect(CopyOnSelectEngine.sensitiveBundleIDs.contains("com.apple.keychainaccess"))
+        #expect(CopyOnSelectEngine.sensitiveBundleIDs.contains("com.apple.Terminal"))
+    }
+
+    @Test @MainActor
+    func testCopyOnSelectEnhancedSensitiveBundleIDsProtection() {
+        // Modern Terminal Emulators
+        #expect(CopyOnSelectEngine.sensitiveBundleIDs.contains("com.mitchellh.ghostty"))
+        #expect(CopyOnSelectEngine.sensitiveBundleIDs.contains("net.kovidgoyal.kitty"))
+        #expect(CopyOnSelectEngine.sensitiveBundleIDs.contains("org.alacritty"))
+        #expect(CopyOnSelectEngine.sensitiveBundleIDs.contains("com.github.wez.wezterm"))
+        #expect(CopyOnSelectEngine.sensitiveBundleIDs.contains("dev.warp.Warp-Stable"))
+        #expect(CopyOnSelectEngine.sensitiveBundleIDs.contains("com.googlecode.iterm2"))
+        
+        // Password Managers & Vaults
+        #expect(CopyOnSelectEngine.sensitiveBundleIDs.contains("com.dashlane.dashlanephone"))
+        #expect(CopyOnSelectEngine.sensitiveBundleIDs.contains("com.enpass.Enpass-Desktop"))
+        #expect(CopyOnSelectEngine.sensitiveBundleIDs.contains("com.nordpass.macos"))
+        #expect(CopyOnSelectEngine.sensitiveBundleIDs.contains("org.keepassxc.keepassxc"))
+        #expect(CopyOnSelectEngine.sensitiveBundleIDs.contains("org.whispersystems.signal-desktop"))
+    }
+
+    @Test @MainActor
+    func testAppGroupEngineRejectsNonAppCustomURL() {
+        let textFile = URL(fileURLWithPath: "/tmp/fake_script.sh")
+        try? "#!/bin/bash\necho hi".write(to: textFile, atomically: true, encoding: .utf8)
+        defer { try? FileManager.default.removeItem(at: textFile) }
+        
+        let item = AppGroupEngine.registerCustomApp(url: textFile)
+        #expect(item == nil, "registerCustomApp must reject non-.app URLs")
+    }
+
+    @Test @MainActor
+    func testLicenseEngineRejectsTamperedKeychainLicense() {
+        let engine = LicenseEngine.shared
+        let originalOverride = engine.testOverrideProStatus
+        defer {
+            LicenseEngine.testIgnoreReceiptCheckInTests = true
+            engine.testOverrideProStatus = originalOverride
+            engine.deactivate()
+        }
+        
+        engine.testOverrideProStatus = nil
+        // When receipt check is enforced, a raw key without valid receipt is rejected
+        LicenseEngine.testIgnoreReceiptCheckInTests = false
+        _ = engine.saveKeychainLicense(key: "XOMSKY-PIRATED-KEY-12345")
+        engine.deleteKeychainReceipt()
+        engine.deleteKeychainActivationId()
+        UserDefaults.standard.removeObject(forKey: "XomskyProReceiptToken")
+        UserDefaults.standard.removeObject(forKey: "XomskyProActivationId")
+        UserDefaults.standard.removeObject(forKey: "XomskyProLicenseKey")
+        
+        engine.checkLicenseStatus()
+        #expect(engine.isPro == false, "Tampered license without cryptographic receipt must be rejected")
+    }
 }
 
 

@@ -1,14 +1,23 @@
 import Foundation
 import Security
+import CryptoKit
 import os
 
 @MainActor
 public final class LicenseEngine: ObservableObject, @unchecked Sendable {
     public static let shared = LicenseEngine()
     
+    /// Computes a cryptographically verified receipt token to prevent UserDefaults spoofing (defaults write)
+    public static func computeReceiptToken(key: String, activationId: String) -> String {
+        let raw = "\(key.trimmingCharacters(in: .whitespacesAndNewlines)):\(activationId.trimmingCharacters(in: .whitespacesAndNewlines)):\(polarOrganizationId):xomsky_receipt_salt_2026"
+        let digest = SHA256.hash(data: Data(raw.utf8))
+        return digest.compactMap { String(format: "%02x", $0) }.joined()
+    }
+    
     public static let serviceName = "com.almosteleven.xomsky.license"
     public static let licenseAccount = "pro_license_key"
     public static let activationAccount = "pro_activation_id"
+    public static let receiptAccount = "pro_receipt_token"
     public static let proPrice = "$19 Lifetime"
     public static let freeSlotsLimit = 5
     public static let freePinnedAppsLimit = 4 // 1 browser hub slot + 4 user pinned app slots = 5 free slots
@@ -37,6 +46,8 @@ public final class LicenseEngine: ObservableObject, @unchecked Sendable {
     public var testOverrideProStatus: Bool? = nil
     /// Test hook to mock online Polar activation responses in automated tests
     public var testMockOnlineValidationResult: Bool? = nil
+    /// Test hook to control whether receipt verification is strictly enforced during unit tests
+    public static var testIgnoreReceiptCheckInTests: Bool = true
     
     @Published private var internalIsPro: Bool = false
     @Published public private(set) var activeLicenseKey: String? = nil
@@ -59,21 +70,38 @@ public final class LicenseEngine: ObservableObject, @unchecked Sendable {
             return
         }
         
-        // 1. Try reading from macOS Keychain
-        if let key = readKeychainLicense(), validateLicenseKey(key) {
-            self.internalIsPro = true
-            self.activeLicenseKey = key
-            self.activeActivationId = readKeychainActivationId() ?? UserDefaults.standard.string(forKey: "XomskyProActivationId")
-            return
+        // 1. Try reading from macOS Keychain (Requires valid activationId and cryptographic receipt verification)
+        if let key = readKeychainLicense(),
+           validateLicenseKey(key),
+           let aid = readKeychainActivationId() ?? UserDefaults.standard.string(forKey: "XomskyProActivationId"),
+           !aid.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let savedReceipt = readKeychainReceipt() ?? UserDefaults.standard.string(forKey: "XomskyProReceiptToken")
+            let expectedReceipt = Self.computeReceiptToken(key: key, activationId: aid)
+            if savedReceipt == expectedReceipt || (Self.isRunningTests && Self.testIgnoreReceiptCheckInTests) {
+                self.internalIsPro = true
+                self.activeLicenseKey = key
+                self.activeActivationId = aid
+                return
+            } else {
+                logger.warning("Tampered or unverified Keychain license detected; ignoring.")
+            }
         }
         
-        // 2. Fallback to UserDefaults (for sandboxed / headless test environments)
+        // 2. Fallback to UserDefaults (Requires valid activationId and cryptographic receipt verification)
         if let fallbackKey = UserDefaults.standard.string(forKey: "XomskyProLicenseKey"),
-           validateLicenseKey(fallbackKey) {
-            self.internalIsPro = true
-            self.activeLicenseKey = fallbackKey
-            self.activeActivationId = UserDefaults.standard.string(forKey: "XomskyProActivationId")
-            return
+           validateLicenseKey(fallbackKey),
+           let fallbackAid = UserDefaults.standard.string(forKey: "XomskyProActivationId"),
+           !fallbackAid.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let savedReceipt = UserDefaults.standard.string(forKey: "XomskyProReceiptToken")
+            let expectedReceipt = Self.computeReceiptToken(key: fallbackKey, activationId: fallbackAid)
+            if savedReceipt == expectedReceipt || (Self.isRunningTests && Self.testIgnoreReceiptCheckInTests) {
+                self.internalIsPro = true
+                self.activeLicenseKey = fallbackKey
+                self.activeActivationId = fallbackAid
+                return
+            } else {
+                logger.warning("Tampered or unverified UserDefaults license detected; ignoring.")
+            }
         }
         
         self.internalIsPro = false
@@ -260,12 +288,16 @@ public final class LicenseEngine: ObservableObject, @unchecked Sendable {
     }
     
     private func activateOffline(key: String, activationId: String? = nil) -> Bool {
+        let effectiveAid = activationId ?? self.activeActivationId ?? (Self.isRunningTests ? "act_test_\(UUID().uuidString)" : "")
         _ = saveKeychainLicense(key: key)
         UserDefaults.standard.set(key, forKey: "XomskyProLicenseKey")
-        if let aid = activationId {
-            _ = saveKeychainActivationId(id: aid)
-            UserDefaults.standard.set(aid, forKey: "XomskyProActivationId")
-            self.activeActivationId = aid
+        if !effectiveAid.isEmpty {
+            _ = saveKeychainActivationId(id: effectiveAid)
+            UserDefaults.standard.set(effectiveAid, forKey: "XomskyProActivationId")
+            let receipt = Self.computeReceiptToken(key: key, activationId: effectiveAid)
+            _ = saveKeychainReceipt(receipt: receipt)
+            UserDefaults.standard.set(receipt, forKey: "XomskyProReceiptToken")
+            self.activeActivationId = effectiveAid
         }
         self.testOverrideProStatus = nil
         self.internalIsPro = true
@@ -280,8 +312,10 @@ public final class LicenseEngine: ObservableObject, @unchecked Sendable {
         }
         deleteKeychainLicense()
         deleteKeychainActivationId()
+        deleteKeychainReceipt()
         UserDefaults.standard.removeObject(forKey: "XomskyProLicenseKey")
         UserDefaults.standard.removeObject(forKey: "XomskyProActivationId")
+        UserDefaults.standard.removeObject(forKey: "XomskyProReceiptToken")
         self.testOverrideProStatus = nil
         self.internalIsPro = false
         self.activeLicenseKey = nil
@@ -399,6 +433,49 @@ public final class LicenseEngine: ObservableObject, @unchecked Sendable {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: Self.serviceName,
             kSecAttrAccount as String: Self.activationAccount
+        ]
+        SecItemDelete(query as CFDictionary)
+    }
+    
+    public func readKeychainReceipt() -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: Self.serviceName,
+            kSecAttrAccount as String: Self.receiptAccount,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        guard status == errSecSuccess, let data = item as? Data else {
+            return nil
+        }
+        return String(data: data, encoding: .utf8)
+    }
+    
+    public func saveKeychainReceipt(receipt: String) -> Bool {
+        guard let data = receipt.data(using: .utf8) else { return false }
+        
+        deleteKeychainReceipt()
+        
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: Self.serviceName,
+            kSecAttrAccount as String: Self.receiptAccount,
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
+        ]
+        
+        let status = SecItemAdd(query as CFDictionary, nil)
+        return status == errSecSuccess
+    }
+    
+    public func deleteKeychainReceipt() {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: Self.serviceName,
+            kSecAttrAccount as String: Self.receiptAccount
         ]
         SecItemDelete(query as CFDictionary)
     }

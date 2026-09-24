@@ -20,7 +20,7 @@ public enum DiagnosticBundleService {
     public static func createDiagnosticArchive() throws -> URL {
         let fileManager = FileManager.default
         let tempDir = fileManager.temporaryDirectory.appendingPathComponent("xomsky_diag_\(UUID().uuidString)")
-        try fileManager.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: tempDir, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
 
         defer {
             // Clean up raw staging directory after zipping
@@ -82,6 +82,7 @@ public enum DiagnosticBundleService {
                 userInfo: [NSLocalizedDescriptionKey: "Failed to create diagnostic archive via ditto."]
             )
         }
+        try? fileManager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: outputZipURL.path)
 
         return outputZipURL
     }
@@ -112,7 +113,8 @@ public enum DiagnosticBundleService {
         """
 
         let timelineText = TelemetryBuffer.shared.exportTimelineText()
-        return "\(summaryHeader)\n\(timelineText)"
+        let rawReport = "\(summaryHeader)\n\(timelineText)"
+        return TelemetryBuffer.sanitizePII(rawReport)
     }
 
     /// Formats a concise markdown summary for GitHub Issue body.

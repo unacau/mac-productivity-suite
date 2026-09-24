@@ -1836,7 +1836,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             if response == .alertFirstButtonReturn {
                 UpdateEngine.runHomebrewUpgradeInTerminal()
             } else if response == .alertSecondButtonReturn {
-                if let url = URL(string: releaseUrl) {
+                if let url = URL(string: releaseUrl), url.scheme == "https" {
                     NSWorkspace.shared.open(url)
                 }
             }
@@ -1855,7 +1855,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             if response == .alertFirstButtonReturn {
                 NSWorkspace.shared.open(UpdateEngine.directDmgDownloadUrl)
             } else if response == .alertSecondButtonReturn {
-                if let url = URL(string: releaseUrl) {
+                if let url = URL(string: releaseUrl), url.scheme == "https" {
                     NSWorkspace.shared.open(url)
                 }
             }

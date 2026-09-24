@@ -577,13 +577,23 @@ public final class ChromeProfileEngine: ObservableObject {
             logger.info("[Test] launchColdStart bypassed for profileDir: \(profileDir)")
             return
         }
+        // Sanitize profile directory name: strictly allow safe alphanumeric profile names without flag injection
+        let trimmed = profileDir.trimmingCharacters(in: .whitespacesAndNewlines)
+        let safeDir: String
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: " _-."))
+        if !trimmed.isEmpty && !trimmed.hasPrefix("-") && trimmed.unicodeScalars.allSatisfy({ allowed.contains($0) }) {
+            safeDir = trimmed
+        } else {
+            safeDir = "Default"
+        }
+        
         let task = Process()
         task.launchPath = "/usr/bin/open"
-        task.arguments = ["-b", self.browserBundleID, "--args", "--profile-directory=\(profileDir)"]
+        task.arguments = ["-b", self.browserBundleID, "--args", "--profile-directory=\(safeDir)"]
         do {
             try task.run()
             task.waitUntilExit()
-            logger.info("Launched Chrome with profile-directory '\(profileDir)' via open.")
+            logger.info("Launched Chrome with profile-directory '\(safeDir)' via open.")
         } catch {
             logger.error("Failed to launch Chrome via open: \(error.localizedDescription)")
         }
@@ -674,13 +684,20 @@ public final class ChromeProfileEngine: ObservableObject {
             (profileDir as NSString).appendingPathComponent("Edge Profile Picture.png"),
             (profileDir as NSString).appendingPathComponent("Custom Profile Picture.png")
         ]
+        // Validate gaia_picture_file_name: must be a pure basename without directory traversal components
         if let gaiaName = info["gaia_picture_file_name"] as? String, !gaiaName.isEmpty {
-            candidatePics.insert((profileDir as NSString).appendingPathComponent(gaiaName), at: 0)
+            let sanitized = (gaiaName as NSString).lastPathComponent
+            if !sanitized.isEmpty && !sanitized.contains("/") && !sanitized.contains("\\") && !sanitized.contains("..") {
+                candidatePics.insert((profileDir as NSString).appendingPathComponent(sanitized), at: 0)
+            }
         }
         
+        let canonicalBase = URL(fileURLWithPath: profileDir).resolvingSymlinksInPath().path
         for picPath in candidatePics {
-            if FileManager.default.fileExists(atPath: picPath),
-               let image = NSImage(contentsOfFile: picPath) {
+            let canonicalPic = URL(fileURLWithPath: picPath).resolvingSymlinksInPath().path
+            guard canonicalPic.hasPrefix(canonicalBase) else { continue }
+            if FileManager.default.fileExists(atPath: canonicalPic),
+               let image = NSImage(contentsOfFile: canonicalPic) {
                 let circular = makeCircularImage(image: image)
                 cachedAvatars[dirKey] = circular
                 return circular

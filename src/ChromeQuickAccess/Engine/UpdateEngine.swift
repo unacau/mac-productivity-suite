@@ -41,7 +41,9 @@ public final class UpdateEngine: Sendable {
     ) -> Bool {
         // 1. Primary approach: Launch an executable .command script.
         // Opening a .command file executes directly in Terminal without requiring TCC AppleEvents permissions.
-        let tempScriptUrl = FileManager.default.temporaryDirectory.appendingPathComponent("xomsky-upgrade.command")
+        // Isolate the script inside a uniquely generated, restricted (0700) subdirectory to prevent symlink / race attacks.
+        let isolatedDir = FileManager.default.temporaryDirectory.appendingPathComponent("xomsky-upg-\(UUID().uuidString)", isDirectory: true)
+        let tempScriptUrl = isolatedDir.appendingPathComponent("xomsky-upgrade.command")
         let scriptContent = """
         #!/bin/bash
         echo "=========================================="
@@ -71,6 +73,7 @@ public final class UpdateEngine: Sendable {
         """
         
         do {
+            try FileManager.default.createDirectory(at: isolatedDir, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
             try scriptContent.write(to: tempScriptUrl, atomically: true, encoding: .utf8)
             try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: tempScriptUrl.path)
             if workspaceOpen(tempScriptUrl) {
