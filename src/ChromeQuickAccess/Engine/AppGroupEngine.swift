@@ -110,6 +110,7 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
     }
     
     private let logger: Logger
+    private static let staticLogger = Logger(subsystem: "com.almosteleven.xomsky", category: "appgroup")
     
     public init(category: String, candidates: [AppCandidate]) {
         self.category = category
@@ -487,8 +488,8 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
             )
         }
         
-        // Fallback if none discovered: add the last candidate (system default)
-        if discovered.isEmpty, let fallback = candidates.last {
+        // Fallback if none discovered: add the last candidate (system default) only in test environments
+        if discovered.isEmpty, Self.bypassLaunchInTests, let fallback = candidates.last {
             let finalPath = fallback.defaultPaths.first ?? ""
             let icon: NSImage
             if !finalPath.isEmpty && FileManager.default.fileExists(atPath: finalPath) {
@@ -775,6 +776,67 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
         return Array(chosen.prefix(freePinnedAppsLimit))
     }
     
+    /// Known phantom/fallback bundle IDs produced by legacy Xomsky versions when categories were empty.
+    public static let legacyPhantomBundleIDs: Set<String> = [
+        "com.openai.chat",
+        "com.apple.dt.Xcode",
+        "com.google.antigravity",
+        "com.google.antigravity-ide",
+        "com.googlecode.iterm2"
+    ]
+    
+    public static let migrationV116Key = "DidMigrateLegacyPinnedAppsV116"
+
+    /// Migrates saved pinned apps by stripping legacy phantom fallback apps that are not installed on this machine,
+    /// seamlessly backfilling empty slots with genuine workstation apps from discoverSmartDefaultPinnedBundleIDs().
+    public static func migrateLegacyPinnedAppsIfNeeded(force: Bool = false) {
+        if !force {
+            guard !bypassLaunchInTests else { return }
+            guard !UserDefaults.standard.bool(forKey: migrationV116Key) else { return }
+        }
+        
+        defer {
+            UserDefaults.standard.set(true, forKey: migrationV116Key)
+        }
+        
+        guard let saved = UserDefaults.standard.stringArray(forKey: "SelectedAppBundleIDs"), !saved.isEmpty else {
+            return
+        }
+        
+        func isInstalled(_ bundleID: String) -> Bool {
+            NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) != nil
+        }
+        
+        // Check if any saved bundle ID is an uninstalled legacy phantom
+        let hasUninstalledLegacyPhantom = saved.contains { bundleID in
+            legacyPhantomBundleIDs.contains(bundleID) && !isInstalled(bundleID)
+        }
+        
+        guard hasUninstalledLegacyPhantom else { return }
+        
+        // Keep all installed saved apps
+        var validApps = saved.filter { isInstalled($0) }
+        
+        // If slots are below limit, backfill with smart defaults that are actually installed
+        if validApps.count < freePinnedAppsLimit {
+            let smartDefaults = discoverSmartDefaultPinnedBundleIDs()
+            for candidate in smartDefaults {
+                if !validApps.contains(candidate) && isInstalled(candidate) {
+                    validApps.append(candidate)
+                    if validApps.count >= freePinnedAppsLimit { break }
+                }
+            }
+        }
+        
+        if validApps.isEmpty {
+            validApps = defaultPinnedBundleIDs
+        }
+        
+        let cleaned = Array(validApps.prefix(maxPinnedQuickApps))
+        UserDefaults.standard.set(cleaned, forKey: "SelectedAppBundleIDs")
+        staticLogger.info("Migrated legacy pinned apps. Cleaned list: \(cleaned)")
+    }
+    
     public static var selectedBundleIDs: Set<String> {
         get {
             if let saved = UserDefaults.standard.stringArray(forKey: "SelectedAppBundleIDs"), !saved.isEmpty {
@@ -789,7 +851,9 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
             ]
             for key in legacyKeys {
                 if let val = UserDefaults.standard.string(forKey: key), !initial.contains(val) {
-                    initial.append(val)
+                    if Self.bypassLaunchInTests || NSWorkspace.shared.urlForApplication(withBundleIdentifier: val) != nil {
+                        initial.append(val)
+                    }
                 }
             }
             if initial.isEmpty {
@@ -900,7 +964,7 @@ public final class AppGroupEngine: ObservableObject, @unchecked Sendable {
                 if !custom.items.contains(where: { $0.bundleID == bundleID }) {
                     custom.items.append(item)
                 }
-            } else if let candidate = allEngines.flatMap({ $0.candidates }).first(where: { $0.bundleID == bundleID }) {
+            } else if Self.bypassLaunchInTests, let candidate = allEngines.flatMap({ $0.candidates }).first(where: { $0.bundleID == bundleID }) {
                 // Resilient fallback for catalog candidates (e.g. headless/CI environments or uninstalled defaults)
                 let icon = NSImage(systemSymbolName: "app.dashed", accessibilityDescription: nil) ?? NSImage()
                 icon.size = NSSize(width: 64, height: 64)

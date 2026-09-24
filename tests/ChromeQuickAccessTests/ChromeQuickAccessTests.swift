@@ -2335,6 +2335,81 @@ struct ChromeQuickAccessUnitTests {
         #expect(chromeCard.cardWidth == clockCard.cardWidth, "All application cards must have identical width")
         #expect(HUDCardView.standardCardWidth == 132)
     }
+
+    @Test @MainActor
+    func testLegacyPhantomAppsMigrationCleansUninstalledApps() {
+        let prevSaved = UserDefaults.standard.stringArray(forKey: "SelectedAppBundleIDs")
+        let prevMigration = UserDefaults.standard.bool(forKey: AppGroupEngine.migrationV116Key)
+        defer {
+            if let prev = prevSaved {
+                UserDefaults.standard.set(prev, forKey: "SelectedAppBundleIDs")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "SelectedAppBundleIDs")
+            }
+            UserDefaults.standard.set(prevMigration, forKey: AppGroupEngine.migrationV116Key)
+        }
+        
+        // Simulate a Mac that inherited uninstalled phantom defaults
+        let phantomDefaults = ["com.openai.chat", "com.apple.dt.Xcode", "com.apple.Terminal", "com.apple.Notes"]
+        UserDefaults.standard.set(phantomDefaults, forKey: "SelectedAppBundleIDs")
+        
+        AppGroupEngine.migrateLegacyPinnedAppsIfNeeded(force: true)
+        
+        let cleaned = UserDefaults.standard.stringArray(forKey: "SelectedAppBundleIDs") ?? []
+        #expect(!cleaned.isEmpty, "Cleaned list must not be empty")
+        #expect(cleaned.count <= AppGroupEngine.freePinnedAppsLimit)
+        
+        for bundle in cleaned {
+            if AppGroupEngine.legacyPhantomBundleIDs.contains(bundle) {
+                // If it is in the phantom set, it must actually be installed on disk
+                let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle)
+                #expect(url != nil, "Retained bundle \(bundle) must be installed on disk")
+            }
+        }
+    }
+
+    @Test @MainActor
+    func testProductionModeDoesNotFabricateMonogramPlaceholders() {
+        let prevBypass = AppGroupEngine.bypassLaunchInTests
+        let prevOverride = AppGroupEngine.aiAgent.customItemsOverride
+        defer {
+            AppGroupEngine.bypassLaunchInTests = prevBypass
+            AppGroupEngine.aiAgent.customItemsOverride = prevOverride
+            AppGroupEngine.aiAgent.refreshItems()
+        }
+        
+        AppGroupEngine.aiAgent.customItemsOverride = nil
+        AppGroupEngine.bypassLaunchInTests = false
+        AppGroupEngine.aiAgent.refreshItems()
+        
+        // If no AI agent is installed, items should be empty in production mode, never fabricating a synthetic monogram
+        let installed = AppGroupEngine.aiAgent.candidates.filter { candidate in
+            NSWorkspace.shared.urlForApplication(withBundleIdentifier: candidate.bundleID) != nil
+        }
+        if installed.isEmpty {
+            #expect(AppGroupEngine.aiAgent.items.isEmpty, "Production mode must not fabricate synthetic candidate if none installed")
+        }
+    }
+
+    @Test @MainActor
+    func testProductionModeDoesNotReturnDashedStubsInPinnedAppItems() {
+        let prevBypass = AppGroupEngine.bypassLaunchInTests
+        let prevSaved = UserDefaults.standard.stringArray(forKey: "SelectedAppBundleIDs")
+        defer {
+            AppGroupEngine.bypassLaunchInTests = prevBypass
+            if let prev = prevSaved {
+                UserDefaults.standard.set(prev, forKey: "SelectedAppBundleIDs")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "SelectedAppBundleIDs")
+            }
+        }
+        
+        AppGroupEngine.bypassLaunchInTests = false
+        UserDefaults.standard.set(["com.fake.app.doesnotexist12345"], forKey: "SelectedAppBundleIDs")
+        
+        let pinned = AppGroupEngine.pinnedAppItems()
+        #expect(!pinned.contains(where: { $0.bundleID == "com.fake.app.doesnotexist12345" }), "Production mode must omit uninstalled app from pinnedAppItems")
+    }
 }
 
 

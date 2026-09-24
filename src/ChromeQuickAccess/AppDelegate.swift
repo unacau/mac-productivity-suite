@@ -31,6 +31,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     public func applicationDidFinishLaunching(_ notification: Notification) {
         logger.info("Starting Xomsky...")
         
+        // 0. Migrate any legacy phantom pinned apps from older versions
+        AppGroupEngine.migrateLegacyPinnedAppsIfNeeded()
+        
         // 1. Setup Menu Bar Status Item
         setupStatusItem()
         
