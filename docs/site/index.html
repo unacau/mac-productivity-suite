@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Xomsky — Fast & Intuitive App Access via Caps Lock + Letter | Chrome/Brave Profiles & Copy-on-Select</title>
-  <meta name="description" content="Утилита для быстрого доступа и интуитивного доступа к выбранным приложениям через Капслок + Первая Буква Приложения, со специальной фичей — быстрый доступ к окнам конкретного хром/брейв профайла через Капс Лок + C/B + 1-4, и для копирования текста при выделении.">
+  <meta name="description" content="Ultra-fast, intuitive macOS app switcher via Caps Lock + letter. Dedicated Chrome & Brave profile switching via Caps + C/B + 1-4, and automatic Linux-style Copy-on-Select.">
 
   <!-- OpenGraph -->
   <meta property="og:title" content="Xomsky — Fast & Intuitive App Access via Caps Lock + Letter">
-  <meta property="og:description" content="Быстрый доступ к выбранным приложениям через Капслок + Первая Буква, доступ к окнам конкретного Chrome/Brave профиля через Капс Лок + C/B + 1-4, и копирование текста при выделении.">
+  <meta property="og:description" content="Fast macOS app switcher via Caps Lock + letter. Direct Chrome & Brave profile window switching via Caps + C/B + 1-4, and automatic Copy-on-Select.">
   <meta property="og:image" content="assets/images/khomyak_opengraph_banner.png">
 
   <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg?v=v6">
@@ -127,12 +127,13 @@
               </button>
             </div>
 
-            <!-- Action Strip: AirDrop to Mac & Brew Install -->
+            <!-- Action Strip: Download DMG & Brew Install -->
             <div class="hero-cta-actions">
-              <button class="airdrop-share-btn" id="airdrop-share-btn" title="AirDrop / Share install command to your Mac">
-                <span class="airdrop-icon">🚀</span>
-                <span>AirDrop to My Mac</span>
-              </button>
+              <a href="https://github.com/unacau/mac-productivity-suite/releases/latest/download/Xomsky.dmg" class="hero-download-btn" title="Download Xomsky for macOS">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                <span>Download DMG</span>
+                <span class="dmg-pill">2.1 MB</span>
+              </a>
               <div class="hero-install-strip" title="Click to copy install command">
                 <span class="hero-install-prompt">$</span>
                 <code class="hero-install-cmd">brew install unacau/tap/xomsky</code>
@@ -152,46 +153,15 @@
               <button class="macro-tap-btn" data-key="copy" title="Linux Copy-on-Select Demo"><span class="kbd-pill">📋</span> Copy</button>
             </div>
 
-            <!-- Mobile Copy-on-Select Touch Sandbox -->
+            <!-- Touch & Copy Sandbox -->
             <div class="mobile-copy-sandbox" id="mobile-copy-sandbox" title="Select text to test auto-copy">
               <div class="sandbox-header">
                 <span class="sandbox-dot"></span>
                 <span>Touch & Copy Sandbox</span>
               </div>
-              <p class="sandbox-hint">Highlight any text below with your finger:</p>
+              <p class="sandbox-hint">Highlight any text below with your mouse or finger:</p>
               <div class="sandbox-selectable-text" id="sandbox-selectable-text">
-                Выдели любой текст мышкой — он мгновенно скопируется в буфер без ⌘C.
-              </div>
-            </div>
-
-            <!-- Founder Note: The 3 Core Pains -->
-            <div class="founder-card" id="founder-card">
-              <div class="founder-card-header">
-                <span class="founder-badge">💡 Why I Built Xomsky</span>
-                <span class="founder-tagline">«Чего не хватает, когда хомяк выключен»</span>
-              </div>
-              <div class="founder-pains-grid">
-                <div class="pain-item">
-                  <span class="pain-num">#1</span>
-                  <div class="pain-content">
-                    <strong>Главная Killer-фича: Окна профилей Chrome/Brave</strong>
-                    <p>В macOS переключение между рабочим, личным и клиентскими профилями сломано. <kbd class="top-kbd">Caps</kbd> + <kbd class="top-kbd">C/B</kbd> + <kbd class="top-kbd">1..4</kbd> поднимает окно именно нужного профиля.</p>
-                  </div>
-                </div>
-                <div class="pain-item">
-                  <span class="pain-num">#2</span>
-                  <div class="pain-content">
-                    <strong>Доступ к приложениям по первой букве</strong>
-                    <p>Мизинец уже на Caps Lock. Зачем писать в поисковую строку? <kbd class="top-kbd">Caps</kbd> + <kbd class="top-kbd">T</kbd> (Terminal), <kbd class="top-kbd">I</kbd> (IDE), <kbd class="top-kbd">A</kbd> (Agent), <kbd class="top-kbd">N</kbd> (Notes).</p>
-                  </div>
-                </div>
-                <div class="pain-item">
-                  <span class="pain-num">#3</span>
-                  <div class="pain-content">
-                    <strong>Минус 1 000 лишних нажатий: Copy-on-Select</strong>
-                    <p>Если ты выделил текст — ты намеревался его скопировать. Выделил мышью ➔ текст уже в буфере обмена с мягким HUD-тостом.</p>
-                  </div>
-                </div>
+                Highlight this text with your mouse — it instantly copies to your clipboard without ⌘C.
               </div>
             </div>
           </div>
@@ -233,7 +203,7 @@
         </div>
       </div>
 
-      <!-- Reactive Mascot Companion HUD Toast (Non-intrusive floating in lower-left) -->
+      <!-- Reactive Mascot Companion HUD Toast (Desktop only) -->
       <div class="companion-hud-widget" id="companion-hud-widget" title="Click to squish!">
         <div class="companion-header">
           <span class="companion-live-dot"></span>
@@ -245,6 +215,54 @@
         </div>
       </div>
     </div>
+
+    <!-- ====================================================================
+         SECTION 2: WHY I BUILT XOMSKY (THE 3 CORE PAINS)
+         ==================================================================== -->
+    <section class="founder-section" id="founder-story">
+      <div class="founder-section-container">
+        <div class="founder-section-header">
+          <span class="founder-badge">💡 Why I Built Xomsky</span>
+          <h2 class="founder-title">What I miss the second Xomsky is turned off</h2>
+          <p class="founder-subtitle">Built out of daily macOS friction. Three essential superpowers in one ultra-fast native Swift 6 engine.</p>
+        </div>
+
+        <div class="founder-pains-grid">
+          <div class="pain-card">
+            <div class="pain-card-top">
+              <span class="pain-num">#1</span>
+              <span class="pain-tag">Killer Feature</span>
+            </div>
+            <h3 class="pain-heading">Chrome & Brave Profile Windows</h3>
+            <p class="pain-desc">
+              macOS <kbd class="top-kbd">Cmd</kbd> + <kbd class="top-kbd">Tab</kbd> lumps all browser profiles into one messy pile. Switching between work, personal, and client profiles is broken. <kbd class="top-kbd">Caps</kbd> + <kbd class="top-kbd">C/B</kbd> + <kbd class="top-kbd">1..4</kbd> raises the exact profile window you need in 0ms.
+            </p>
+          </div>
+
+          <div class="pain-card">
+            <div class="pain-card-top">
+              <span class="pain-num">#2</span>
+              <span class="pain-tag">Muscle Memory</span>
+            </div>
+            <h3 class="pain-heading">Instant App Access by First Letter</h3>
+            <p class="pain-desc">
+              Your pinky already rests on Caps Lock. Why type in Spotlight or Raycast? <kbd class="top-kbd">Caps</kbd> + <kbd class="top-kbd">T</kbd> (Terminal), <kbd class="top-kbd">I</kbd> (IDE), <kbd class="top-kbd">A</kbd> (Agent), <kbd class="top-kbd">N</kbd> (Notes) — instant switching with zero context loss.
+            </p>
+          </div>
+
+          <div class="pain-card">
+            <div class="pain-card-top">
+              <span class="pain-num">#3</span>
+              <span class="pain-tag">Micro-Optimization</span>
+            </div>
+            <h3 class="pain-heading">Zero Wasted Clicks: Copy-on-Select</h3>
+            <p class="pain-desc">
+              If you highlighted text, your intention was already to copy it. Linux/X11-style auto-copy on mouse drag selection or multi-click with a subtle cursor HUD toast. Eliminates 1,000 redundant <kbd class="top-kbd">⌘C</kbd> keystrokes a day.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <!-- ====================================================================
          NATIVE VIDEO PROOFS MODAL (PLAYS AUTHENTIC RECORDINGS)
@@ -288,9 +306,10 @@
         <span class="sticky-title">Xomsky</span>
       </div>
       <div class="sticky-actions">
-        <button class="sticky-btn sticky-airdrop-btn" id="mobile-sticky-airdrop" title="AirDrop to your Mac">
-          <span>🚀</span> <span>AirDrop</span>
-        </button>
+        <a href="https://github.com/unacau/mac-productivity-suite/releases/latest/download/Xomsky.dmg" class="sticky-btn sticky-dmg-btn" title="Download Xomsky DMG">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+          <span>DMG (2.1 MB)</span>
+        </a>
         <button class="sticky-btn sticky-copy-btn" id="mobile-sticky-copy-btn" title="Copy brew install command">
           <span>📋</span> <span>brew</span>
         </button>

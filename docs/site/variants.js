@@ -669,31 +669,26 @@
       mobileSpacer.addEventListener("click", triggerCompanionSquish);
     }
 
-    // AirDrop & Web Share API Handlers ("Send to My Mac")
-    const airdropBtns = document.querySelectorAll(".airdrop-share-btn, #mobile-sticky-airdrop");
-    airdropBtns.forEach((btn) => {
-      btn.addEventListener("click", (e) => {
+    // Mobile Sticky Copy Brew Button
+    const mobileCopyBtn = document.getElementById("mobile-sticky-copy-btn");
+    if (mobileCopyBtn) {
+      mobileCopyBtn.addEventListener("click", (e) => {
         if (e) e.preventDefault();
-        playTactileClick("popover");
-        if (navigator.vibrate) navigator.vibrate([15, 30]);
-
-        if (navigator.share) {
-          navigator.share({
-            title: "Xomsky — Native macOS Productivity Suite",
-            text: "Instant Chrome & Brave profile switching and copy-on-select for Mac: brew install unacau/tap/xomsky",
-            url: "https://xomsky.app"
-          }).catch(() => {});
-        } else {
-          const text = "brew install unacau/tap/xomsky";
-          try {
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-              navigator.clipboard.writeText(text).catch(() => {});
-            }
-          } catch (err) {}
-          showCopyToast(window.innerWidth / 2, window.innerHeight / 2, "Copied brew command to clipboard!");
-        }
+        const text = "brew install unacau/tap/xomsky";
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).catch(() => {});
+          }
+        } catch (err) {}
+        playTactileClick("copy");
+        showCopyToast(window.innerWidth / 2, window.innerHeight - 80, text);
+        const orig = mobileCopyBtn.innerHTML;
+        mobileCopyBtn.innerHTML = `<span>✓</span> <span>copied</span>`;
+        setTimeout(() => {
+          mobileCopyBtn.innerHTML = orig;
+        }, 1400);
       });
-    });
+    }
 
     // Mobile Copy-on-Select Touch Sandbox
     const copySandbox = document.getElementById("mobile-copy-sandbox");

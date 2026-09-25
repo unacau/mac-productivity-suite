@@ -2024,19 +2024,19 @@
    Footer Positioning Fix — Zero Keyboard Collision
    ========================================================================== */
 .site-footer {
-  position: fixed;
-  bottom: 16px;
-  left: 24px;
-  width: auto;
-  text-align: left;
-  padding: 0;
+  position: relative;
+  width: 100%;
+  text-align: center;
+  padding: 40px 24px 30px;
   color: rgba(148, 163, 184, 0.7);
-  font-size: 0.74rem;
+  font-size: 0.78rem;
   font-weight: 500;
   letter-spacing: 0.01em;
   z-index: 90;
-  pointer-events: none;
-  user-select: none;
+  pointer-events: auto;
+  user-select: text;
+  margin-top: auto;
+  box-sizing: border-box;
 }
 
 [data-theme="light"] .site-footer {
@@ -2045,12 +2045,6 @@
 
 .site-footer p {
   margin: 0;
-}
-
-@media (max-width: 768px) {
-  .site-footer {
-    display: none;
-  }
 }
 
 /* /* Interactive Elements Pointer-Events Guard */
@@ -2253,12 +2247,19 @@
 /* ==========================================================================
    Option C: Side-by-Side 60fps Video & Live 3D Mascot Stage
    ========================================================================== */
+.variant-stage-section {
+  position: relative;
+  width: 100%;
+  min-height: calc(100vh - 84px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 0;
+  box-sizing: border-box;
+}
+
 .option-c-split-stage {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  transform: translateY(-50%);
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -2266,8 +2267,10 @@
   pointer-events: none;
   z-index: 85;
   width: 100%;
-  max-width: 1600px;
+  max-width: 1540px;
   margin: 0 auto;
+  gap: 36px;
+  box-sizing: border-box;
 }
 
 .option-c-left-col {
@@ -2538,8 +2541,8 @@
   margin-top: 4px;
 }
 
-/* Luminous Apple AirDrop / Share to Mac Button */
-.airdrop-share-btn {
+/* Hero Primary Download DMG Button */
+.hero-download-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -2554,20 +2557,27 @@
   box-shadow: 0 4px 16px rgba(37, 99, 235, 0.40);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   user-select: none;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
-.airdrop-share-btn:hover {
+.hero-download-btn:hover {
   transform: translateY(-1px);
   background: linear-gradient(135deg, #0369A1 0%, #1D4ED8 100%);
   box-shadow: 0 6px 22px rgba(37, 99, 235, 0.55);
+  color: #FFFFFF;
 }
 
-.airdrop-share-btn:active {
+.hero-download-btn:active {
   transform: translateY(1px);
 }
 
-.airdrop-icon {
-  font-size: 1.05rem;
+.hero-download-btn .dmg-pill {
+  font-size: 0.70rem;
+  background: rgba(255, 255, 255, 0.24);
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-weight: 700;
 }
 
 /* Mobile Copy-on-Select Touch Sandbox */
@@ -2631,6 +2641,152 @@
   border-color: rgba(0, 0, 0, 0.08);
 }
 
+/* ==========================================================================
+   Section 2: Why I Built Xomsky (The 3 Core Pains)
+   ========================================================================== */
+.founder-section {
+  width: 100%;
+  max-width: 1240px;
+  margin: 50px auto 80px;
+  padding: 0 44px;
+  box-sizing: border-box;
+  pointer-events: auto;
+  user-select: text;
+  z-index: 85;
+  position: relative;
+}
+
+.founder-section-container {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.founder-section-header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.founder-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #38BDF8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  padding: 6px 14px;
+  border-radius: 999px;
+}
+
+[data-theme="light"] .founder-badge {
+  color: #0284C7;
+  background: rgba(2, 132, 199, 0.10);
+  border-color: rgba(2, 132, 199, 0.25);
+}
+
+.founder-title {
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+  color: var(--text-primary, #FFFFFF);
+  margin: 0;
+}
+
+.founder-subtitle {
+  font-size: 1.02rem;
+  color: var(--text-secondary, #94A3B8);
+  max-width: 660px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+.founder-pains-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+}
+
+.pain-card {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 20px;
+  padding: 26px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 
+    0 16px 40px rgba(0, 0, 0, 0.35),
+    0 0 20px rgba(56, 189, 248, 0.08);
+}
+
+[data-theme="light"] .pain-card {
+  background: rgba(255, 255, 255, 0.88);
+  border-color: rgba(56, 189, 248, 0.35);
+  box-shadow: 
+    0 12px 32px rgba(0, 0, 0, 0.08),
+    0 0 16px rgba(56, 189, 248, 0.08);
+}
+
+.pain-card:hover {
+  transform: translateY(-3px);
+  border-color: #38BDF8;
+  box-shadow: 
+    0 20px 48px rgba(0, 0, 0, 0.45),
+    0 0 32px rgba(56, 189, 248, 0.22);
+}
+
+.pain-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pain-num {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.80rem;
+  font-weight: 800;
+  color: #38BDF8;
+  background: rgba(56, 189, 248, 0.16);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+
+.pain-tag {
+  font-size: 0.70rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94A3B8;
+}
+
+.pain-heading {
+  font-size: 1.20rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary, #FFFFFF);
+  line-height: 1.3;
+  margin: 0;
+}
+
+.pain-desc {
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--text-secondary, #94A3B8);
+  margin: 0;
+}
+
 /* Sticky Mobile Bottom Bar */
 .mobile-sticky-bar {
   display: none;
@@ -2652,13 +2808,7 @@
     justify-content: space-between;
     padding: 0 16px;
     z-index: 999;
-    transform: translateY(100%);
-    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
     box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.45);
-  }
-
-  .mobile-sticky-bar.visible {
-    transform: translateY(0);
   }
 
   [data-theme="light"] .mobile-sticky-bar {
@@ -2701,6 +2851,7 @@
     font-weight: 700;
     cursor: pointer;
     border: none;
+    text-decoration: none;
     transition: transform 0.15s ease;
   }
 
@@ -2708,7 +2859,7 @@
     transform: scale(0.96);
   }
 
-  .sticky-airdrop-btn {
+  .sticky-dmg-btn {
     background: linear-gradient(135deg, #0284C7 0%, #2563EB 100%);
     color: #FFFFFF;
     box-shadow: 0 2px 10px rgba(37, 99, 235, 0.35);
@@ -2731,6 +2882,15 @@
    Responsive Architecture: The Pocket Mac (< 900px & Mobile)
    ========================================================================== */
 @media (max-width: 900px) {
+  /* Hide Butt View and floating companion HUD widget on mobile */
+  #cam-view-btn {
+    display: none !important;
+  }
+
+  .companion-hud-widget {
+    display: none !important;
+  }
+
   .option-c-split-stage {
     position: relative;
     top: 0;
@@ -2739,7 +2899,7 @@
     transform: none;
     flex-direction: column;
     align-items: center;
-    padding: 68px 16px 120px;
+    padding: 24px 16px 40px;
     gap: 16px;
     width: 100%;
     max-width: 100vw;
@@ -2750,7 +2910,7 @@
   .option-c-mobile-spacer {
     display: block;
     width: 100%;
-    height: 240px;
+    height: 200px;
     cursor: pointer;
     pointer-events: auto;
     margin-top: 4px;
@@ -2790,7 +2950,7 @@
     width: 100%;
   }
 
-  .airdrop-share-btn {
+  .hero-download-btn {
     width: 100%;
     justify-content: center;
     min-height: 46px;
@@ -2818,6 +2978,32 @@
     border-radius: 14px;
   }
 
+  .macos-video-footer .footer-hint {
+    display: none;
+  }
+
+  .founder-section {
+    padding: 0 16px;
+    margin: 30px auto 10px;
+  }
+
+  .founder-title {
+    font-size: 1.65rem;
+  }
+
+  .founder-subtitle {
+    font-size: 0.92rem;
+  }
+
+  .founder-pains-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .pain-card {
+    padding: 20px;
+  }
+
   /* Subtly scale switcher dock on mobile so it doesn't block viewport */
   .variant-switcher-bar {
     bottom: 64px;
@@ -2834,9 +3020,9 @@
 
 /* Reactive Companion Mascot HUD Widget */
 .companion-hud-widget {
-  position: fixed;
-  bottom: 80px;
-  right: 28px;
+  position: absolute;
+  bottom: 24px;
+  right: 36px;
   z-index: 95;
   width: 240px;
   background: rgba(15, 23, 42, 0.88);

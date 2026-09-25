@@ -347,6 +347,7 @@ let userInteracted = false;
 let scene, camera, renderer, controls;
 let hamsterRoot, cheeksGroup, eyesGroup, snoutGroup;
 let eyeLeft, eyeRight;
+let glintLBig, glintLSmall, glintRBig, glintRSmall;
 let leftEarGroup, rightEarGroup;
 let whiskersGroup, tailMesh;
 let keyboardGroup;
@@ -755,11 +756,11 @@ function buildGiantRealisticHamster() {
   eyeLeft.position.z = 0.07;
   eyeLGroup.add(eyeLeft);
 
-  const glintLBig = new THREE.Mesh(glintBigGeo, glintMat);
+  glintLBig = new THREE.Mesh(glintBigGeo, glintMat);
   glintLBig.position.set(-0.06, 0.06, 0.24);
   eyeLGroup.add(glintLBig);
 
-  const glintLSmall = new THREE.Mesh(glintSmallGeo, glintMat);
+  glintLSmall = new THREE.Mesh(glintSmallGeo, glintMat);
   glintLSmall.position.set(0.07, -0.06, 0.24);
   eyeLGroup.add(glintLSmall);
 
@@ -781,11 +782,11 @@ function buildGiantRealisticHamster() {
   eyeRight.position.z = 0.07;
   eyeRGroup.add(eyeRight);
 
-  const glintRBig = new THREE.Mesh(glintBigGeo, glintMat);
+  glintRBig = new THREE.Mesh(glintBigGeo, glintMat);
   glintRBig.position.set(-0.06, 0.06, 0.24);
   eyeRGroup.add(glintRBig);
 
-  const glintRSmall = new THREE.Mesh(glintSmallGeo, glintMat);
+  glintRSmall = new THREE.Mesh(glintSmallGeo, glintMat);
   glintRSmall.position.set(0.07, -0.06, 0.24);
   eyeRGroup.add(glintRSmall);
 
@@ -977,6 +978,8 @@ function createKeycapTexture(label, isInteractive, accentColor, hasLed, isCaps) 
   }
 
   const texture = new THREE.CanvasTexture(canvas);
+  texture.center.set(0.5, 0.5);
+  texture.rotation = Math.PI;
   texture.anisotropy = 4;
   keycapTextureCache[cacheKey] = texture;
   return texture;
@@ -3049,10 +3052,24 @@ function animate(currentTime = performance.now()) {
       snoutGroup.rotation.y += (targetHeadX * 0.35 - snoutGroup.rotation.y) * 0.08;
     }
 
-    const isBlink = ((time + 2.0) % 4.0) < 0.12;
-    const blinkScale = isBlink ? 0.05 : 1.0;
+    // Smooth organic blink cycle every 4.2s with cosine easing (duration ~0.15s)
+    const blinkPeriod = 4.2;
+    const blinkDuration = 0.15;
+    const blinkTime = (time + 2.0) % blinkPeriod;
+    let blinkScale = 1.0;
+    if (blinkTime < blinkDuration) {
+      const progress = blinkTime / blinkDuration; // 0 to 1
+      const dip = Math.sin(progress * Math.PI); // 0 -> 1 -> 0
+      blinkScale = Math.max(0.04, 1.0 - dip * 0.96);
+    }
     eyeLeft.scale.y = blinkScale;
     eyeRight.scale.y = blinkScale;
+    if (glintLBig && glintRBig && glintLSmall && glintRSmall) {
+      glintLBig.scale.y = blinkScale;
+      glintRBig.scale.y = blinkScale;
+      glintLSmall.scale.y = blinkScale;
+      glintRSmall.scale.y = blinkScale;
+    }
   }
 
   renderer.render(scene, camera);
