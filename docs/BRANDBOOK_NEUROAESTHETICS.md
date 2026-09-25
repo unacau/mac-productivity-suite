@@ -7,14 +7,20 @@
 
 ## 1. Executive Summary & Brand Purpose
 
-**Khomyak** (Хомяк) is a lightweight, zero-latency macOS productivity suite built in pure native Swift 6 and SwiftUI.
+**Xomsky** — утилита для быстрого доступа и интуитивного доступа к выбранным приложениям через **Капслок + Первая Буква Приложения**, со специальной фичей — **быстрый доступ к окнам конкретного хром/брейв профайла через Капс Лок + C/B + 1-4**, и для **копирования текста при выделении** (Copy-on-Select). Built in pure native Swift 6 and SwiftUI.
 
-* **The Core Metaphor:** Tapping the physical Caps-Lock key replaces the futile mobile phone tap-to-earn meme with instantaneous developer flow state.
+* **The Core Metaphor:** Tapping the physical Caps-Lock key replaces the futile mobile phone tap-to-earn meme with instantaneous developer flow state and intuitive app routing.
 * **Primary Slogan:**
   > *«Тапни хомяка — войди в поток.»* (*“Tap the Hamster. Own the Flow.”*)
-* **Tagline:** *Your Mac’s tactile home-row buddy.*
+* **Tagline:** *Быстрый доступ к приложениям по первой букве · Окна Chrome/Brave профилей · Copy-on-Select.*
 
-Neuroaesthetics demonstrates that visual aesthetic experiences are evolutionary prediction and reward mechanisms. By grounding Khomyak's visual identity in neuroscience, we optimize both optical legibility in macOS and neuromuscular habit formation on the keyboard.
+Neuroaesthetics demonstrates that visual aesthetic experiences are evolutionary prediction and reward mechanisms. By grounding Xomsky's visual identity in neuroscience, we optimize both optical legibility in macOS and neuromuscular habit formation on the keyboard.
+
+### 1.1 The Behavioral Genesis (The "Missing Limb" Effect)
+The brand identity and interaction design address three visceral neuromuscular frustrations in macOS:
+1. **Broken Profile Navigation (Primary Driver):** Searching through 15 Chrome windows for a specific client or work profile creates severe cognitive friction. `Caps + C/B + 1..4` restores immediate spatial orientation.
+2. **Home-Row Focal Continuity:** Eliminates search-bar typing (Spotlight/Raycast) via single-character `Caps Lock + [Letter]` routing.
+3. **Intent-Action Synthesis:** Copy-on-Select removes the redundant `Cmd + C` motor sub-routine for every mouse selection.
 
 ---
 
@@ -121,7 +127,7 @@ Every visual and interactive expression of Khomyak must activate all three nodes
   * *«Тапни хомяка — войди в поток.»*
   * *“Tap the Hamster. Own the Flow.”*
 * **Product Descriptions:**
-  * *«Хомяк на Caps Lock: самый продуктивный тап в твоей жизни.»*
-  * *“The driverless macOS hyper-key that turns the home row into your fastest workspace switch.”*
+  * *«Для быстрого доступа и интуитивного доступа к выбранным приложениям через Капслок + Первая Буква Приложения, со специальной фичей — быстрый доступ к окнам конкретного хром/брейв профайла через Капс Лок + C/B + 1-4, и для копирования текста при выделении.»*
+  * *“Fast and intuitive access to selected apps via Caps Lock + First Letter of App, with a special feature: direct access to windows of a specific Chrome/Brave profile via Caps Lock + C/B + 1-4, and copy-on-select text.”*
 * **Developer One-Liner:**
-  * *“Pure native Swift 6. Zero daemons. 100% flow.”*
+  * *“Pure native Swift 6. Zero daemons. Caps Lock + Letter app access + Chrome/Brave profiles + Copy-on-Select.”*
