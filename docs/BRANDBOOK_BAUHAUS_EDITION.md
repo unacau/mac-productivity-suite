@@ -8,15 +8,22 @@
 
 ## 1. Executive Summary & Brand Purpose
 
-**Khomyak: Bauhaus Edition** (Хомяк / *Der Hamster*) is a radical functionalist re-imagining of the macOS productivity suite.
+**Xomsky: Bauhaus Edition** (Хомяк / *Der Hamster*) is a radical functionalist re-imagining of macOS application and workspace switching.
 
+* **Core Positioning:** Утилита для быстрого доступа и интуитивного доступа к выбранным приложениям через **Капслок + Первая Буква Приложения**, со специальной фичей — **быстрый доступ к окнам конкретного хром/брейв профайла через Капс Лок + C/B + 1-4**, и для **копирования текста при выделении** (Copy-on-Select).
 * **The Core Philosophy:** *«Form folgt Fluss»* (*"Form Follows Flow"*). Ornamental skeuomorphism, digital fur textures, and frivolous micro-details are eliminated. In their place stands pure, irreducible geometric constructivism designed to achieve zero cognitive friction.
 * **The Transformed Metaphor:** Tapping the physical Caps-Lock key ceases to be a playful cartoon meme and becomes an **industrial switchboard operation**—a tactile, driverless bridge between developer cognition and machine execution.
 * **Hero Slogans:**
-  * **English:** *“Der Hamster: Form Follows Flow. Precision Keyboard Constructivism for macOS.”*
+  * **English:** *“Xomsky: Fast & Intuitive App Access via Caps Lock + Letter. Chrome/Brave Profiles & Copy-on-Select.”*
   * **German:** *«Tippe den Hamster. Beherrsche den Fluss.»*
-  * **Russian:** *«Хомяк: Форма следует за потоком. Тактильный конструктивизм для macOS.»*
-* **Tagline:** *The home-row precision instrument.*
+  * **Russian:** *«Xomsky: Быстрый доступ к приложениям через Капслок + Буква, профили Chrome/Brave и копирование при выделении.»*
+* **Tagline:** *The home-row precision instrument for apps and browser profiles.*
+
+### 1.1 Functional Genesis: Eliminating 3 System Bottlenecks
+In Bauhaus functionalism, form follows flow to resolve three fundamental ergonomics failures in macOS:
+1. **Window-to-Profile Dissociation (#1):** macOS groups by application process, blinding the user to browser profiles. Xomsky directly addresses profile windows via `Caps + C/B + 1..4`.
+2. **Search-Input Overhead (#2):** Replacing lexical search (typing app names in Spotlight) with direct geometric letter-key mapping (`Caps + [Letter]`).
+3. **Redundant Motor Syntax (#3):** Selection equals intent to copy. Copy-on-Select removes the redundant `Cmd + C` keystroke.
 
 ---
 

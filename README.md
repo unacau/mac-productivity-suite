@@ -1,10 +1,11 @@
 <p align="center">
-  <img src="assets/xomsky_canonical_hero.png" alt="Xomsky — Your Mac’s Home Row on Steroids (5 Tools in 0ms)" width="100%">
+  <img src="assets/xomsky_canonical_hero.png" alt="Xomsky — Fast & Intuitive App Access via Caps Lock" width="100%">
 </p>
 
 <p align="center">
-  <strong>Your Mac’s Home Row on Steroids · 5 Tools in 0ms</strong><br>
-  <em>Dedicated Caps-Lock Hyper Key • 0ms Chromium Profile Switcher • Linux Copy-on-Select • 100% Driverless</em>
+  <strong>Быстрый и интуитивный доступ к выбранным приложениям через Капслок + Первая Буква Приложения</strong><br>
+  <em>Специальная фича: быстрый доступ к окнам конкретного Chrome/Brave профайла через Капс Лок + C/B + 1–4 • Копирование текста при выделении (Copy-on-Select)</em><br>
+  <sub>Fast & intuitive access to selected apps via Caps Lock + First Letter • Chrome/Brave profile windows via Caps + C/B + 1–4 • 100% Driverless Swift 6</sub>
 </p>
 
 <p align="center">
@@ -31,13 +32,26 @@
 brew install unacau/tap/xomsky
 ```
 
-**Xomsky** turns the physical `Caps-Lock` key into a sub-16ms hardware hyper modifier. Built in pure native **Swift 6** with zero background daemons, zero kernel extensions, and a 15 MB footprint, Xomsky puts your entire workstation right under your home-row fingertips.
+**Xomsky** создан для быстрого и интуитивного доступа к выбранным приложениям через **Капслок + Первая Буква Приложения**, со специальной фичей — **быстрый доступ к окнам конкретного хром/брейв профайла через Капс Лок + C/B + 1-4**, и для **копирования текста при выделении** (Copy-on-Select). Built in pure native **Swift 6** with zero background daemons, zero kernel extensions, and a 15 MB footprint, Xomsky puts your entire workstation right under your home-row fingertips.
+
+---
+
+## 💡 История создания и 3 главные боли (Why I Built This)
+
+Xomsky появился не из желания сделать очередную абстрактную «утилиту для продуктивности», а из ежедневного бессилия перед тремя системными ограничениями macOS:
+
+1. **Главная боль и Killer Feature — Окна профилей браузера (`Caps + C/B + 1..4`)**:  
+   В macOS переключение профилей браузера сломано на системном уровне. Системный `Cmd + Tab` знает только приложение «Chrome» целиком, `Cmd + \`` заставляет вслепую перебирать десяток окон, а в меню профилей приходится целиться мышкой. **Это была главная причина создания Xomsky**. Когда утилита выключена, именно этого физически не хватает сильнее всего: зажал `Caps`, нажал `C` (или `B`) + цифру `1..4` — и моментально поднял окно нужного рабочего, личного или клиентского профиля.
+2. **Естественное продолжение — Доступ к приложениям по первой букве (`Caps + [Буква]`)**:  
+   Когда левый мизинец уже лежит на удобном аппаратном `Caps Lock`, тянуться к Spotlight или Raycast, чтобы напечатать *"term"* или *"code"*, ощущается как лишняя работа. Зажал `Caps` + нажал первую букву (`T` для Terminal, `I` для IDE, `A` для AI Agent, `N` для Notes, `F` для Finder) — и окно уже в фокусе без единой поисковой строки.
+3. **Устранение 1 000 паразитных нажатий — Копирование при выделении (Copy-on-Select)**:  
+   Если разработчик выделил текст на экране мышью — в 99% случаев он намеревался его скопировать. Нажимать `Cmd + C` каждый раз — это лишнее действие, которое за день накапливается в сотни пустых движений кисти. С Xomsky выделил текст — он уже в буфере обмена с мягким тактильным HUD-тостом.
 
 ---
 
 ## ✨ The 5-Key Home-Row Cockpit
 
-Hold <kbd>Caps-Lock</kbd> and tap your home row to switch primary workspaces in **0ms** without touching your mouse:
+Hold <kbd>Caps-Lock</kbd> and tap the first letter of your application to switch instantly without touching your mouse:
 
 | Key | Station | Target Applications | Action |
 | :---: | :--- | :--- | :--- |

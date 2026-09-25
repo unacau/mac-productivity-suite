@@ -264,8 +264,8 @@ const CATEGORY_DATA = {
     shortcut: "Caps-Lock + N",
     color: "#F59E0B",
     tasks: [
-      "☑ Zero-latency Caps-Lock Hyper Key",
-      "☑ 5-App Toolkit Fast Switcher",
+      "☑ Caps Lock + First Letter App Access",
+      "☑ Chrome/Brave Profiles (Caps + C/B + 1-4)",
       "☑ Universal Copy-on-Select",
       "☐ Ship Xomsky v1.0.0 Release"
     ]
@@ -1307,9 +1307,9 @@ function updateSimulatedHUD(category = "chrome", profileIdx = 0) {
     if (previewBody) {
       previewBody.innerHTML = `
         <div class="terminal-preview-screen" style="color: #FCD34D; font-size: 9px; line-height: 1.5;">
-          • 0ms Caps-Lock Hyper-Key context switching<br>
-          • Native Swift 6 standalone binary (2.1 MB)<br>
-          • Zero background daemons, 0% CPU
+          • Caps Lock + First Letter app access<br>
+          • Chrome/Brave profile windows (Caps + C/B + 1-4)<br>
+          • Universal Copy-on-Select & 100% native Swift 6
         </div>
       `;
     }

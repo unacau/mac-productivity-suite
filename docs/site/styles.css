@@ -3180,4 +3180,97 @@ kbd {
   transform: scale(0.96);
 }
 
+/* ==========================================================================
+   Founder Note: Why I Built Xomsky (3 Core Pains)
+   ========================================================================== */
+.founder-card {
+  margin-top: 14px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 13px 15px;
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  text-align: left;
+}
+
+.founder-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 9px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  padding-bottom: 7px;
+}
+
+[data-theme="dark"] .founder-card-header {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.founder-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #0284C7;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+[data-theme="dark"] .founder-badge {
+  color: #38BDF8;
+}
+
+.founder-tagline {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.founder-pains-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pain-item {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.pain-num {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #0284C7;
+  background: rgba(2, 132, 199, 0.08);
+  padding: 2px 5px;
+  border-radius: 5px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+[data-theme="dark"] .pain-num {
+  color: #38BDF8;
+  background: rgba(56, 189, 248, 0.12);
+}
+
+.pain-content strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  margin-bottom: 2px;
+}
+
+.pain-content p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.73rem;
+}
+
 

@@ -1,14 +1,20 @@
-# Architecture & Specification: Khomyak (Хомяк) — v1.0.0
+# Architecture & Specification: Xomsky (Хомяк) — v1.0.0
 
 ## 1. Vision & Core Objective
-Khomyak (Хомяк) is a lightweight, zero-latency macOS productivity suite built in pure native Swift 6 and SwiftUI.
-It operates as a driverless standalone application providing:
-1. **Dual-Role Caps-Lock**: Tap alone emits `Escape` (`0x35`); hold down acts as a Hyper modifier.
-2. **Chrome Profile Quick Access (`Caps-Lock + C` & digits `1`..`4`)**: Instant switching and cycling between open Chromium profiles without AppleScript scripting or creating empty tabs.
-3. **5-App Toolkit Fast Switcher (`Caps-Lock + T/I/A/N/C`)**: Instant home-row cycling across Terminal (`T`), IDE (`I`), AI Agent (`A`), Notes (`N`), and Chrome (`C`), with up to 4 pinned application slots.
-4. **Antigravity Switcher**: Seamless switching and partner cycling between Antigravity and Antigravity IDE.
-5. **Universal Copy-on-Select**: Linux/X11-style automatic clipboard copying upon mouse drag selection (>10pt) or multi-click word/paragraph selection.
-6. **Non-Activating Floating Bezel HUD**: Visual feedback showing profile/application avatars, dismissible before window focus transitions.
+**Xomsky** — утилита для быстрого доступа и интуитивного доступа к выбранным приложениям через **Капслок + Первая Буква Приложения**, со специальной фичей — **быстрый доступ к окнам конкретного хром/брейв профайла через Капс Лок + C/B + 1-4**, и для **копирования текста при выделении** (Copy-on-Select).
+
+Built in pure native Swift 6 and SwiftUI, it operates as a driverless standalone application providing:
+1. **Быстрый доступ к выбранным приложениям (`Caps-Lock + Первая Буква Приложения`)**: Интуитивное переключение на выбранные приложения по их первой букве (Terminal `T`, IDE `I`, Agent `A`, Notes `N`, Chrome `C`, Brave `B`, Finder `F` и др.) с поддержкой до 4 закрепленных слотов.
+2. **Специальная фича: быстрый доступ к окнам Chrome/Brave профилей (`Caps-Lock + C/B + 1..4`)**: Мгновенный переход к окнам конкретного профиля браузера без скриптов AppleScript и без открытия пустых вкладок.
+3. **Копирование текста при выделении (Copy-on-Select)**: Автоматическое копирование в буфер обмена в стиле Linux/X11 при выделении текста мышью (>10pt) с тактильным всплывающим уведомлением (HUD toast).
+4. **Dual-Role Caps-Lock**: Tap alone emits `Escape` (`0x35`); hold down acts as a dedicated modifier.
+5. **Non-Activating Floating Bezel HUD**: Visual feedback showing profile/application avatars, dismissible before window focus transitions.
+
+### 1.1 Architectural Genesis (The 3 Core Frictions)
+Xomsky was engineered around the "missing limb effect" — the visceral friction experienced when the utility is disabled:
+1. **The Root Friction (#1 Killer Feature): Browser Profile Windows (`Caps + C/B + 1..4`)**: macOS cannot natively navigate windows by browser profile. `Cmd + Tab` groups all windows under one process; `Cmd + \`` forces blind sequential cycling across unrelated windows. Xomsky targets profile windows directly by index via `AXUIElement`.
+2. **Focal Continuity (#2): First-Letter Application Jump (`Caps + [Letter]`)**: Once the hand rests on Caps Lock, typing app names into Spotlight or Raycast is redundant cognitive friction. Single-keystroke jump to Terminal (`T`), IDE (`I`), Agent (`A`), Notes (`N`).
+3. **Intent-Action Synthesis (#3): Universal Copy-on-Select**: 99.9% of mouse text selections are intended for copying. Xomsky eliminates thousands of redundant `Cmd + C` keystrokes daily.
 
 ---
 

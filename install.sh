@@ -37,7 +37,7 @@ done
 
 echo "=================================================="
 echo " Installing ${APP_NAME} for macOS                 "
-echo " Zero-latency workflow accelerator               "
+echo " Fast & Intuitive App Access via Caps Lock        "
 echo "=================================================="
 
 # Check if running on macOS
@@ -179,8 +179,9 @@ echo "=================================================="
 echo " ✅ Installation Complete!                        "
 echo " Installed: ${TARGET_APP} (${INSTALLED_FROM})     "
 echo "=================================================="
-echo "Next Steps:"
+echo "Next Steps & 3 Core Capabilities:"
 echo " 1. Enable Accessibility for '${APP_NAME}' in System Settings."
 echo " 2. Tap Caps-Lock alone ➔ Escape."
-echo " 3. Tap Caps-Lock + letter (e.g. C, T, I, A, N) ➔ Instant switch."
-echo " 4. Enjoy zero-latency productivity!"
+echo " 3. Tap Caps-Lock + C/B + 1..4 ➔ Direct Chrome/Brave profile windows (#1 Killer Feature)."
+echo " 4. Tap Caps-Lock + letter (T, I, A, N, F) ➔ Instant app switch (#2 First Letter)."
+echo " 5. Select text anywhere ➔ Automatic Copy-on-Select (#3 No more Cmd+C)."

@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Xomsky — Your Mac’s Home Row on Steroids (5 Tools in 0ms)</title>
-  <meta name="description" content="Zero-latency Caps-Lock hyper-key for macOS. Switch Chrome profiles, Terminal, IDE, AI Agent, and Notes in 0ms without touching your mouse.">
+  <title>Xomsky — Fast & Intuitive App Access via Caps Lock + Letter | Chrome/Brave Profiles & Copy-on-Select</title>
+  <meta name="description" content="Утилита для быстрого доступа и интуитивного доступа к выбранным приложениям через Капслок + Первая Буква Приложения, со специальной фичей — быстрый доступ к окнам конкретного хром/брейв профайла через Капс Лок + C/B + 1-4, и для копирования текста при выделении.">
 
   <!-- OpenGraph -->
-  <meta property="og:title" content="Xomsky — Your Mac’s Home Row on Steroids (5 Tools in 0ms)">
-  <meta property="og:description" content="5 Free Slots out of the box. Switch Chrome profiles, Terminal, IDE, AI Agent, and Notes in 0ms without touching your mouse.">
+  <meta property="og:title" content="Xomsky — Fast & Intuitive App Access via Caps Lock + Letter">
+  <meta property="og:description" content="Быстрый доступ к выбранным приложениям через Капслок + Первая Буква, доступ к окнам конкретного Chrome/Brave профиля через Капс Лок + C/B + 1-4, и копирование текста при выделении.">
   <meta property="og:image" content="assets/images/khomyak_opengraph_banner.png">
 
   <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg?v=v6">
@@ -77,13 +77,13 @@
     <div class="top-tagline-container">
       <div class="hero-badge">
         <span class="hero-badge-dot pulse-dot"></span>
-        <span>Instant App Switcher · 0ms</span>
+        <span>Caps Lock + First Letter · Chrome/Brave Profiles · Copy-on-Select</span>
       </div>
-      <h1 class="top-punchline">Your Mac’s Home Row on Steroids. <span>5 Tools in 0ms.</span></h1>
+      <h1 class="top-punchline">Fast & Intuitive App Access. <span>Caps Lock + First Letter.</span></h1>
       <p class="top-subline">
         <span>Hold</span>
         <kbd class="top-kbd">Caps Lock</kbd>
-        <span>+ tap</span>
+        <span>+ First Letter (</span>
         <span class="subline-keys">
           <kbd class="top-kbd" id="subline-browser-kbd">C</kbd>
           <kbd class="top-kbd">T</kbd>
@@ -91,8 +91,7 @@
           <kbd class="top-kbd">A</kbd>
           <kbd class="top-kbd">N</kbd>
         </span>
-        <span class="subline-sep">—</span>
-        <span>Never touch your mouse</span>
+        <span>) · Profiles: <kbd class="top-kbd">1..4</kbd> · Copy on Select</span>
       </p>
     </div>
 
@@ -289,6 +288,37 @@
           <span class="copy-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></span>
           <span class="copy-text">Copy</span>
         </button>
+      </div>
+
+      <!-- Founder Note: The 3 Core Pains -->
+      <div class="founder-card" id="founder-card">
+        <div class="founder-card-header">
+          <span class="founder-badge">💡 Why I Built Xomsky</span>
+          <span class="founder-tagline">«Чего не хватает, когда хомяк выключен»</span>
+        </div>
+        <div class="founder-pains-grid">
+          <div class="pain-item">
+            <span class="pain-num">#1</span>
+            <div class="pain-content">
+              <strong>Главная Killer-фича: Окна профилей Chrome/Brave</strong>
+              <p>В macOS переключение между рабочим, личным и клиентскими профилями сломано. <kbd class="top-kbd">Caps</kbd> + <kbd class="top-kbd">C/B</kbd> + <kbd class="top-kbd">1..4</kbd> поднимает окно именно нужного профиля.</p>
+            </div>
+          </div>
+          <div class="pain-item">
+            <span class="pain-num">#2</span>
+            <div class="pain-content">
+              <strong>Доступ к приложениям по первой букве</strong>
+              <p>Мизинец уже на Caps Lock. Зачем писать в поисковую строку? <kbd class="top-kbd">Caps</kbd> + <kbd class="top-kbd">T</kbd> (Terminal), <kbd class="top-kbd">I</kbd> (IDE), <kbd class="top-kbd">A</kbd> (Agent), <kbd class="top-kbd">N</kbd> (Notes).</p>
+            </div>
+          </div>
+          <div class="pain-item">
+            <span class="pain-num">#3</span>
+            <div class="pain-content">
+              <strong>Минус 1 000 лишних нажатий: Copy-on-Select</strong>
+              <p>Если ты выделил текст — ты намеревался его скопировать. Выделил мышью ➔ текст уже в буфере обмена с мягким HUD-тостом.</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
