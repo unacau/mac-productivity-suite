@@ -20,6 +20,8 @@ class RangeRequestHandler(BaseHTTPRequestHandler):
         if not rel_path:
             rel_path = 'index.html'
         full_path = (DIRECTORY / rel_path).resolve()
+        if full_path.is_dir():
+            full_path = (full_path / 'index.html').resolve()
         # Security check: must stay within DIRECTORY
         if not str(full_path).startswith(str(DIRECTORY)):
             return None

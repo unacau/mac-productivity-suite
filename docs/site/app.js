@@ -1,5 +1,5 @@
 /**
- * Khomyak (Хомяк) — Ethereal Bright Liminal 3D Giant Hamster Experience
+ * Xomsky — Ethereal Bright Liminal 3D Giant Hamster Experience
  * Ultra-clean, photorealistic giant geometric Bauhaus hamster filling the screen.
  */
 
@@ -167,8 +167,28 @@ const PROFILES = [
 // Camera View Presets (Dynamic 3/4 Hero View vs Cute Butt View vs Front View)
 const CAM_PRESETS = {
   hero: {
-    pos: new THREE.Vector3(-1.15, 1.55, 4.60),
-    target: new THREE.Vector3(0.35, 0.64, 0.15)
+    pos: new THREE.Vector3(-1.25, 1.85, 4.70),
+    target: new THREE.Vector3(0.15, 0.98, 0.15)
+  },
+  optionA: {
+    // Wide framing to show both left-flanking 3D Mac window and the hamster with zero top overlap
+    pos: new THREE.Vector3(-1.05, 1.50, 4.90),
+    target: new THREE.Vector3(-0.45, 0.78, 0.25)
+  },
+  optionB: {
+    // Hamster positioned to leave room for Animos 60fps carousel on the right
+    pos: new THREE.Vector3(-1.35, 1.70, 4.70),
+    target: new THREE.Vector3(0.25, 0.90, 0.20)
+  },
+  optionC: {
+    // Hamster framed proudly and prominently in the center channel between left copy and right macOS video window
+    pos: new THREE.Vector3(-0.35, 1.55, 4.80),
+    target: new THREE.Vector3(-0.35, 0.82, 0.15)
+  },
+  mobileOptionC: {
+    // Tighter portrait framing for mobile: centers hamster's face and paws in top 280px viewport
+    pos: new THREE.Vector3(-0.35, 1.48, 5.20),
+    target: new THREE.Vector3(-0.35, 0.70, 0.15)
   },
   rear: {
     pos: new THREE.Vector3(0.35, 1.85, -4.90),
@@ -180,14 +200,49 @@ const CAM_PRESETS = {
   }
 };
 
+window.setCameraView = setCameraView;
+
+function setLightingPreset(variantName) {
+  if (!ambientLight || !keyLight || !fillLight || !rimLightL || !rimLightR) return;
+  const isLight = (currentTheme === "light");
+
+  if (variantName === "option-c" || variantName === "option-a") {
+    // High-contrast, vibrant studio illumination for Option A & Option C
+    keyLight.intensity = isLight ? 1.50 : 1.20;
+    fillLight.intensity = isLight ? 0.95 : 0.68;
+    rimLightL.intensity = isLight ? 1.40 : 1.95;
+    rimLightR.intensity = isLight ? 0.30 : 2.60;
+    ambientLight.intensity = isLight ? 1.15 : 0.85;
+    if (scene && scene.fog) {
+      scene.fog.density = isLight ? 0.016 : 0.014;
+    }
+  } else {
+    // Standard baseline theme lighting
+    const t = THEMES[currentTheme] || THEMES.dark;
+    keyLight.intensity = t.keyLightIntensity;
+    fillLight.intensity = t.fillIntensity;
+    rimLightL.intensity = t.rimLIntensity;
+    rimLightR.intensity = t.rimRIntensity;
+    ambientLight.intensity = t.ambientIntensity;
+    if (scene && scene.fog) {
+      scene.fog.density = t.fogDensity;
+    }
+  }
+}
+window.setLightingPreset = setLightingPreset;
+
 let currentCamView = "hero"; // Default to dynamic 3/4 Hero view (balanced & shows profile + glowing keycap)
 let targetCamPos = CAM_PRESETS.hero.pos.clone();
 let targetCamLook = CAM_PRESETS.hero.target.clone();
 let isCamTransitioning = false;
 
 function setCameraView(viewName, smooth = true) {
-  currentCamView = viewName;
-  const preset = CAM_PRESETS[viewName] || CAM_PRESETS.hero;
+  let targetView = viewName;
+  if (viewName === "optionC" && window.innerWidth <= 900) {
+    targetView = "mobileOptionC";
+  }
+  currentCamView = targetView;
+  const preset = CAM_PRESETS[targetView] || CAM_PRESETS.hero;
   targetCamPos.copy(preset.pos);
   targetCamLook.copy(preset.target);
 
@@ -201,8 +256,18 @@ function setCameraView(viewName, smooth = true) {
   updateCamBtnLabel();
 }
 
+function getVariantDefaultCam() {
+  const isMobile = window.innerWidth <= 900;
+  const curVar = document.documentElement.getAttribute("data-design-variant") || "option-c";
+  if (curVar === "option-c") return isMobile ? "mobileOptionC" : "optionC";
+  if (curVar === "option-a") return "optionA";
+  if (curVar === "option-b") return "optionB";
+  return "hero";
+}
+
 function toggleCameraView() {
-  const next = currentCamView === "rear" ? "hero" : "rear";
+  const defaultCam = getVariantDefaultCam();
+  const next = currentCamView === "rear" ? defaultCam : "rear";
   setCameraView(next, true);
   sound.playClick();
 }
@@ -287,6 +352,7 @@ let whiskersGroup, tailMesh;
 let keyboardGroup;
 let interactiveKeyMeshes = [];
 let keyMeshMap = {};
+let profileWindows = [];
 
 const RESTING_GAZE_X = 0.12; // ACM CHI Gaze-Cueing: gentle ~8-10° resting turn toward right-side HUD
 const RESTING_GAZE_Y = -0.02;
@@ -437,6 +503,7 @@ function initThreeJS() {
   buildBrightLiminalEnvironment();
   buildGiantRealisticHamster();
   buildMechanicalKeyboardDeck();
+  buildFlankingChromeWindows();
 
   // Events
   window.addEventListener("resize", onWindowResize);
@@ -1153,6 +1220,800 @@ function buildMechanicalKeyboardDeck() {
   scene.add(keyboardGroup);
 }
 
+// ==========================================================================
+// 3D Flanking Mac Windows (Option A: 3D WebGL Masterpiece)
+// ==========================================================================
+function drawChromeSquircleIcon(ctx, x, y, size) {
+  // Squircle Background (Crisp pure white with rounded corners)
+  ctx.save();
+  ctx.fillStyle = "#FFFFFF";
+  ctx.shadowColor = "rgba(0, 0, 0, 0.55)";
+  ctx.shadowBlur = 18;
+  ctx.shadowOffsetY = 6;
+  ctx.beginPath();
+  ctx.roundRect(x, y, size, size, size * 0.24);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+  ctx.restore();
+
+  // Draw Google Chrome Logo
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  const rOuter = size * 0.38;
+  const rInner = size * 0.17;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, rOuter, 0, Math.PI * 2);
+  ctx.clip();
+
+  // Top Red Blade
+  ctx.fillStyle = "#EA4335";
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.arc(cx, cy, rOuter, -Math.PI * 0.85, Math.PI * 0.18, false);
+  ctx.lineTo(cx, cy);
+  ctx.fill();
+
+  // Bottom-Left Green Blade
+  ctx.fillStyle = "#34A853";
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.arc(cx, cy, rOuter, Math.PI * 0.52, Math.PI * 1.52, false);
+  ctx.lineTo(cx, cy);
+  ctx.fill();
+
+  // Bottom-Right Yellow Blade
+  ctx.fillStyle = "#FBBC05";
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.arc(cx, cy, rOuter, Math.PI * 0.18, Math.PI * 0.52, false);
+  ctx.lineTo(cx, cy);
+  ctx.fill();
+
+  // Center White circle spacer
+  ctx.fillStyle = "#FFFFFF";
+  ctx.beginPath();
+  ctx.arc(cx, cy, rInner + 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Center Blue circle
+  ctx.fillStyle = "#1A73E8";
+  ctx.beginPath();
+  ctx.arc(cx, cy, rInner, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function createPortalCanvas(selectedIdx) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 600;
+  canvas.height = 460;
+  const ctx = canvas.getContext("2d");
+
+  // 1. Outer Luminous Frosted Glass Bezel (High-contrast deep obsidian with specular highlight)
+  ctx.save();
+  const outerGrad = ctx.createLinearGradient(0, 8, 0, 452);
+  outerGrad.addColorStop(0, "rgba(24, 30, 46, 0.98)");
+  outerGrad.addColorStop(1, "rgba(10, 14, 23, 0.98)");
+  ctx.fillStyle = outerGrad;
+  ctx.beginPath();
+  ctx.roundRect(8, 8, 584, 444, 32);
+  ctx.fill();
+
+  // Specular Outer Border with Cyan Accent Glow
+  ctx.strokeStyle = "rgba(56, 189, 248, 0.50)";
+  ctx.lineWidth = 2.5;
+  ctx.shadowColor = "#38BDF8";
+  ctx.shadowBlur = 22;
+  ctx.stroke();
+  ctx.restore();
+
+  // 2. Inner Vibrant Electric-Blue Card (High contrast royal/electric blue)
+  const cardX = 22;
+  const cardY = 22;
+  const cardW = 556;
+  const cardH = 416;
+  const cardR = 24;
+
+  ctx.save();
+  const innerGrad = ctx.createLinearGradient(cardX, cardY, cardX, cardY + cardH);
+  innerGrad.addColorStop(0, "#2563EB");    // Brilliant royal cobalt blue
+  innerGrad.addColorStop(0.48, "#1D4ED8"); // Electric rich blue
+  innerGrad.addColorStop(1, "#0B132B");    // Deep contrast midnight obsidian base
+  ctx.fillStyle = innerGrad;
+  ctx.beginPath();
+  ctx.roundRect(cardX, cardY, cardW, cardH, cardR);
+  ctx.fill();
+
+  // High-Contrast Luminous Border
+  ctx.strokeStyle = "#38BDF8";
+  ctx.lineWidth = 3.5;
+  ctx.shadowColor = "#38BDF8";
+  ctx.shadowBlur = 22;
+  ctx.stroke();
+
+  // Top specular glass reflection sheen
+  const glassSheen = ctx.createLinearGradient(cardX, cardY, cardX, cardY + cardH * 0.44);
+  glassSheen.addColorStop(0, "rgba(255, 255, 255, 0.28)");
+  glassSheen.addColorStop(1, "rgba(255, 255, 255, 0.0)");
+  ctx.fillStyle = glassSheen;
+  ctx.beginPath();
+  ctx.roundRect(cardX + 2, cardY + 2, cardW - 4, cardH * 0.44, [cardR, cardR, 0, 0]);
+  ctx.fill();
+  ctx.restore();
+
+  // 3. Squircle Chrome App Icon (Centered, Sized & High-Contrast)
+  const iconSize = 106;
+  const iconX = (600 - iconSize) / 2;
+  const iconY = 40;
+  drawChromeSquircleIcon(ctx, iconX, iconY, iconSize);
+
+  // 4. App Name Label ("Google Chrome")
+  ctx.save();
+  ctx.fillStyle = "#FFFFFF";
+  ctx.font = "bold 27px -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+  ctx.shadowColor = "rgba(0, 0, 0, 0.85)";
+  ctx.shadowBlur = 12;
+  ctx.fillText("Google Chrome", 300, 180);
+
+  // Subtitle Pill / Mode Tag
+  ctx.fillStyle = "#7DD3FC";
+  ctx.font = "bold 12.5px -apple-system, BlinkMacSystemFont, 'SF Pro Text', monospace";
+  ctx.letterSpacing = "0.08em";
+  ctx.fillText("PROFILE SWITCHER · 4 SPACES", 300, 204);
+  ctx.restore();
+
+  // 5. Horizontal Profile Avatars Row (Centered & Symmetrical)
+  const avatarSpacing = 114;
+  const totalW = (PROFILES.length - 1) * avatarSpacing;
+  const startX = 300 - totalW / 2;
+  const avatarY = 308;
+  const avatarRadius = 34;
+
+  PROFILES.forEach((p, idx) => {
+    const cx = startX + idx * avatarSpacing;
+    const isSelected = idx === selectedIdx;
+
+    // Keycap Badge [1..4] Above Avatar
+    ctx.save();
+    const badgeW = 26;
+    const badgeH = 20;
+    const badgeY = avatarY - avatarRadius - 26;
+    ctx.beginPath();
+    ctx.roundRect(cx - badgeW / 2, badgeY, badgeW, badgeH, 5);
+    if (isSelected) {
+      ctx.fillStyle = "#38BDF8";
+      ctx.fill();
+      ctx.fillStyle = "#0F172A";
+      ctx.font = "bold 12px -apple-system, BlinkMacSystemFont, monospace";
+    } else {
+      ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.32)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.fillStyle = "#E2E8F0";
+      ctx.font = "600 12px -apple-system, BlinkMacSystemFont, monospace";
+    }
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(String(idx + 1), cx, badgeY + badgeH / 2 + 0.5);
+    ctx.restore();
+
+    if (isSelected) {
+      // Outer Glowing Electric Cyan Neon Ring
+      ctx.save();
+      ctx.strokeStyle = "#00F0FF";
+      ctx.lineWidth = 4.5;
+      ctx.shadowColor = "#00F0FF";
+      ctx.shadowBlur = 28;
+      ctx.beginPath();
+      ctx.arc(cx, avatarY, avatarRadius + 9, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Inner Crisp White Accent Ring
+      ctx.strokeStyle = "#FFFFFF";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx, avatarY, avatarRadius + 4, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Avatar Circle
+    ctx.save();
+    ctx.fillStyle = p.color || "#0284C7";
+    ctx.beginPath();
+    ctx.arc(cx, avatarY, avatarRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // White Border around Avatar
+    ctx.strokeStyle = isSelected ? "#FFFFFF" : "rgba(255, 255, 255, 0.88)";
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // Monogram Initial
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 24px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const initial = p.initial || (p.name ? p.name.charAt(0) : "W");
+    ctx.fillText(initial, cx, avatarY + 1);
+    ctx.restore();
+
+    // Profile Label Below Avatar
+    ctx.save();
+    ctx.fillStyle = isSelected ? "#FFFFFF" : "rgba(255, 255, 255, 0.85)";
+    ctx.font = isSelected ? "bold 15px -apple-system, BlinkMacSystemFont, sans-serif" : "500 13.5px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.textAlign = "center";
+    ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
+    ctx.shadowBlur = 8;
+    ctx.fillText(p.name, cx, avatarY + 52);
+    ctx.restore();
+  });
+
+  return canvas;
+}
+
+function createTerminalPortalCanvas() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 600;
+  canvas.height = 460;
+  const ctx = canvas.getContext("2d");
+
+  // Outer bezel
+  ctx.save();
+  const outerGrad = ctx.createLinearGradient(0, 8, 0, 452);
+  outerGrad.addColorStop(0, "rgba(24, 30, 46, 0.98)");
+  outerGrad.addColorStop(1, "rgba(10, 14, 23, 0.98)");
+  ctx.fillStyle = outerGrad;
+  ctx.beginPath();
+  ctx.roundRect(8, 8, 584, 444, 32);
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.38)";
+  ctx.lineWidth = 2.5;
+  ctx.shadowColor = "rgba(16, 185, 129, 0.4)";
+  ctx.shadowBlur = 20;
+  ctx.stroke();
+  ctx.restore();
+
+  // Inner Dark Terminal Window
+  const cardX = 22;
+  const cardY = 22;
+  const cardW = 556;
+  const cardH = 416;
+  const cardR = 24;
+
+  ctx.save();
+  ctx.fillStyle = "#0B0F19";
+  ctx.beginPath();
+  ctx.roundRect(cardX, cardY, cardW, cardH, cardR);
+  ctx.fill();
+
+  ctx.strokeStyle = "#10B981";
+  ctx.lineWidth = 3.5;
+  ctx.shadowColor = "#10B981";
+  ctx.shadowBlur = 18;
+  ctx.stroke();
+
+  // macOS Traffic Lights
+  const tlY = cardY + 24;
+  const tlStartX = cardX + 24;
+  ["#FF5F56", "#FFBD2E", "#27C93F"].forEach((col, i) => {
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.arc(tlStartX + i * 20, tlY, 6.5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Title
+  ctx.fillStyle = "#94A3B8";
+  ctx.font = "600 13px -apple-system, BlinkMacSystemFont, monospace";
+  ctx.textAlign = "center";
+  ctx.fillText("Terminal (Ghostty / iTerm2) — zsh · 80x24", 300, tlY + 5);
+
+  // Terminal Divider Line
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cardX, cardY + 44);
+  ctx.lineTo(cardX + cardW, cardY + 44);
+  ctx.stroke();
+
+  // Terminal Lines
+  ctx.textAlign = "left";
+  ctx.font = "13.5px 'SF Mono', Menlo, Monaco, monospace";
+  let lineY = cardY + 76;
+  const lines = [
+    { text: "igorekishev@MacBook-Pro ~/xomsky % swift test", color: "#38BDF8" },
+    { text: "Building for debugging [Swift 6.0]...", color: "#94A3B8" },
+    { text: "✔ Suite ChromeQuickAccessUnitTests passed (0.042s)", color: "#10B981" },
+    { text: "✔ 99 tests passed, 0 failures.", color: "#10B981" },
+    { text: "", color: "#FFFFFF" },
+    { text: "igorekishev@MacBook-Pro ~/xomsky % xomsky status", color: "#38BDF8" },
+    { text: "● Engine: Active | Latency: 0ms | CGEventTap: Head", color: "#FCD34D" },
+    { text: "igorekishev@MacBook-Pro ~/xomsky % ▋", color: "#10B981" }
+  ];
+
+  lines.forEach(l => {
+    ctx.fillStyle = l.color;
+    ctx.fillText(l.text, cardX + 28, lineY);
+    lineY += 25;
+  });
+
+  // Footer Tag
+  ctx.fillStyle = "rgba(16, 185, 129, 0.18)";
+  ctx.beginPath();
+  ctx.roundRect(cardX + 24, cardY + cardH - 52, cardW - 48, 34, 10);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(16, 185, 129, 0.4)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.fillStyle = "#6EE7B7";
+  ctx.font = "bold 12.5px -apple-system, BlinkMacSystemFont, monospace";
+  ctx.textAlign = "center";
+  ctx.fillText("⚡ Caps + T ➔ Instant Terminal Focus & Window Cycle in 0ms", 300, cardY + cardH - 30);
+  ctx.restore();
+
+  return canvas;
+}
+
+function createIdePortalCanvas() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 600;
+  canvas.height = 460;
+  const ctx = canvas.getContext("2d");
+
+  // Outer bezel
+  ctx.save();
+  const outerGrad = ctx.createLinearGradient(0, 8, 0, 452);
+  outerGrad.addColorStop(0, "rgba(24, 30, 46, 0.98)");
+  outerGrad.addColorStop(1, "rgba(10, 14, 23, 0.98)");
+  ctx.fillStyle = outerGrad;
+  ctx.beginPath();
+  ctx.roundRect(8, 8, 584, 444, 32);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.38)";
+  ctx.lineWidth = 2.5;
+  ctx.shadowColor = "rgba(168, 85, 247, 0.4)";
+  ctx.shadowBlur = 20;
+  ctx.stroke();
+  ctx.restore();
+
+  // Inner IDE Window
+  const cardX = 22;
+  const cardY = 22;
+  const cardW = 556;
+  const cardH = 416;
+  const cardR = 24;
+
+  ctx.save();
+  ctx.fillStyle = "#0D1117";
+  ctx.beginPath();
+  ctx.roundRect(cardX, cardY, cardW, cardH, cardR);
+  ctx.fill();
+  ctx.strokeStyle = "#A855F7";
+  ctx.lineWidth = 3.5;
+  ctx.shadowColor = "#A855F7";
+  ctx.shadowBlur = 18;
+  ctx.stroke();
+
+  // Traffic lights
+  const tlY = cardY + 24;
+  const tlStartX = cardX + 24;
+  ["#FF5F56", "#FFBD2E", "#27C93F"].forEach((col, i) => {
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.arc(tlStartX + i * 20, tlY, 6.5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Tab Header
+  ctx.fillStyle = "#161B22";
+  ctx.beginPath();
+  ctx.roundRect(cardX + 90, cardY + 10, 160, 28, [6, 6, 0, 0]);
+  ctx.fill();
+  ctx.fillStyle = "#E6EDF3";
+  ctx.font = "bold 12px -apple-system, BlinkMacSystemFont, monospace";
+  ctx.fillText("⚡ AppSwitcher.swift", cardX + 104, cardY + 28);
+
+  // Divider
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cardX, cardY + 44);
+  ctx.lineTo(cardX + cardW, cardY + 44);
+  ctx.stroke();
+
+  // Code lines with syntax highlighting
+  const lines = [
+    { num: "01", tokens: [{ t: "import ", c: "#FF7B72" }, { t: "Cocoa", c: "#79C0FF" }, { t: ", ", c: "#C9D1D9" }, { t: "Carbon", c: "#79C0FF" }] },
+    { num: "02", tokens: [{ t: "@MainActor", c: "#D2A8FF" }] },
+    { num: "03", tokens: [{ t: "public final class ", c: "#FF7B72" }, { t: "AppGroupEngine", c: "#FFA657" }, { t: " {", c: "#C9D1D9" }] },
+    { num: "04", tokens: [{ t: "  /// Universal Home-Row Shortcuts (T, I, A, N, C)", c: "#8B949E" }] },
+    { num: "05", tokens: [{ t: "  public func ", c: "#FF7B72" }, { t: "focusApp", c: "#D2A8FF" }, { t: "(_ key: ", c: "#C9D1D9" }, { t: "KeyShortcut", c: "#FFA657" }, { t: ") async {", c: "#C9D1D9" }] },
+    { num: "06", tokens: [{ t: "    let target = ", c: "#FF7B72" }, { t: "pinnedApps[key]", c: "#C9D1D9" }] },
+    { num: "07", tokens: [{ t: "    await ", c: "#FF7B72" }, { t: "NSWorkspace.shared", c: "#79C0FF" }, { t: ".open(target)", c: "#D2A8FF" }] },
+    { num: "08", tokens: [{ t: "    MinimalHUDWindow.shared.", c: "#79C0FF" }, { t: "hideImmediate()", c: "#D2A8FF" }] },
+    { num: "09", tokens: [{ t: "  }", c: "#C9D1D9" }] }
+  ];
+
+  let codeY = cardY + 74;
+  lines.forEach(l => {
+    ctx.fillStyle = "#484F58";
+    ctx.font = "12px 'SF Mono', monospace";
+    ctx.textAlign = "right";
+    ctx.fillText(l.num, cardX + 38, codeY);
+
+    ctx.textAlign = "left";
+    let curX = cardX + 54;
+    l.tokens.forEach(tok => {
+      ctx.fillStyle = tok.c;
+      ctx.fillText(tok.t, curX, codeY);
+      curX += ctx.measureText(tok.t).width;
+    });
+    codeY += 24;
+  });
+
+  // Footer Tag
+  ctx.fillStyle = "rgba(168, 85, 247, 0.16)";
+  ctx.beginPath();
+  ctx.roundRect(cardX + 24, cardY + cardH - 52, cardW - 48, 34, 10);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(168, 85, 247, 0.4)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.fillStyle = "#E9D5FF";
+  ctx.font = "bold 12.5px -apple-system, BlinkMacSystemFont, monospace";
+  ctx.textAlign = "center";
+  ctx.fillText("⚡ Caps + I ➔ Instant IDE Focus & Window Cycling", 300, cardY + cardH - 30);
+  ctx.restore();
+
+  return canvas;
+}
+
+function createAiPortalCanvas() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 600;
+  canvas.height = 460;
+  const ctx = canvas.getContext("2d");
+
+  // Outer bezel
+  ctx.save();
+  const outerGrad = ctx.createLinearGradient(0, 8, 0, 452);
+  outerGrad.addColorStop(0, "rgba(24, 30, 46, 0.98)");
+  outerGrad.addColorStop(1, "rgba(10, 14, 23, 0.98)");
+  ctx.fillStyle = outerGrad;
+  ctx.beginPath();
+  ctx.roundRect(8, 8, 584, 444, 32);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.38)";
+  ctx.lineWidth = 2.5;
+  ctx.shadowColor = "rgba(236, 72, 153, 0.4)";
+  ctx.shadowBlur = 20;
+  ctx.stroke();
+  ctx.restore();
+
+  // Inner AI Window
+  const cardX = 22;
+  const cardY = 22;
+  const cardW = 556;
+  const cardH = 416;
+  const cardR = 24;
+
+  ctx.save();
+  ctx.fillStyle = "#0F172A";
+  ctx.beginPath();
+  ctx.roundRect(cardX, cardY, cardW, cardH, cardR);
+  ctx.fill();
+  ctx.strokeStyle = "#EC4899";
+  ctx.lineWidth = 3.5;
+  ctx.shadowColor = "#EC4899";
+  ctx.shadowBlur = 18;
+  ctx.stroke();
+
+  // Traffic lights
+  const tlY = cardY + 24;
+  const tlStartX = cardX + 24;
+  ["#FF5F56", "#FFBD2E", "#27C93F"].forEach((col, i) => {
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.arc(tlStartX + i * 20, tlY, 6.5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // AI Header
+  ctx.fillStyle = "#F472B6";
+  ctx.font = "bold 13px -apple-system, BlinkMacSystemFont, sans-serif";
+  ctx.textAlign = "left";
+  ctx.fillText("🤖 Antigravity AI Agent", cardX + 90, cardY + 28);
+
+  ctx.fillStyle = "rgba(236, 72, 153, 0.2)";
+  ctx.beginPath();
+  ctx.roundRect(cardX + cardW - 120, cardY + 14, 98, 20, 999);
+  ctx.fill();
+  ctx.fillStyle = "#FBCFE8";
+  ctx.font = "bold 10px monospace";
+  ctx.textAlign = "center";
+  ctx.fillText("● ONLINE 0ms", cardX + cardW - 71, cardY + 28);
+
+  // Divider
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cardX, cardY + 44);
+  ctx.lineTo(cardX + cardW, cardY + 44);
+  ctx.stroke();
+
+  // Chat/Telemetry Bubble 1 (User prompt)
+  ctx.fillStyle = "rgba(255, 255, 255, 0.06)";
+  ctx.beginPath();
+  ctx.roundRect(cardX + 24, cardY + 54, cardW - 48, 50, 10);
+  ctx.fill();
+  ctx.fillStyle = "#94A3B8";
+  ctx.font = "bold 10.5px monospace";
+  ctx.textAlign = "left";
+  ctx.fillText("USER PROMPT · 0ms context switch", cardX + 36, cardY + 70);
+  ctx.fillStyle = "#FFFFFF";
+  ctx.font = "12.5px -apple-system, BlinkMacSystemFont, sans-serif";
+  ctx.fillText("Refactor Chrome profile automation to native macOS menu bar", cardX + 36, cardY + 90);
+
+  // Chat/Telemetry Bubble 2 (Agent Execution)
+  ctx.fillStyle = "rgba(236, 72, 153, 0.10)";
+  ctx.beginPath();
+  ctx.roundRect(cardX + 24, cardY + 114, cardW - 48, 134, 10);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(236, 72, 153, 0.3)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.fillStyle = "#F472B6";
+  ctx.font = "bold 10.5px monospace";
+  ctx.fillText("ANTIGRAVITY EXECUTION · VERIFIED PIPELINE", cardX + 36, cardY + 132);
+
+  const steps = [
+    { icon: "✔", text: "AXUIElement menu bar inspection & item selection", col: "#10B981" },
+    { icon: "✔", text: "Select profile by index without window title regex", col: "#10B981" },
+    { icon: "✔", text: "Non-activating MinimalHUDWindow overlay dismissed", col: "#10B981" },
+    { icon: "⚡", text: "All 99 Swift Unit Tests passing deterministically", col: "#38BDF8" }
+  ];
+
+  let stepY = cardY + 154;
+  steps.forEach(s => {
+    ctx.fillStyle = s.col;
+    ctx.font = "bold 12.5px monospace";
+    ctx.fillText(s.icon, cardX + 36, stepY);
+    ctx.fillStyle = "#E2E8F0";
+    ctx.font = "12px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.fillText(s.text, cardX + 56, stepY);
+    stepY += 23;
+  });
+
+  // Footer Tag
+  ctx.fillStyle = "rgba(236, 72, 153, 0.18)";
+  ctx.beginPath();
+  ctx.roundRect(cardX + 24, cardY + cardH - 52, cardW - 48, 34, 10);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(236, 72, 153, 0.4)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.fillStyle = "#FBCFE8";
+  ctx.font = "bold 12.5px -apple-system, BlinkMacSystemFont, monospace";
+  ctx.textAlign = "center";
+  ctx.fillText("⚡ Caps + A ➔ Instant AI Agent Overlay without losing flow", 300, cardY + cardH - 30);
+  ctx.restore();
+
+  return canvas;
+}
+
+function createNotesPortalCanvas() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 600;
+  canvas.height = 460;
+  const ctx = canvas.getContext("2d");
+
+  // Outer bezel
+  ctx.save();
+  const outerGrad = ctx.createLinearGradient(0, 8, 0, 452);
+  outerGrad.addColorStop(0, "rgba(24, 30, 46, 0.98)");
+  outerGrad.addColorStop(1, "rgba(10, 14, 23, 0.98)");
+  ctx.fillStyle = outerGrad;
+  ctx.beginPath();
+  ctx.roundRect(8, 8, 584, 444, 32);
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.38)";
+  ctx.lineWidth = 2.5;
+  ctx.shadowColor = "rgba(245, 158, 11, 0.35)";
+  ctx.shadowBlur = 20;
+  ctx.stroke();
+  ctx.restore();
+
+  // Inner Notes Card
+  const cardX = 22;
+  const cardY = 22;
+  const cardW = 556;
+  const cardH = 416;
+  const cardR = 24;
+
+  ctx.save();
+  ctx.fillStyle = "#18181B";
+  ctx.beginPath();
+  ctx.roundRect(cardX, cardY, cardW, cardH, cardR);
+  ctx.fill();
+
+  ctx.strokeStyle = "#F59E0B";
+  ctx.lineWidth = 3.5;
+  ctx.shadowColor = "#F59E0B";
+  ctx.shadowBlur = 18;
+  ctx.stroke();
+
+  // macOS Traffic Lights
+  const tlY = cardY + 24;
+  const tlStartX = cardX + 24;
+  ["#FF5F56", "#FFBD2E", "#27C93F"].forEach((col, i) => {
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.arc(tlStartX + i * 20, tlY, 6.5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Title
+  ctx.fillStyle = "#F59E0B";
+  ctx.font = "bold 13px -apple-system, BlinkMacSystemFont, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("Apple Notes / Obsidian — Fast Scratchpad", 300, tlY + 5);
+
+  // Divider
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cardX, cardY + 44);
+  ctx.lineTo(cardX + cardW, cardY + 44);
+  ctx.stroke();
+
+  // Note Content
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#FCD34D";
+  ctx.font = "bold 15px -apple-system, BlinkMacSystemFont, sans-serif";
+  ctx.fillText("Sprint Roadmap & Architecture Notes", cardX + 28, cardY + 74);
+
+  ctx.fillStyle = "#A1A1AA";
+  ctx.font = "12px -apple-system, BlinkMacSystemFont, sans-serif";
+  ctx.fillText("Updated just now · Instant capture in 0ms", cardX + 28, cardY + 95);
+
+  const tasks = [
+    { done: true, text: "Eliminate HUD bottom footnote box & recenter avatars" },
+    { done: true, text: "Separate Option C video from headline text into split stage" },
+    { done: true, text: "Harmonize 3D hamster placement, lighting, and contrast" },
+    { done: true, text: "Implement 3D multi-app switching (T, I, A, N, C)" }
+  ];
+
+  let noteY = cardY + 128;
+  tasks.forEach(t => {
+    ctx.fillStyle = t.done ? "#10B981" : "#A1A1AA";
+    ctx.font = "bold 14px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.fillText(t.done ? "☑" : "☐", cardX + 28, noteY);
+    ctx.fillStyle = t.done ? "#FFFFFF" : "#D4D4D8";
+    ctx.font = "13.5px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.fillText(t.text, cardX + 54, noteY);
+    noteY += 30;
+  });
+
+  // Footer Tag
+  ctx.fillStyle = "rgba(245, 158, 11, 0.18)";
+  ctx.beginPath();
+  ctx.roundRect(cardX + 24, cardY + cardH - 52, cardW - 48, 34, 10);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(245, 158, 11, 0.4)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.fillStyle = "#FCD34D";
+  ctx.font = "bold 12.5px -apple-system, BlinkMacSystemFont, monospace";
+  ctx.textAlign = "center";
+  ctx.fillText("⚡ Caps + N ➔ Instant Floating Scratchpad without losing context", 300, cardY + cardH - 30);
+  ctx.restore();
+
+  return canvas;
+}
+
+let appPortalMeshes = {};
+
+function buildFlankingChromeWindows() {
+  profileWindows = [];
+  appPortalMeshes = {};
+
+  const curVariant = document.documentElement.getAttribute("data-design-variant") || "option-c";
+  if (curVariant !== "option-a") {
+    // Option A is archived in /archive/ — avoid allocating 8 canvas textures & 3D meshes on main landing page
+    return;
+  }
+
+  const planeGeo = new THREE.PlaneGeometry(1.48, 1.14);
+
+  PROFILES.forEach((p, idx) => {
+    const canvas = createPortalCanvas(idx);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.LinearFilter;
+
+    const portalMat = new THREE.MeshBasicMaterial({
+      map: texture,
+      side: THREE.DoubleSide,
+      transparent: true,
+      fog: false, // Prevents fog washout
+      opacity: idx === 0 ? 1.0 : 0.0
+    });
+
+    const portalMesh = new THREE.Mesh(planeGeo, portalMat);
+    portalMesh.position.set(-2.05, 0.85, 1.6);
+    portalMesh.rotation.y = 0.32;
+    portalMesh.userData = { profileIndex: idx, category: "chrome" };
+    const curVariant = document.documentElement.getAttribute("data-design-variant") || "option-c";
+    portalMesh.visible = (curVariant === "option-a" && idx === 0);
+
+    scene.add(portalMesh);
+    profileWindows.push(portalMesh);
+  });
+
+  // Multi-app 3D portal windows (T, I, A, N)
+  const appConfigs = [
+    { key: "terminal", canvasFn: createTerminalPortalCanvas },
+    { key: "ide", canvasFn: createIdePortalCanvas },
+    { key: "ai", canvasFn: createAiPortalCanvas },
+    { key: "notes", canvasFn: createNotesPortalCanvas }
+  ];
+
+  appConfigs.forEach(({ key, canvasFn }) => {
+    const canvas = canvasFn();
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.LinearFilter;
+    const mat = new THREE.MeshBasicMaterial({
+      map: texture,
+      side: THREE.DoubleSide,
+      transparent: true,
+      fog: false,
+      opacity: 0.0
+    });
+    const mesh = new THREE.Mesh(planeGeo, mat);
+    mesh.position.set(-2.05, 0.85, 1.6);
+    mesh.rotation.y = 0.32;
+    mesh.userData = { category: key };
+    mesh.visible = false;
+    scene.add(mesh);
+    appPortalMeshes[key] = mesh;
+  });
+}
+
+function setOptionAWindowsVisible(visible) {
+  if (profileWindows) {
+    profileWindows.forEach((win, idx) => {
+      const isTarget = (currentCategory === "chrome" && idx === activeIndex);
+      win.visible = visible && isTarget;
+      win.material.opacity = (visible && isTarget) ? 1.0 : 0.0;
+    });
+  }
+  if (appPortalMeshes) {
+    Object.keys(appPortalMeshes).forEach((cat) => {
+      const mesh = appPortalMeshes[cat];
+      const isTarget = (currentCategory === cat);
+      mesh.visible = visible && isTarget;
+      mesh.material.opacity = (visible && isTarget) ? 1.0 : 0.0;
+    });
+  }
+}
+window.setOptionAWindowsVisible = setOptionAWindowsVisible;
+
 // --------------------------------------------------------------------------
 // Live Simulated Native macOS HUD (Matching MinimalHUDWindow.swift)
 // --------------------------------------------------------------------------
@@ -1683,9 +2544,45 @@ function activateCategory(category = "chrome", subIndex = null, keyId = null, fr
     pill.classList.toggle("active", pill.getAttribute("data-category") === currentCategory);
   });
 
-  // Synchronize Variant 5 Golden Hybrid Right Card if present
-  if (window.xomskyVariants && typeof window.xomskyVariants.updateHybridStage === "function") {
-    window.xomskyVariants.updateHybridStage(currentCategory, activeIndex);
+  // Update 3D WebGL Flanking Mac Windows (Option A)
+  const curVar = document.documentElement.getAttribute("data-design-variant") || "option-c";
+  const isOptionA = (curVar === "option-a");
+
+  if (profileWindows && profileWindows.length > 0) {
+    profileWindows.forEach((win, i) => {
+      const isTarget = (currentCategory === "chrome" && i === activeIndex);
+      win.visible = isOptionA && isTarget;
+      win.material.opacity = (isOptionA && isTarget) ? 1.0 : 0.0;
+      if (isOptionA && isTarget) {
+        win.scale.set(1.08, 1.08, 1);
+        setTimeout(() => { if (win) win.scale.set(1.0, 1.0, 1); }, 140);
+      }
+    });
+  }
+
+  if (appPortalMeshes) {
+    Object.keys(appPortalMeshes).forEach((cat) => {
+      const mesh = appPortalMeshes[cat];
+      const isTarget = (currentCategory === cat);
+      mesh.visible = isOptionA && isTarget;
+      mesh.material.opacity = (isOptionA && isTarget) ? 1.0 : 0.0;
+      if (isOptionA && isTarget) {
+        mesh.scale.set(1.08, 1.08, 1);
+        setTimeout(() => { if (mesh) mesh.scale.set(1.0, 1.0, 1); }, 140);
+      }
+    });
+  }
+
+  // Synchronize Variant System if present
+  if (window.xomskyVariants) {
+    if (typeof window.xomskyVariants.updateCategoryState === "function") {
+      window.xomskyVariants.updateCategoryState(currentCategory, activeIndex, targetKeyId);
+    } else if (typeof window.xomskyVariants.updateHybridStage === "function") {
+      window.xomskyVariants.updateHybridStage(currentCategory, activeIndex);
+    }
+    if (typeof window.xomskyVariants.handleMascotReaction === "function") {
+      window.xomskyVariants.handleMascotReaction(currentCategory, activeIndex, targetKeyId);
+    }
   }
 }
 
@@ -1727,6 +2624,43 @@ function onPointerDown(e) {
     return;
   }
 
+  // 1.5. Raycast 3D floating Mac windows in Option A
+  if ((profileWindows && profileWindows.length > 0) || (appPortalMeshes && Object.keys(appPortalMeshes).length > 0)) {
+    const curVar = document.documentElement.getAttribute("data-design-variant") || "option-c";
+    if (curVar === "option-a") {
+      const allWins = [...(profileWindows || []), ...Object.values(appPortalMeshes || {})];
+      const activeWins = allWins.filter(w => w.visible);
+      const winHits = raycaster.intersectObjects(activeWins, true);
+      if (winHits.length > 0) {
+        const hit = winHits[0];
+        if (currentCategory === "chrome") {
+          if (hit.uv) {
+            const canvasY = (1 - hit.uv.y) * 460;
+            const canvasX = hit.uv.x * 600;
+            if (canvasY >= 230 && canvasY <= 370) {
+              const clickedIdx = Math.min(3, Math.max(0, Math.floor((canvasX - 72) / 114)));
+              activateCategory("chrome", clickedIdx, String(clickedIdx + 1), true);
+              return;
+            }
+          }
+          const nextIdx = (activeIndex + 1) % PROFILES.length;
+          activateCategory("chrome", nextIdx, String(nextIdx + 1), true);
+        } else if (currentCategory === "terminal") {
+          activateCategory("ide", 0, "i", true);
+        } else if (currentCategory === "ide") {
+          activateCategory("ai", 0, "a", true);
+        } else if (currentCategory === "ai") {
+          activateCategory("notes", 0, "n", true);
+        } else if (currentCategory === "notes") {
+          activateCategory("chrome", 0, "1", true);
+        } else {
+          activateCategory("chrome", 0, "1", true);
+        }
+        return;
+      }
+    }
+  }
+
   // 2. Raycast hamster for squish squeeze
   const hamsterHits = raycaster.intersectObjects(hamsterRoot ? hamsterRoot.children : [], true);
   if (hamsterHits.length > 0) {
@@ -1740,6 +2674,14 @@ function onWindowResize() {
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   renderer.setSize(w, h);
+
+  const curVar = document.documentElement.getAttribute("data-design-variant") || "option-c";
+  if (curVar === "option-c" && currentCamView !== "rear") {
+    const targetCam = w <= 900 ? "mobileOptionC" : "optionC";
+    if (currentCamView !== targetCam) {
+      setCameraView(targetCam, true);
+    }
+  }
 }
 
 // --------------------------------------------------------------------------
@@ -1870,6 +2812,17 @@ function applyTheme(themeName, animate = true, persist = false) {
     plateRoughness: target.plateRoughness,
     plateMetalness: target.plateMetalness
   };
+
+  const curVar = document.documentElement.getAttribute("data-design-variant") || "option-c";
+  if (curVar === "option-c" || curVar === "option-a") {
+    const isLight = (themeName === "light");
+    themeTransition.to.keyLightIntensity = isLight ? 1.50 : 1.20;
+    themeTransition.to.fillLightIntensity = isLight ? 0.95 : 0.68;
+    themeTransition.to.rimLIntensity = isLight ? 1.40 : 1.95;
+    themeTransition.to.rimRIntensity = isLight ? 0.30 : 2.60;
+    themeTransition.to.ambientIntensity = isLight ? 1.15 : 0.85;
+    themeTransition.to.fogDensity = isLight ? 0.016 : 0.014;
+  }
 
   themeTransition.progress = 0;
   themeTransition.active = true;
@@ -2298,6 +3251,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Keyboard Navigation: [V], [C], [1..4], [T], [I], [A], [N], [Space], [M]
   window.addEventListener("keydown", (e) => {
     if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+    if (e.altKey || e.metaKey || e.ctrlKey) return;
 
     const key = e.key.toLowerCase();
     if (key === "m") {

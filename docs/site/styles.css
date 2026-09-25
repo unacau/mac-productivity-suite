@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Khomyak (Хомяк) — Ethereal Bright Liminal 3D Hamster Experience
+   Xomsky — Ethereal Bright Liminal 3D Hamster Experience
    Luminous, white, pinkish, zero-noise, hyper-realistic giant hamster.
    ========================================================================== */
 
@@ -2106,15 +2106,15 @@ kbd {
 }
 
 .top-subline {
-  font-size: 0.86rem;
+  font-size: 0.95rem;
   font-weight: 500;
   color: var(--text-secondary);
   letter-spacing: -0.01em;
   margin: 0;
   opacity: 0.95;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  display: block;
+  line-height: 1.55;
+  text-align: center;
 }
 
 .subline-keys {
