@@ -167,16 +167,16 @@ const PROFILES = [
 // Camera View Presets (Dynamic 3/4 Hero View vs Cute Butt View vs Front View)
 const CAM_PRESETS = {
   hero: {
-    pos: new THREE.Vector3(1.65, 1.15, 4.80),
-    target: new THREE.Vector3(-0.35, 0.08, 0.15)
+    pos: new THREE.Vector3(-1.15, 1.55, 4.60),
+    target: new THREE.Vector3(0.35, 0.64, 0.15)
   },
   rear: {
-    pos: new THREE.Vector3(0.35, 1.15, -4.90),
-    target: new THREE.Vector3(-0.35, 0.08, 0.10)
+    pos: new THREE.Vector3(0.35, 1.85, -4.90),
+    target: new THREE.Vector3(-0.35, 0.78, 0.10)
   },
   front: {
-    pos: new THREE.Vector3(1.00, 1.15, 5.20),
-    target: new THREE.Vector3(-0.35, 0.08, 0.10)
+    pos: new THREE.Vector3(-0.35, 1.55, 4.80),
+    target: new THREE.Vector3(-0.35, 0.64, 0.10)
   }
 };
 
@@ -288,8 +288,10 @@ let keyboardGroup;
 let interactiveKeyMeshes = [];
 let keyMeshMap = {};
 
+const RESTING_GAZE_X = 0.12; // ACM CHI Gaze-Cueing: gentle ~8-10° resting turn toward right-side HUD
+const RESTING_GAZE_Y = -0.02;
 let mouseX = 0, mouseY = 0;
-let targetHeadX = 0, targetHeadY = 0;
+let targetHeadX = RESTING_GAZE_X, targetHeadY = RESTING_GAZE_Y;
 let raycaster, mouseVec;
 let mouseMoved = true;
 
@@ -405,13 +407,13 @@ function initThreeJS() {
   camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 1000);
   camera.position.copy(CAM_PRESETS.hero.pos);
 
-  // Renderer
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
+  // Renderer: Thermal & GPU power-optimized for cool silent operation
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "default" });
   renderer.setSize(width, height);
-  // Restore high quality on Retina displays
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  // Cap at 1.5 for crisp Retina text with 44% lower GPU shader load than 2.0
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
   window.__renderer = renderer;
@@ -439,9 +441,13 @@ function initThreeJS() {
   // Events
   window.addEventListener("resize", onWindowResize);
   window.addEventListener("mousemove", onMouseMove);
+  window.addEventListener("mouseleave", () => {
+    targetHeadX = RESTING_GAZE_X;
+    targetHeadY = RESTING_GAZE_Y;
+  });
   container.addEventListener("pointerdown", onPointerDown);
 
-  animate();
+  // animate(); // Kickoff handled by IntersectionObserver
 }
 
 // --------------------------------------------------------------------------
@@ -513,7 +519,7 @@ function buildBrightLiminalEnvironment() {
 // --------------------------------------------------------------------------
 function buildGiantRealisticHamster() {
   hamsterRoot = new THREE.Group();
-  hamsterRoot.position.set(-0.35, -0.45, 0);
+  hamsterRoot.position.set(-0.35, -0.48, 0);
   hamsterRoot.scale.set(0.68, 0.68, 0.68);
 
   // Bauhaus Palette Materials
@@ -654,15 +660,14 @@ function buildGiantRealisticHamster() {
   rightEarGroup.add(rOuter, rInner, rRing, rInnerRing);
   hamsterRoot.add(rightEarGroup);
 
-  // 3. Concentric Bauhaus Eyes (Outer Rings + Obsidian Core + Dual Glints)
+  // 3. Expressive Focus Eyes (Clean Graphic Contour + Deep Obsidian Pupil + Dual Specular Glints)
   eyesGroup = new THREE.Group();
   eyesGroup.position.set(0, 1.28, 0.72);
 
   const eyeBaseGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.04, 48);
   eyeBaseGeo.rotateX(Math.PI / 2);
-  const eyeRingOuterGeo = new THREE.TorusGeometry(0.35, 0.018, 16, 64);
-  const eyeRingInnerGeo = new THREE.TorusGeometry(0.27, 0.016, 16, 64);
-  const eyeSphereGeo = new THREE.SphereGeometry(0.20, 32, 32);
+  const eyeRingOuterGeo = new THREE.TorusGeometry(0.35, 0.016, 16, 64);
+  const eyeSphereGeo = new THREE.SphereGeometry(0.23, 32, 32);
   const glintBigGeo = new THREE.SphereGeometry(0.065, 16, 16);
   const glintSmallGeo = new THREE.SphereGeometry(0.032, 16, 16);
   const glintMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
@@ -679,20 +684,16 @@ function buildGiantRealisticHamster() {
   ringOutL.position.z = 0.025;
   eyeLGroup.add(ringOutL);
 
-  const ringInL = new THREE.Mesh(eyeRingInnerGeo, bauhausOutlineMat);
-  ringInL.position.z = 0.026;
-  eyeLGroup.add(ringInL);
-
   eyeLeft = new THREE.Mesh(eyeSphereGeo, eyeObsidianMat);
-  eyeLeft.position.z = 0.06;
+  eyeLeft.position.z = 0.07;
   eyeLGroup.add(eyeLeft);
 
   const glintLBig = new THREE.Mesh(glintBigGeo, glintMat);
-  glintLBig.position.set(-0.06, 0.06, 0.22);
+  glintLBig.position.set(-0.06, 0.06, 0.24);
   eyeLGroup.add(glintLBig);
 
   const glintLSmall = new THREE.Mesh(glintSmallGeo, glintMat);
-  glintLSmall.position.set(0.07, -0.06, 0.22);
+  glintLSmall.position.set(0.07, -0.06, 0.24);
   eyeLGroup.add(glintLSmall);
 
   eyesGroup.add(eyeLGroup);
@@ -709,20 +710,16 @@ function buildGiantRealisticHamster() {
   ringOutR.position.z = 0.025;
   eyeRGroup.add(ringOutR);
 
-  const ringInR = new THREE.Mesh(eyeRingInnerGeo, bauhausOutlineMat);
-  ringInR.position.z = 0.026;
-  eyeRGroup.add(ringInR);
-
   eyeRight = new THREE.Mesh(eyeSphereGeo, eyeObsidianMat);
-  eyeRight.position.z = 0.06;
+  eyeRight.position.z = 0.07;
   eyeRGroup.add(eyeRight);
 
   const glintRBig = new THREE.Mesh(glintBigGeo, glintMat);
-  glintRBig.position.set(-0.06, 0.06, 0.22);
+  glintRBig.position.set(-0.06, 0.06, 0.24);
   eyeRGroup.add(glintRBig);
 
   const glintRSmall = new THREE.Mesh(glintSmallGeo, glintMat);
-  glintRSmall.position.set(0.07, -0.06, 0.22);
+  glintRSmall.position.set(0.07, -0.06, 0.24);
   eyeRGroup.add(glintRSmall);
 
   eyesGroup.add(eyeRGroup);
@@ -921,9 +918,9 @@ function createKeycapTexture(label, isInteractive, accentColor, hasLed, isCaps) 
 function buildMechanicalKeyboardDeck() {
   keyboardGroup = new THREE.Group();
   keyboardGroup.scale.set(0.48, 0.48, 0.48); // Scaled proportionally with hamster
-  keyboardGroup.position.set(-0.35, -0.42, 0.95); // Aligned cleanly with hamster
-  keyboardGroup.rotation.y = 0; // Spacebar facing user
-  keyboardGroup.rotation.x = 0.12; // Ergonomic 7° Apple tilt
+  keyboardGroup.position.set(-0.35, -0.44, 0.95); // Resting cleanly on the floor in front of paws
+  keyboardGroup.rotation.y = 0; // Spacebar facing user straight
+  keyboardGroup.rotation.x = 0.12; // Ergonomic ~7° Apple tilt
 
   const t = THEMES[currentTheme] || THEMES.dark;
   const chassisColorOverride = 0x1E222D; // Space Gray / Dark Obsidian
@@ -1095,7 +1092,13 @@ function buildMechanicalKeyboardDeck() {
   curX += step;
 
   ["S", "D", "F", "G", "H", "J", "K", "L", ";", "'"].forEach(k => {
-    addKey(curX + 0.5 * step, startZ + step * 2, 1.0, k);
+    if (k === "F") {
+      addKey(curX + 0.5 * step, startZ + step * 2, 1.0, "F", { isInteractive: true, category: "finder", keyId: "f", accentColor: "#0284C7" });
+    } else if (k === "S") {
+      addKey(curX + 0.5 * step, startZ + step * 2, 1.0, "S", { isInteractive: true, category: "settings", keyId: "s", accentColor: "#64748B" });
+    } else {
+      addKey(curX + 0.5 * step, startZ + step * 2, 1.0, k);
+    }
     curX += step;
   });
   addKey(curX + 0.9 * step, startZ + step * 2, 1.8, "Enter");
@@ -1679,7 +1682,15 @@ function activateCategory(category = "chrome", subIndex = null, keyId = null, fr
   document.querySelectorAll(".mnemonic-pill").forEach((pill) => {
     pill.classList.toggle("active", pill.getAttribute("data-category") === currentCategory);
   });
+
+  // Synchronize Variant 5 Golden Hybrid Right Card if present
+  if (window.xomskyVariants && typeof window.xomskyVariants.updateHybridStage === "function") {
+    window.xomskyVariants.updateHybridStage(currentCategory, activeIndex);
+  }
 }
+
+window.activateCategory = activateCategory;
+window.selectCockpitSlot = selectCockpitSlot;
 
 // --------------------------------------------------------------------------
 // Mouse & Raycasting Handlers
@@ -1692,8 +1703,8 @@ function onMouseMove(e) {
 
   mouseX = (e.clientX / window.innerWidth) * 2 - 1;
   mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
-  targetHeadX = mouseX * 0.28;
-  targetHeadY = mouseY * 0.18;
+  targetHeadX = RESTING_GAZE_X + mouseX * 0.20;
+  targetHeadY = RESTING_GAZE_Y + mouseY * 0.15;
 
   mouseVec.x = mouseX;
   mouseVec.y = mouseY;
@@ -1871,14 +1882,59 @@ function switchTheme(targetTheme = null) {
 }
 
 // --------------------------------------------------------------------------
-// Animation Loop
+// Animation Loop (Thermal & Battery Conscious)
 // --------------------------------------------------------------------------
 let clock = new THREE.Clock();
+let lastFrameTime = 0;
+const TARGET_FPS = 60;
+const FRAME_INTERVAL = 1000 / TARGET_FPS; // ~16.67ms cap
+let isTabVisible = !document.hidden;
+let isCanvasVisible = true;
+let isAnimating = false;
 
-function animate() {
+// Completely stop GPU drawing when browser tab is inactive/minimized
+document.addEventListener("visibilitychange", () => {
+  isTabVisible = !document.hidden;
+  if (isTabVisible && isCanvasVisible && !isAnimating) {
+    lastFrameTime = performance.now();
+    isAnimating = true;
+    requestAnimationFrame(animate);
+  }
+});
+
+// Completely stop GPU drawing when canvas is scrolled out of view
+document.addEventListener("DOMContentLoaded", () => {
+  const container = document.getElementById("canvas-container");
+  if (container) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        isCanvasVisible = entry.isIntersecting;
+        if (isCanvasVisible && isTabVisible && !isAnimating) {
+          lastFrameTime = performance.now();
+          isAnimating = true;
+          requestAnimationFrame(animate);
+        }
+      });
+    }, { rootMargin: "0px", threshold: 0.0 });
+    observer.observe(container);
+  }
+});
+
+function animate(currentTime = performance.now()) {
+  if (!isTabVisible || !isCanvasVisible) {
+    isAnimating = false;
+    return; // 0% GPU when in background or off-screen
+  }
+  isAnimating = true;
+
   requestAnimationFrame(animate);
 
-  const delta = clock.getDelta();
+  // Throttle 120Hz ProMotion displays to a rock-solid 60fps to prevent fan noise & GPU heat
+  const elapsed = currentTime - lastFrameTime;
+  if (elapsed < FRAME_INTERVAL) return;
+  lastFrameTime = currentTime - (elapsed % FRAME_INTERVAL);
+
+  const delta = Math.min(clock.getDelta(), 0.1);
   const time = clock.getElapsedTime();
 
   controls.update();
@@ -1976,7 +2032,7 @@ function animate() {
 
   // Giant Hamster Breathing Motion (Calm, deep, smooth liminal breathing)
   const BASE_SCALE = 0.68;
-  const BASE_Y = -0.45;
+  const BASE_Y = -0.48;
   const breath = Math.sin(time * 1.2) * 0.005;
   if (!isSquishing && hamsterRoot) {
     hamsterRoot.scale.set(BASE_SCALE + breath * 0.03, BASE_SCALE - breath * 0.04, BASE_SCALE + breath * 0.03);
@@ -2032,10 +2088,13 @@ function animate() {
     rightEarGroup.rotation.z = -0.25 - earTwitch;
   }
 
-  // Eyes Cursor Tracking & Blinking
+  // Eyes Cursor Tracking & Blinking (Gaze-Cueing toward HUD)
   if (eyesGroup) {
     eyesGroup.rotation.y += (targetHeadX - eyesGroup.rotation.y) * 0.08;
     eyesGroup.rotation.x += (-targetHeadY - eyesGroup.rotation.x) * 0.08;
+    if (snoutGroup) {
+      snoutGroup.rotation.y += (targetHeadX * 0.35 - snoutGroup.rotation.y) * 0.08;
+    }
 
     const isBlink = ((time + 2.0) % 4.0) < 0.12;
     const blinkScale = isBlink ? 0.05 : 1.0;

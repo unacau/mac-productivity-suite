@@ -1,29 +1,33 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru" data-design-variant="hybrid" data-default-variant="hybrid">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Xomsky — Your Mac’s Home Row on Steroids (5 Tools in 0ms)</title>
-  <meta name="description" content="Zero-latency Caps-Lock hyper-key for macOS. Switch Chrome profiles, Terminal, IDE, AI Agent, and Notes in 0ms without touching your mouse.">
+  <title>Xomsky — Variant 5: Golden Hybrid (CHI Recommended)</title>
+  <meta name="description" content="Caps-Lock гипер-клавиша с нулевой задержкой. Переключение профилей Chrome и Brave, копирование при выделении и переключение приложений за 0мс без мыши.">
 
   <!-- OpenGraph -->
-  <meta property="og:title" content="Xomsky — Your Mac’s Home Row on Steroids (5 Tools in 0ms)">
-  <meta property="og:description" content="5 Free Slots out of the box. Switch Chrome profiles, Terminal, IDE, AI Agent, and Notes in 0ms without touching your mouse.">
+  <meta property="og:title" content="Xomsky — Недостающий Набор Инструментов для macOS">
+  <meta property="og:description" content="Мгновенное переключение профилей Chrome и Brave, копирование при выделении и переключение приложений через Caps-Lock с нулевой задержкой. Чистый Swift.">
   <meta property="og:image" content="assets/images/khomyak_opengraph_banner.png">
 
   <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg?v=v6">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/images/favicon-32x32.png?v=v6">
   <link rel="icon" type="image/png" sizes="16x16" href="assets/images/favicon-16x16.png?v=v6">
   <link rel="apple-touch-icon" sizes="180x180" href="assets/images/apple-touch-icon.png?v=v6">
+  
   <link rel="stylesheet" href="styles.css?v=cockpit_v2">
+  <link rel="stylesheet" href="variants.css?v=2.2">
 
   <!-- Immediate Zero-Flicker System Theme Detector -->
   <script>
     (function() {
       try {
+        var params = new URLSearchParams(window.location.search);
+        var urlTheme = params.get("theme");
         var override = localStorage.getItem("xomsky_theme_override");
         var systemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-        var theme = (override === "dark" || override === "light") ? override : (systemDark ? "dark" : "light");
+        var theme = (urlTheme === "dark" || urlTheme === "light") ? urlTheme : ((override === "dark" || override === "light") ? override : (systemDark ? "dark" : "light"));
         document.documentElement.setAttribute("data-theme", theme);
       } catch (e) {}
     })();
@@ -35,14 +39,20 @@
 </head>
 <body class="liminal-body">
 
+  
+  <!-- Fullscreen Video Background -->
+  <video autoplay loop muted playsinline class="bg-video-wonderful">
+    <source src="assets/media/screenrec-switch-app.mp4" type="video/mp4">
+  </video>
+
   <!-- Fullscreen 3D WebGL Canvas -->
+
   <div id="canvas-container"></div>
 
-  <!-- Ultra-Clean, Zero-Noise UI Overlay -->
+  <!-- Ultra-Clean UI Overlay -->
   <div class="ui-overlay">
     
-    <!-- Top Bar: Minimalist Branding & Download CTA -->
-    <!-- Top Bar: Clean Branding & Action Controls -->
+    <!-- Top Bar: Navigation & Action Controls -->
     <header class="top-nav">
       <div class="nav-brand">
         <img src="assets/images/brand-mark.svg?v=v6" alt="Xomsky Logo" class="brand-icon">
@@ -51,19 +61,34 @@
 
       <nav class="nav-controls" aria-label="Main Navigation">
         <div class="nav-actions">
+          <!-- 60fps Native Proofs Trigger Button -->
+          <button class="open-proofs-btn cam-view-btn" data-video-src="assets/media/screenrec-switch-app.mp4" title="Watch authentic 60fps macOS screen recordings">
+            <span>▶</span>
+            <span>60fps Proofs</span>
+          </button>
+
+          <!-- Hamster Camera View Toggle -->
           <button id="cam-view-btn" class="cam-view-btn" title="Toggle Hamster Camera View (V)">
             <span id="cam-view-icon">🍑</span>
             <span id="cam-view-text">Butt View</span>
           </button>
+
+          <!-- Theme Toggle -->
           <button id="theme-toggle" class="glass-icon-btn" title="Toggle Dark/Light Mode (M)">
             <span id="theme-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></span>
           </button>
+
+          <!-- Sound Toggle -->
           <button id="sound-toggle" class="glass-icon-btn" title="Toggle tactile sound">
             <span id="sound-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span>
           </button>
+
+          <!-- GitHub Repo -->
           <a href="https://github.com/unacau/mac-productivity-suite" target="_blank" rel="noopener" class="glass-icon-btn" title="GitHub Repository">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
           </a>
+
+          <!-- Download Action -->
           <a href="https://github.com/unacau/mac-productivity-suite/releases/latest/download/Xomsky.dmg" class="download-btn">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
             <span>Download DMG</span>
@@ -73,226 +98,435 @@
       </nav>
     </header>
 
-    <!-- Center Top Punchline -->
-    <div class="top-tagline-container">
-      <div class="hero-badge">
-        <span class="hero-badge-dot pulse-dot"></span>
-        <span>Instant App Switcher · 0ms</span>
-      </div>
-      <h1 class="top-punchline">Your Mac’s Home Row on Steroids. <span>5 Tools in 0ms.</span></h1>
-      <p class="top-subline">
-        <span>Hold</span>
-        <kbd class="top-kbd">Caps Lock</kbd>
-        <span>+ tap</span>
-        <span class="subline-keys">
-          <kbd class="top-kbd" id="subline-browser-kbd">C</kbd>
-          <kbd class="top-kbd">T</kbd>
-          <kbd class="top-kbd">I</kbd>
-          <kbd class="top-kbd">A</kbd>
-          <kbd class="top-kbd">N</kbd>
-        </span>
-        <span class="subline-sep">—</span>
-        <span>Never touch your mouse</span>
-      </p>
-    </div>
+    <!-- ====================================================================
+         VARIANT 5: THE GOLDEN HYBRID (CHI RECOMMENDED MASTER SYNTHESIS)
+         ==================================================================== -->
+    <div class="variant-stage-section" data-variant-section="hybrid">
+      <div class="top-tagline-container">
+        <h1 class="top-punchline" style="font-size: 2.75rem !important; font-weight: 800 !important; letter-spacing: -0.04em !important; line-height: 1.18 !important; margin-bottom: 12px !important; text-align: center;">
+          Быстрый доступ к профилям и приложениям <br/><span class="zero-latency-highlight">через Caps Lock.</span>
+        </h1>
+        <p class="top-subline" style="font-size: 1.15rem !important; opacity: 0.9 !important; max-width: 640px !important; margin: 0 auto 16px !important; line-height: 1.5 !important; text-align: center;">
+          Переключай профили Chrome и Brave, открывай Telegram или Finder одной клавишей, и копируй текст сразу при выделении мышкой.
+        </p>
 
-    <!-- Right Side: 5-Key Cockpit Feature Widget -->
-    <div class="cockpit-widget" id="cockpit-widget" data-browser="chrome">
-      <!-- Cockpit Header -->
-      <div class="cockpit-header">
-        <div class="cockpit-header-left">
-          <span class="cockpit-live-dot pulse-dot"></span>
-          <span class="cockpit-title">Interactive HUD</span>
-        </div>
-        <div class="cockpit-browser-picker" id="cockpit-browser-picker">
-          <button class="browser-pill-btn active" data-browser="chrome" title="Switch to Google Chrome (Caps+C)">Chrome</button>
-          <button class="browser-pill-btn" data-browser="brave" title="Switch to Brave Browser (Caps+B)">Brave</button>
+        <!-- Clean Brew Install Bar -->
+        <div class="hero-install-strip" id="hero-install-strip" title="Кликните, чтобы скопировать команду установки">
+          <span class="hero-install-prompt">$</span>
+          <code class="hero-install-cmd" id="hero-brew-cmd">brew install unacau/tap/xomsky</code>
+          <button class="hero-install-copy-btn" id="hero-install-copy-btn" title="Скопировать команду">
+            <span id="hero-copy-icon">📋</span>
+            <span id="hero-copy-label">Скопировать</span>
+          </button>
         </div>
       </div>
 
-      <!-- 5-Key Home-Row Selector Deck -->
-      <div class="cockpit-keys-deck" id="cockpit-keys-deck">
-        <button class="cockpit-key-btn active" data-slot="c" id="cockpit-browser-key-btn" title="Press C or Caps+C">
-          <span class="key-cap" id="browser-key-cap">C</span>
-          <span class="key-label" id="browser-key-label">Chrome</span>
-        </button>
-        <button class="cockpit-key-btn" data-slot="t" title="Press T or Caps+T">
-          <span class="key-cap">T</span>
-          <span class="key-label">Terminal</span>
-        </button>
-        <button class="cockpit-key-btn" data-slot="i" title="Press I or Caps+I">
-          <span class="key-cap">I</span>
-          <span class="key-label">IDE</span>
-        </button>
-        <button class="cockpit-key-btn" data-slot="a" title="Press A or Caps+A">
-          <span class="key-cap">A</span>
-          <span class="key-label">Agent</span>
-        </button>
-        <button class="cockpit-key-btn" data-slot="n" title="Press N or Caps+N">
-          <span class="key-cap">N</span>
-          <span class="key-label">Notes</span>
-        </button>
-      </div>
+      <!-- Right Stage: 3D Vertical Card Deck (Inspired by example_gif.mp4) -->
+      <div class="variant-right-stage vertical-deck-stage">
+        <!-- Deck Navigation Pills -->
+        <div class="deck-indicator-pills">
+          <button class="deck-pill active" data-deck-index="0" title="Профили Chrome и Brave">Профили</button>
+          <button class="deck-pill" data-deck-index="1" title="Твои приложения">Приложения</button>
+          <button class="deck-pill" data-deck-index="2" title="Копирование при выделении">Копирование</button>
+        </div>
 
-      <!-- Dynamic Slot Stage Container -->
-      <div class="cockpit-stage" id="cockpit-stage">
-        <!-- Slot Stage 1: Chrome (with Profiles 1..4) -->
-        <div class="slot-panel active" id="slot-panel-c">
-          <!-- Active Profile Card -->
-          <aside class="chrome-popup-card" id="chrome-popup-card" aria-label="Chrome Profile Badge" title="Click or press 1..4 to cycle profiles in 0ms">
-            <div class="chrome-popup-active-card">
-              <div class="chrome-avatar-container">
-                <div class="chrome-avatar-circle" id="chrome-active-avatar">
-                  <img src="assets/images/profiles/igor.png" class="chrome-active-avatar-img" alt="Igor">
+        <div class="vertical-cards-viewport" id="vertical-cards-viewport">
+          <!-- Card 0: Chrome & Brave Profiles -->
+          <div class="deck-card card-active" data-card-index="0">
+            <div class="deck-card-glass">
+              <div class="deck-card-header">
+                <div class="deck-card-icon-wrap">
+                  <img src="assets/images/icon_chrome.png" class="deck-card-app-icon" alt="Google Chrome">
+                </div>
+                <div class="deck-card-meta">
+                  <div class="deck-card-title">Профили браузера</div>
+                  <div class="deck-card-badge">Caps + C ➔ 1..4</div>
                 </div>
               </div>
-              <div class="chrome-active-meta">
-                <div class="chrome-active-name" id="chrome-active-name">Igor</div>
-                <div class="chrome-active-email" id="chrome-active-email">igor@xomsky.app</div>
-                <div class="chrome-active-stats" id="chrome-active-stats">
-                  <span class="stats-badge"><span class="stats-dot"></span><span id="chrome-window-count">4 windows</span></span>
-                  <span class="stats-sep">·</span>
-                  <span id="chrome-tabs-count">12 tabs</span>
+
+              <div class="deck-profiles-grid">
+                <div class="deck-profile-item active" data-index="0" title="Caps + C + 1: Igor">
+                  <div class="deck-avatar-ring"><img src="assets/images/profiles/igor.png" alt="Igor"></div>
+                  <span class="deck-profile-key">1</span>
+                  <span class="deck-profile-label">Личный</span>
+                </div>
+                <div class="deck-profile-item" data-index="1" title="Caps + C + 2: Al11">
+                  <div class="deck-avatar-ring"><img src="assets/images/profiles/ai11.png" alt="Al11"></div>
+                  <span class="deck-profile-key">2</span>
+                  <span class="deck-profile-label">Рабочий</span>
+                </div>
+                <div class="deck-profile-item" data-index="2" title="Caps + C + 3: GCP">
+                  <div class="deck-avatar-ring"><img src="assets/images/profiles/gcp.png" alt="GCP"></div>
+                  <span class="deck-profile-key">3</span>
+                  <span class="deck-profile-label">GCP</span>
+                </div>
+                <div class="deck-profile-item" data-index="3" title="Caps + C + 4: Nastya">
+                  <div class="deck-avatar-ring"><img src="assets/images/profiles/nastya.png" alt="Nastya"></div>
+                  <span class="deck-profile-key">4</span>
+                  <span class="deck-profile-label">Настя</span>
                 </div>
               </div>
-            </div>
-          </aside>
 
-          <!-- 4 Quick Profile Switcher Pills -->
-          <div class="profile-switch-pills" id="profile-switch-pills">
-            <button class="profile-pill active" data-index="0" title="Press 1 or Caps+1">
-              <span class="pill-key">1</span>
-              <img src="assets/images/profiles/igor.png" class="pill-avatar" alt="Igor">
-              <span class="pill-name">Igor</span>
-            </button>
-            <button class="profile-pill" data-index="1" title="Press 2 or Caps+2">
-              <span class="pill-key">2</span>
-              <img src="assets/images/profiles/ai11.png" class="pill-avatar" alt="Al11">
-              <span class="pill-name">Al11</span>
-            </button>
-            <button class="profile-pill" data-index="2" title="Press 3 or Caps+3">
-              <span class="pill-key">3</span>
-              <img src="assets/images/profiles/gcp.png" class="pill-avatar" alt="GCP" style="background: linear-gradient(135deg, #EC4899 0%, #F43F5E 100%); padding: 2px;">
-              <span class="pill-name">GCP</span>
-            </button>
-            <button class="profile-pill" data-index="3" title="Press 4 or Caps+4">
-              <span class="pill-key">4</span>
-              <img src="assets/images/profiles/nastya.png" class="pill-avatar" alt="Nastya">
-              <span class="pill-name">Nastya</span>
-            </button>
-          </div>
-        </div>
+              <div class="deck-key-flow">
+                <span class="flow-key">Caps</span> + <span class="flow-key">C</span> + <span class="flow-num">1..4</span> ➔ <span class="flow-desc">Мгновенный переход</span>
+              </div>
 
-        <!-- Slot Stage 2: Terminal -->
-        <div class="slot-panel" id="slot-panel-t">
-          <div class="tool-preview-card">
-            <div class="tool-preview-top">
-              <div class="tool-preview-icon-wrap">
-                <img src="assets/images/icon_terminal.png" class="tool-preview-icon" alt="Terminal">
+              <div class="deck-card-caption">
+                Зажми <strong>Caps Lock</strong>, нажми <strong>C</strong>, затем <strong>1..4</strong> — и ты сразу в нужном профиле.
               </div>
-              <div class="tool-preview-info">
-                <div class="tool-preview-name">Terminal <span class="tool-badge">iTerm2 / Ghostty</span></div>
-                <div class="tool-preview-desc">Instant terminal window jump & profile toggle</div>
-              </div>
-              <span class="tool-shortcut-tag">Caps + T</span>
-            </div>
-            <div class="tool-mini-snippet">
-              <span style="color: #0284C7;">➜ ~/mac-suite</span> swift test<br>
-              <span style="color: #10B981;">✔ 70/70 tests passed (0.042s)</span>
-            </div>
-            <div class="tool-telemetry-box">
-              <div class="telemetry-line"><span class="telemetry-dot"></span> <strong>0ms Hardware Tap</strong> · Zero focus delay</div>
-              <div class="telemetry-sub">Auto-cycles open terminal windows or spawns new tab</div>
             </div>
           </div>
-        </div>
 
-        <!-- Slot Stage 3: IDE -->
-        <div class="slot-panel" id="slot-panel-i">
-          <div class="tool-preview-card">
-            <div class="tool-preview-top">
-              <div class="tool-preview-icon-wrap">
-                <img src="assets/images/icon_antigravity_ide.png" class="tool-preview-icon" alt="IDE">
+          <!-- Card 1: Your Chosen Apps (Finder, Telegram, Settings, Chrome) -->
+          <div class="deck-card card-next" data-card-index="1">
+            <div class="deck-card-glass">
+              <div class="deck-card-header">
+                <div class="deck-card-icon-wrap multi-app-icons">
+                  <img src="assets/images/icon_finder.png" class="deck-mini-icon" alt="Finder">
+                  <img src="assets/images/icon_telegram.png" class="deck-mini-icon" alt="Telegram">
+                  <img src="assets/images/icon_settings.png" class="deck-mini-icon" alt="Settings">
+                </div>
+                <div class="deck-card-meta">
+                  <div class="deck-card-title">Твои приложения</div>
+                  <div class="deck-card-badge">Caps + Буква</div>
+                </div>
               </div>
-              <div class="tool-preview-info">
-                <div class="tool-preview-name">IDE <span class="tool-badge">Antigravity / Cursor</span></div>
-                <div class="tool-preview-desc">Focus active workspace or cycle open projects</div>
+
+              <div class="deck-apps-grid">
+                <div class="deck-app-pill active" data-app="f" title="Caps + F: Finder">
+                  <img src="assets/images/icon_finder.png" alt="Finder">
+                  <span class="deck-app-key">F</span>
+                  <span class="deck-app-name">Finder</span>
+                </div>
+                <div class="deck-app-pill" data-app="t" title="Caps + T: Telegram">
+                  <img src="assets/images/icon_telegram.png" alt="Telegram">
+                  <span class="deck-app-key">T</span>
+                  <span class="deck-app-name">Telegram</span>
+                </div>
+                <div class="deck-app-pill" data-app="s" title="Caps + S: Settings">
+                  <img src="assets/images/icon_settings.png" alt="Настройки">
+                  <span class="deck-app-key">S</span>
+                  <span class="deck-app-name">Настройки</span>
+                </div>
+                <div class="deck-app-pill" data-app="c" title="Caps + C: Chrome">
+                  <img src="assets/images/icon_chrome.png" alt="Chrome">
+                  <span class="deck-app-key">C</span>
+                  <span class="deck-app-name">Браузер</span>
+                </div>
               </div>
-              <span class="tool-shortcut-tag">Caps + I</span>
-            </div>
-            <div class="tool-mini-snippet">
-              <span style="color: #F472B6;">import</span> SwiftUI<br>
-              <span style="color: #60A5FA;">MinimalHUDWindow</span>.shared.showImmediate()<br>
-              <span style="color: var(--text-muted);">// Raised window in 0ms</span>
-            </div>
-            <div class="tool-telemetry-box">
-              <div class="telemetry-line"><span class="telemetry-dot"></span> <strong>Direct Space Switch</strong> · Editor focus in 0ms</div>
-              <div class="telemetry-sub">Instant return to code from any macOS desktop space</div>
+
+              <div class="deck-key-flow">
+                <span class="flow-key">Caps</span> + <span class="flow-key">Буква</span> ➔ <span class="flow-desc">Фокус или смена окон</span>
+              </div>
+
+              <div class="deck-card-caption">
+                Назначь программы, в которых живешь. Нажал — приложение на экране. Нажал еще раз — листаешь его окна.
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Slot Stage 4: AI Agent -->
-        <div class="slot-panel" id="slot-panel-a">
-          <div class="tool-preview-card">
-            <div class="tool-preview-top">
-              <div class="tool-preview-icon-wrap">
-                <img src="assets/images/icon_antigravity.png" class="tool-preview-icon" alt="AI Agent">
+          <!-- Card 2: Copy Text on Select -->
+          <div class="deck-card card-prev" data-card-index="2">
+            <div class="deck-card-glass">
+              <div class="deck-card-header">
+                <div class="deck-card-icon-wrap copy-icon-wrap">
+                  <span class="deck-copy-emoji">📋</span>
+                </div>
+                <div class="deck-card-meta">
+                  <div class="deck-card-title">Копирование при выделении</div>
+                  <div class="deck-card-badge green-badge">Авто-буфер</div>
+                </div>
               </div>
-              <div class="tool-preview-info">
-                <div class="tool-preview-name">AI Agent <span class="tool-badge">Antigravity / Claude</span></div>
-                <div class="tool-preview-desc">1-tap access to your reasoning companion</div>
+
+              <div class="deck-copy-sandbox">
+                <div class="deck-copy-prompt">Выдели мышкой эту строчку:</div>
+                <div class="deck-selectable-box" id="deck-selectable-box" title="Просто проведи мышкой по тексту!">
+                  <span class="selectable-highlight">Выделил текст — и он уже в буфере обмена.</span>
+                </div>
+                <div class="deck-copy-status-line" id="deck-copy-status-line">
+                  <span class="copy-pulse-indicator">●</span> Проведи мышкой по тексту выше
+                </div>
               </div>
-              <span class="tool-shortcut-tag">Caps + A</span>
-            </div>
-            <div class="tool-mini-snippet">
-              <span style="color: #C084FC;">$</span> agy plan "Refactor telemetry"<br>
-              <span style="color: #10B981;">✔ Plan approved · 0ms context switch</span>
-            </div>
-            <div class="tool-telemetry-box">
-              <div class="telemetry-line"><span class="telemetry-dot"></span> <strong>Floating Bezel HUD</strong> · Non-activating overlay</div>
-              <div class="telemetry-sub">Prompt or review without context-switching away from work</div>
+
+              <div class="deck-key-flow">
+                <span class="flow-badge">Linux Style</span> ➔ <span class="flow-desc">Без нажатия ⌘+C</span>
+              </div>
+
+              <div class="deck-card-caption">
+                Выделяешь любой текст в любом месте на Mac — он мгновенно скопирован. Никаких ⌘+C.
+              </div>
             </div>
           </div>
+
         </div>
 
-        <!-- Slot Stage 5: Notes -->
-        <div class="slot-panel" id="slot-panel-n">
-          <div class="tool-preview-card">
-            <div class="tool-preview-top">
-              <div class="tool-preview-icon-wrap">
-                <img src="assets/images/icon_notes.png" class="tool-preview-icon" alt="Notes">
-              </div>
-              <div class="tool-preview-info">
-                <div class="tool-preview-name">Notes <span class="tool-badge">Apple Notes / Obsidian</span></div>
-                <div class="tool-preview-desc">Jot down thoughts without losing flow state</div>
-              </div>
-              <span class="tool-shortcut-tag">Caps + N</span>
-            </div>
-            <div class="tool-mini-snippet">
-              <span style="color: #FBBF24;">#</span> Quick Capture<br>
-              <span style="color: var(--text-muted);">- Instant floating scratchpad</span>
-            </div>
-            <div class="tool-telemetry-box">
-              <div class="telemetry-line"><span class="telemetry-dot"></span> <strong>Instant Quick Capture</strong> · Zero friction scratchpad</div>
-              <div class="telemetry-sub">Pops active note right under your fingers in 0ms</div>
-            </div>
-          </div>
+        <div class="deck-controls-hint">
+          <span>↕ Колесико мыши, клик или клавиши для перелистывания</span>
         </div>
-      </div>
-
-      <!-- Terminal Install Bar -->
-      <div class="terminal-install-bar" id="terminal-install-bar" title="Click to copy install command">
-        <span class="terminal-prompt">$</span>
-        <code class="terminal-cmd" id="install-cmd">brew install unacau/tap/xomsky</code>
-        <button class="copy-cmd-btn" id="copy-install-btn" title="Copy terminal install command">
-          <span class="copy-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></span>
-          <span class="copy-text">Copy</span>
-        </button>
       </div>
     </div>
 
-    <!-- Hidden Elements to prevent app.js from crashing -->
+    <!-- ====================================================================
+         VARIANT 0: ORIGINAL BASELINE COCKPIT WIDGET (PRESERVED INTACT)
+         ==================================================================== -->
+    <div class="variant-stage-section" data-variant-section="original" style="display: none;">
+      <div class="top-tagline-container">
+        <div class="hero-badge">
+          <span class="hero-badge-dot pulse-dot"></span>
+          <span>Instant App Switcher · 0ms</span>
+        </div>
+        <h1 class="top-punchline">Your Mac’s Home Row on Steroids. <span>5 Tools in 0ms.</span></h1>
+        <p class="top-subline">
+          <span>Hold</span>
+          <kbd class="top-kbd">Caps Lock</kbd>
+          <span>+ tap</span>
+          <span class="subline-keys">
+            <kbd class="top-kbd" id="subline-browser-kbd">C</kbd>
+            <kbd class="top-kbd">T</kbd>
+            <kbd class="top-kbd">I</kbd>
+            <kbd class="top-kbd">A</kbd>
+            <kbd class="top-kbd">N</kbd>
+          </span>
+          <span class="subline-sep">—</span>
+          <span>Never touch your mouse</span>
+        </p>
+      </div>
+
+      <!-- Right Side: 5-Key Cockpit Feature Widget -->
+      <div class="cockpit-widget" id="cockpit-widget" data-browser="chrome">
+        <!-- Cockpit Header -->
+        <div class="cockpit-header">
+          <div class="cockpit-header-left">
+            <span class="cockpit-live-dot pulse-dot"></span>
+            <span class="cockpit-title">Интерактивный HUD</span>
+          </div>
+          <div class="cockpit-browser-picker" id="cockpit-browser-picker">
+            <button class="browser-pill-btn active" data-browser="chrome" title="Переключить на Google Chrome (Caps+C)">Chrome</button>
+            <button class="browser-pill-btn" data-browser="brave" title="Переключить на Brave (Caps+B)">Brave</button>
+          </div>
+        </div>
+
+        <!-- 5-Key Home-Row Selector Deck -->
+        <div class="cockpit-keys-deck" id="cockpit-keys-deck">
+          <button class="cockpit-key-btn active" data-slot="c" id="cockpit-browser-key-btn" title="Нажми C или Caps+C">
+            <span class="key-cap" id="browser-key-cap">C</span>
+            <span class="key-label" id="browser-key-label">Chrome</span>
+          </button>
+          <button class="cockpit-key-btn" data-slot="t" title="Нажми T или Caps+T">
+            <span class="key-cap">T</span>
+            <span class="key-label">Терминал</span>
+          </button>
+          <button class="cockpit-key-btn" data-slot="i" title="Нажми I или Caps+I">
+            <span class="key-cap">I</span>
+            <span class="key-label">IDE</span>
+          </button>
+          <button class="cockpit-key-btn" data-slot="a" title="Нажми A или Caps+A">
+            <span class="key-cap">A</span>
+            <span class="key-label">Агент</span>
+          </button>
+          <button class="cockpit-key-btn" data-slot="n" title="Нажми N или Caps+N">
+            <span class="key-cap">N</span>
+            <span class="key-label">Заметки</span>
+          </button>
+        </div>
+
+        <!-- Dynamic Slot Stage Container -->
+        <div class="cockpit-stage" id="cockpit-stage">
+          <!-- Slot Stage 1: Chrome (with Profiles 1..4) -->
+          <div class="slot-panel active" id="slot-panel-c">
+            <aside class="chrome-popup-card" id="chrome-popup-card" aria-label="Chrome Profile Badge" title="Кликните или нажмите 1..4 для переключения профилей за 0мс">
+              <div class="chrome-popup-active-card">
+                <div class="chrome-avatar-container">
+                  <div class="chrome-avatar-circle" id="chrome-active-avatar">
+                    <img src="assets/images/profiles/igor.png" class="chrome-active-avatar-img" alt="Igor">
+                  </div>
+                </div>
+                <div class="chrome-active-meta">
+                  <div class="chrome-active-name" id="chrome-active-name">Igor</div>
+                  <div class="chrome-active-email" id="chrome-active-email">igor@xomsky.app</div>
+                  <div class="chrome-active-stats" id="chrome-active-stats">
+                    <span class="stats-badge"><span class="stats-dot"></span><span id="chrome-window-count">4 windows</span></span>
+                    <span class="stats-sep">·</span>
+                    <span id="chrome-tabs-count">12 tabs</span>
+                  </div>
+                </div>
+              </div>
+            </aside>
+
+            <!-- 4 Quick Profile Switcher Pills -->
+            <div class="profile-switch-pills" id="profile-switch-pills">
+              <button class="profile-pill active" data-index="0" title="Нажми 1 или Caps+1">
+                <span class="pill-key">1</span>
+                <img src="assets/images/profiles/igor.png" class="pill-avatar" alt="Igor">
+                <span class="pill-name">Igor</span>
+              </button>
+              <button class="profile-pill" data-index="1" title="Нажми 2 или Caps+2">
+                <span class="pill-key">2</span>
+                <img src="assets/images/profiles/ai11.png" class="pill-avatar" alt="Al11">
+                <span class="pill-name">Al11</span>
+              </button>
+              <button class="profile-pill" data-index="2" title="Нажми 3 или Caps+3">
+                <span class="pill-key">3</span>
+                <img src="assets/images/profiles/gcp.png" class="pill-avatar" alt="GCP" style="background: linear-gradient(135deg, #EC4899 0%, #F43F5E 100%); padding: 2px;">
+                <span class="pill-name">GCP</span>
+              </button>
+              <button class="profile-pill" data-index="3" title="Нажми 4 или Caps+4">
+                <span class="pill-key">4</span>
+                <img src="assets/images/profiles/nastya.png" class="pill-avatar" alt="Nastya">
+                <span class="pill-name">Nastya</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Slot Stage 2: Терминал -->
+          <div class="slot-panel" id="slot-panel-t">
+            <div class="tool-preview-card">
+              <div class="tool-preview-top">
+                <div class="tool-preview-icon-wrap">
+                  <img src="assets/images/icon_terminal.png" class="tool-preview-icon" alt="Терминал">
+                </div>
+                <div class="tool-preview-info">
+                  <div class="tool-preview-name">Терминал <span class="tool-badge">iTerm2 / Ghostty</span></div>
+                  <div class="tool-preview-desc">Instant terminal window jump & profile toggle</div>
+                </div>
+                <span class="tool-shortcut-tag">Caps + T</span>
+              </div>
+              <div class="tool-mini-snippet">
+                <span style="color: #0284C7;">➜ ~/mac-suite</span> swift test<br>
+                <span style="color: #10B981;">✔ 70/70 tests passed (0.042s)</span>
+              </div>
+              <div class="tool-telemetry-box">
+                <div class="telemetry-line"><span class="telemetry-dot"></span> <strong>0ms Hardware Tap</strong> · Нулевая задержка фокуса</div>
+                <div class="telemetry-sub">Авто-переключение окон терминала или создание вкладки</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Slot Stage 3: IDE -->
+          <div class="slot-panel" id="slot-panel-i">
+            <div class="tool-preview-card">
+              <div class="tool-preview-top">
+                <div class="tool-preview-icon-wrap">
+                  <img src="assets/images/icon_antigravity_ide.png" class="tool-preview-icon" alt="IDE">
+                </div>
+                <div class="tool-preview-info">
+                  <div class="tool-preview-name">IDE <span class="tool-badge">Antigravity / Cursor</span></div>
+                  <div class="tool-preview-desc">Фокус на активном рабочем пространстве или переключение проектов</div>
+                </div>
+                <span class="tool-shortcut-tag">Caps + I</span>
+              </div>
+              <div class="tool-mini-snippet">
+                <span style="color: #F472B6;">import</span> SwiftUI<br>
+                <span style="color: #60A5FA;">MinimalHUDWindow</span>.shared.showImmediate()<br>
+                <span style="color: var(--text-muted);">// Raised window in 0ms</span>
+              </div>
+              <div class="tool-telemetry-box">
+                <div class="telemetry-line"><span class="telemetry-dot"></span> <strong>Прямое Переключение</strong> · Editor focus in 0ms</div>
+                <div class="telemetry-sub">Мгновенное возвращение к коду с любого рабочего стола</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Slot Stage 4: AI Агент -->
+          <div class="slot-panel" id="slot-panel-a">
+            <div class="tool-preview-card">
+              <div class="tool-preview-top">
+                <div class="tool-preview-icon-wrap">
+                  <img src="assets/images/icon_antigravity.png" class="tool-preview-icon" alt="AI Агент">
+                </div>
+                <div class="tool-preview-info">
+                  <div class="tool-preview-name">AI Агент <span class="tool-badge">Antigravity / Claude</span></div>
+                  <div class="tool-preview-desc">Доступ к вашему ИИ-помощнику в один клик</div>
+                </div>
+                <span class="tool-shortcut-tag">Caps + A</span>
+              </div>
+              <div class="tool-mini-snippet">
+                <span style="color: #C084FC;">$</span> agy plan "Refactor telemetry"<br>
+                <span style="color: #10B981;">✔ Plan approved · 0ms context switch</span>
+              </div>
+              <div class="tool-telemetry-box">
+                <div class="telemetry-line"><span class="telemetry-dot"></span> <strong>Плавающий HUD</strong> · Non-activating overlay</div>
+                <div class="telemetry-sub">Задавайте вопросы без потери контекста работы</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Slot Stage 5: Заметки -->
+          <div class="slot-panel" id="slot-panel-n">
+            <div class="tool-preview-card">
+              <div class="tool-preview-top">
+                <div class="tool-preview-icon-wrap">
+                  <img src="assets/images/icon_notes.png" class="tool-preview-icon" alt="Заметки">
+                </div>
+                <div class="tool-preview-info">
+                  <div class="tool-preview-name">Заметки <span class="tool-badge">Apple Заметки / Obsidian</span></div>
+                  <div class="tool-preview-desc">Записывайте мысли, не теряя состояние потока</div>
+                </div>
+                <span class="tool-shortcut-tag">Caps + N</span>
+              </div>
+              <div class="tool-mini-snippet">
+                <span style="color: #FBBF24;">#</span> Quick Capture<br>
+                <span style="color: var(--text-muted);">- Instant floating scratchpad</span>
+              </div>
+              <div class="tool-telemetry-box">
+                <div class="telemetry-line"><span class="telemetry-dot"></span> <strong>Мгновенный Захват</strong> · Zero friction scratchpad</div>
+                <div class="telemetry-sub">Открывает активную заметку прямо под пальцами за 0мс</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Терминал Install Bar -->
+        <div class="terminal-install-bar" id="terminal-install-bar" title="Кликните, чтобы скопировать команду установки">
+          <span class="terminal-prompt">$</span>
+          <code class="terminal-cmd" id="install-cmd">brew install unacau/tap/xomsky</code>
+          <button class="copy-cmd-btn" id="copy-install-btn" title="Copy terminal install command">
+            <span class="copy-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></span>
+            <span class="copy-text">Скопировать</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         NATIVE VIDEO PROOFS MODAL (PLAYS AUTHENTIC RECORDINGS)
+         ==================================================================== -->
+    <div class="proofs-modal-backdrop" id="proofs-modal">
+      <div class="proofs-modal-box">
+        <div class="proofs-modal-header">
+          <div class="proofs-modal-title">
+            <span>📹 Аутентичные записи экрана macOS (60fps)</span>
+          </div>
+          <button class="proofs-modal-close" id="proofs-close-btn">✕</button>
+        </div>
+
+        <div class="proofs-video-tabs">
+          <button class="proofs-tab-btn active" data-src="assets/media/screenrec-switch-app.mp4">
+            🔄 Переключатель Приложений и Профили
+          </button>
+          <button class="proofs-tab-btn" data-src="assets/media/screenrec-select-copy.mp4">
+            📋 Копирование при Выделении
+          </button>
+        </div>
+
+        <div class="proofs-video-player-wrap">
+          <video id="proofs-video" class="proofs-video-element" controls playsinline loop muted>
+            <source src="assets/media/screenrec-switch-app.mp4" type="video/mp4">
+          </video>
+        </div>
+
+        <div style="font-size: 0.74rem; color: #94A3B8; text-align: center;">
+          Оригинальная запись экрана без монтажа (Apple Silicon macOS Sonoma).
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         FLOATING VARIANT SWITCHER DOCK (1-CLICK JUMP ACROSS ALL VARIANTS)
+         ==================================================================== -->
+
+
+    <!-- Hidden Elements to prevent app.js legacy references from crashing -->
     <div style="display: none;">
       <button id="hud-toggle"></button>
       <button id="paradox-toggle"></button>
@@ -322,8 +556,16 @@
       <button id="simulate-profile4-btn"></button>
     </div>
 
+
+    <!-- Footer -->
+    <footer class="site-footer">
+      <div class="footer-content">
+        <p>&copy; 2026 Xomsky. Все права защищены.</p>
+      </div>
+    </footer>
   </div>
 
   <script src="app.js?v=cockpit_v1"></script>
+  <script src="variants.js?v=2.2"></script>
 </body>
 </html>
